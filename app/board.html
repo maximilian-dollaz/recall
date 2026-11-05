@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dream board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/ui/theme.css"><!-- the look: tokens, the delta, glass (page rules below win) -->
+<style>
+  /* Colours, type, glass and the backdrop come from /static/ui/theme.css. */
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--fg); font:400 16px/1.618 var(--font-ui); }
+  .wrap { max-width:1600px; margin:0 auto; padding:21px 16px 55px }
+  header { display:flex; align-items:center; justify-content:space-between; gap:13px; flex-wrap:wrap; margin-bottom:13px }
+  h1 { font:600 var(--fs3)/1.236 var(--font-display); margin:0; text-shadow:var(--shade) } h1 a { font-family:var(--font-ui); color:var(--fg-2); text-decoration:none; font-weight:400; font-size:1rem; margin-right:13px; vertical-align:.3em }
+  .pills { display:flex; gap:8px; flex-wrap:wrap }
+  .pills button { font:inherit; font-weight:500; padding:8px 16px; border-radius:999px; border:1px solid var(--rim); background:var(--glass); color:var(--fg-2); cursor:pointer; -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px); transition:border-color var(--t-micro), color var(--t-micro), box-shadow var(--t-micro) }
+  .pills button:hover { color:var(--fg); border-color:var(--rim-strong) }
+  .pills button[aria-pressed="true"] { background:var(--lit-fill); color:var(--fg); border-color:var(--lit-rim); box-shadow:var(--halo-on); font-weight:600 }
+  .pills .n { opacity:.7; margin-left:6px; font-size:.85em }
+  #projects button { font-size:1.05rem; padding:13px 21px }
+  #people { margin:13px 0 21px } #people button { padding:5px 13px; font-size:.9rem }
+  .dl { font:inherit; font-weight:600; padding:10px 21px; border-radius:999px; border:0; background:var(--primary-fill); color:var(--primary-fg); box-shadow:var(--primary-glow); cursor:pointer; text-decoration:none }
+  .grid { columns:300px; column-gap:13px }
+  .card { break-inside:avoid; margin:0 0 13px; padding:0; border-radius:13px; overflow:hidden }
+  .pics { display:grid; gap:2px } .pics.many { grid-template-columns:1fr 1fr }
+  .pics button { all:unset; cursor:zoom-in; position:relative; display:block; background:var(--field) }
+  .pics img { display:block; width:100%; height:auto }
+  .pics.many img { aspect-ratio:1; object-fit:cover }
+  .pics.many > button:first-child:nth-last-child(2n+1) { grid-column:1 / -1 } .pics.many > button:first-child:nth-last-child(2n+1) img { aspect-ratio:2 }
+  .pics .play { position:absolute; inset:auto auto 8px 8px; background:rgba(14,21,25,.66); color:var(--bone); border-radius:999px; padding:2px 10px; font-size:.8rem }
+  .file { display:block; padding:13px; color:var(--link); text-decoration:none; border-bottom:1px solid var(--rim) }
+  .say { padding:10px 13px 13px } .say b { display:block } .say p { margin:3px 0 0; color:var(--fg-2); font-size:.95rem; white-space:pre-wrap }
+  .empty { color:var(--fg-2); padding:34px 0; text-align:center; text-shadow:var(--shade) }
+  #lb { position:fixed; inset:0; background:rgba(10,15,18,.94); -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px); display:none; z-index:10; color:var(--bone) }
+  #lb.on { display:grid; grid-template-rows:1fr auto }
+  #lb .stage { display:grid; place-items:center; min-height:0; padding:13px }
+  #lb img, #lb video { max-width:100%; max-height:100%; object-fit:contain }
+  #lb .cap { padding:13px 21px 21px; max-width:900px; margin:0 auto; width:100% } #lb .cap b { display:block } #lb .cap p { margin:3px 0 0; opacity:.8; white-space:pre-wrap }
+  #lb .nav { position:fixed; top:50%; transform:translateY(-50%); font:inherit; font-size:2rem; background:rgba(16,28,36,.52); color:var(--bone); border:1px solid rgba(242,236,225,.13); border-radius:999px; width:55px; height:55px; cursor:pointer }
+  #lb .prev { left:13px } #lb .next { right:13px }
+  #lb .x { position:fixed; top:13px; right:13px; font:inherit; font-size:1rem; background:rgba(16,28,36,.62); color:var(--bone); border:1px solid rgba(242,236,225,.13); border-radius:999px; padding:8px 16px; cursor:pointer }
+  @media (max-width:520px) { #lb .nav { display:none } .grid { columns:2 160px; column-gap:8px } .card { margin-bottom:8px } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><a href="/">← Recall</a>Dream board</h1>
+    <a class="dl" id="dl" href="#" download>Download all</a>
+  </header>
+  <div class="pills" id="projects"></div>
+  <div class="pills" id="people"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden></div>
+</div>
+<div id="lb" role="dialog" aria-modal="true" aria-label="Photo">
+  <div class="stage" id="stage"></div>
+  <div class="cap" id="cap"></div>
+  <button class="nav prev" id="prev" aria-label="Previous">‹</button>
+  <button class="nav next" id="next" aria-label="Next">›</button>
+  <button class="x" id="close">Close</button>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const img = (path, size) => `/board/img/${encodeURIComponent(path)}?size=${size}`;
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+let project = new URLSearchParams(location.search).get('project') || store.get('board.project') || '';
+let person = 'all', data = null, last = '', shown = [];
+
+async function load() {
+  const r = await fetch(`/api/board?project=${encodeURIComponent(project)}`);
+  if (r.status === 401) { location.href = '/signin'; return; }
+  const d = await r.json(); const sig = JSON.stringify(d);
+  if (sig === last) return; last = sig; data = d;
+  if (d.project) { project = d.project.id; store.set('board.project', project); }
+  render();
+}
+
+function render() {
+  const d = data; if (!d) return;
+  $('#projects').innerHTML = d.projects.map((p) => `<button data-p="${esc(p.id)}" aria-pressed="${p.id === project}">${esc(p.name)}<span class="n">${p.n}</span></button>`).join('');
+  $('#projects').querySelectorAll('button').forEach((b) => b.onclick = () => { project = b.dataset.p; person = 'all'; last = ''; load(); });
+  if (person !== 'all' && !d.people.some((p) => p.id === person)) person = 'all';
+  $('#people').innerHTML = d.people.length ? [`<button data-who="all" aria-pressed="${person === 'all'}">Everyone</button>`, ...d.people.map((p) => `<button data-who="${esc(p.id)}" aria-pressed="${person === p.id}">${esc(p.name)}<span class="n">${p.n}</span></button>`)].join('') : '';
+  $('#people').querySelectorAll('button').forEach((b) => b.onclick = () => { person = b.dataset.who; render(); });
+  $('#dl').href = `/board/zip?project=${encodeURIComponent(project)}`;
+  $('#dl').hidden = !d.cards.length;
+  const cards = d.cards.filter((c) => person === 'all' || c.person === person);
+  shown = [];
+  $('#grid').innerHTML = cards.map((c) => {
+    const pics = c.files.filter((f) => f.visual), other = c.files.filter((f) => !f.visual);
+    const tiles = pics.map((f) => { shown.push({ f, c }); return `<button data-i="${shown.length - 1}" aria-label="Open photo from ${esc(c.who)}"><img loading="lazy" src="${img(f.path, 'thumb')}" alt="">${f.video ? '<span class="play">▶ video</span>' : ''}</button>`; }).join('');
+    return `<article class="card">${pics.length ? `<div class="pics${pics.length > 1 ? ' many' : ''}">${tiles}</div>` : ''}${other.map((f) => `<a class="file" href="${img(f.path, 'full')}" target="_blank" rel="noopener">${esc(f.name)}</a>`).join('')}<div class="say"><b>${esc(c.who)}</b>${c.notes ? `<p>${esc(c.notes)}</p>` : ''}</div></article>`;
+  }).join('');
+  $('#grid').querySelectorAll('[data-i]').forEach((b) => b.onclick = () => open(+b.dataset.i));
+  const name = d.project ? d.project.name : 'this project';
+  $('#empty').hidden = cards.length > 0;
+  $('#empty').textContent = d.project ? `Nothing for ${name} yet. Save photos with the Share to Recall shortcut and pick ${name}.` : 'No team projects yet.';
+}
+
+let at = -1;
+function open(i) {
+  if (!shown.length) return; at = (i + shown.length) % shown.length;
+  const { f, c } = shown[at];
+  $('#stage').innerHTML = f.video ? `<video src="${img(f.path, 'full')}" controls autoplay playsinline></video>` : `<img src="${img(f.path, 'full')}" alt="">`;
+  $('#cap').innerHTML = `<b>${esc(c.who)}</b>${c.notes ? `<p>${esc(c.notes)}</p>` : ''}`;
+  $('#lb').classList.add('on');
+}
+function close() { $('#lb').classList.remove('on'); $('#stage').innerHTML = ''; at = -1; }
+$('#close').onclick = close; $('#prev').onclick = () => open(at - 1); $('#next').onclick = () => open(at + 1);
+$('#stage').onclick = (e) => { if (e.target === $('#stage')) close(); };
+document.addEventListener('keydown', (e) => { if (at < 0) return; if (e.key === 'Escape') close(); if (e.key === 'ArrowLeft') open(at - 1); if (e.key === 'ArrowRight') open(at + 1); });
+let sx = 0; $('#lb').addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true });
+$('#lb').addEventListener('touchend', (e) => { const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 55) open(at + (dx < 0 ? 1 : -1)); });
+
+load(); setInterval(() => { if (at < 0 && !document.hidden) load(); }, 15000);
+</script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+# Each person's private library lives here; never shared through this repo.
+.DS_Store
+imports/
+inbox/
+libraries/
+library/
+node_modules/
+tools/node_modules/
+tools/.venv/
+.thumbs/
+.trash/
+shortcuts/*.unsigned.shortcut
+.local/
+.board-cache/
+dist/
+
+# This install's settings and secrets; .env.example is the template.
+.env
+.env.*
+!.env.example
+# GBrain's owner lock for this checkout (holds a token).
+.gbrain-owner-*.json
+# Private working notes: ops logs, morning lists, review screenshots of real data.
+private/
+docs/private/
+backups/
+# Private working notes kept in place (ops logs, morning lists, live-page sources, reviews and screenshots of real data).
+/docs/ops-log.md
+/docs/morning.md
+/docs/HANDOFF.md
+/docs/sonnet-ops-prompt.md
+/docs/vibe-edits-prompt.md
+/docs/categories-chat-prompt.md
+/docs/categories-workshop.md
+/docs/resume.html
+/docs/recall-one-pager.html
+/docs/phone-setup.html
+/docs/shortcut-build.html
+/docs/shortcut-build.md
+/docs/system-map.html
+/docs/find-redesign.html
+/docs/soul-map.md
+/docs/review/
+/docs/polish/
+/tests/questions.md
+/deploy/
+/.claude/
+/context-library-map.html
+# Signed shortcuts carry an install's address: built per install, never committed.
+shortcuts/*.shortcut
+# Built by the installer from tools/ocr.swift.
+/tools/ocr
+# The working roadmap and the old quick tunnel stay private; ROADMAP.md is the public roadmap.
+/PROJECT.md
+/tools/tunnel.sh
+/server/com.recall.tunnel.plist
+# The river painting (artist not known): kept out of the public repo; installs without it show the delta.
+/app/static/river-*

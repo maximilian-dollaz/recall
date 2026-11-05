@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recall setup</title>
+<style>
+  :root { --bg:#f3f1ec; --paper:#fffdf9; --fg:#1f1d19; --muted:#6c665b; --line:#dcd6cb; --accent:#2d5a46; --ring:#e8590c; --ios:#007aff; --sheet:#f2f2f7; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#171613; --paper:#201e1a; --fg:#ece7dd; --muted:#a59d8f; --line:#3a362f; --accent:#7fc3a2; --ring:#ff8a3d; color-scheme: dark; } }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.45 -apple-system, system-ui, sans-serif }
+  main { max-width:560px; margin:0 auto; padding:21px 16px 55px }
+  h1 { font-size:1.5rem; margin:0 0 5px } h2 { font-size:1.05rem; color:var(--muted); font-weight:600; margin:34px 0 13px; text-transform:uppercase; letter-spacing:.04em }
+  .lede { color:var(--muted); margin:0 0 8px }
+  .step { display:grid; grid-template-columns:34px 1fr; gap:13px; margin:0 0 34px }
+  .n { width:34px; height:34px; border-radius:50%; background:var(--accent); color:var(--paper); display:grid; place-items:center; font-weight:700 }
+  .step p { margin:4px 0 13px; font-weight:600 }
+  /* A drawn phone screen; the orange ring is where to tap. */
+  .phone { width:100%; max-width:260px; border:8px solid #111; border-radius:30px; background:#fff; color:#111; padding:21px 13px; font:13px/1.35 -apple-system, system-ui, sans-serif; position:relative; min-height:200px }
+  .phone .bar { height:4px; width:80px; background:#111; border-radius:4px; margin:-13px auto 13px }
+  .tap { outline:3px solid var(--ring); outline-offset:3px; border-radius:10px; position:relative }
+  .tap::after { content:"tap"; position:absolute; right:-8px; top:-21px; background:var(--ring); color:#fff; font-size:11px; font-weight:700; padding:1px 7px; border-radius:999px }
+  .btn { display:block; text-align:center; padding:9px; border-radius:10px; background:#2d5a46; color:#fff; font-weight:600; margin:8px 0 }
+  .gbtn { display:block; text-align:center; padding:9px; border-radius:6px; border:1px solid #ccc; font-weight:600; margin:13px 0 }
+  .row { display:block; padding:9px 11px; border-radius:10px; border:1px solid #ddd; margin:6px 0 }
+  .row small { display:block; color:#666 }
+  .bubble { background:#e9e9eb; border-radius:16px; padding:8px 11px; display:inline-block; max-width:85% }
+  .bubble u { color:var(--ios) }
+  .sheet { background:var(--sheet); border-radius:13px; padding:8px }
+  .sheet .it { background:#fff; padding:9px 11px; border-bottom:1px solid #e5e5ea } .sheet .it:last-child { border:0 }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:3px } .grid i { aspect-ratio:1; background:#c9c2b5; position:relative } .grid i.on::after { content:"✓"; position:absolute; right:3px; bottom:3px; background:var(--ios); color:#fff; border-radius:50%; width:16px; height:16px; font-size:10px; display:grid; place-items:center; font-style:normal }
+  .menu .it { color:var(--ios); text-align:center }
+  .field { border:1px solid #ccc; border-radius:8px; padding:9px; color:#666; margin:8px 0 }
+  .kb { display:flex; justify-content:space-between; align-items:center; background:#d1d3d9; border-radius:8px; padding:9px 11px; margin-top:13px }
+  .say { background:var(--paper); border:1px solid var(--line); border-radius:13px; padding:13px 16px; margin-top:13px }
+  .say b { display:block; margin-bottom:5px } .say ul { margin:0; padding-left:20px } .say li { margin:3px 0 }
+  .note { color:var(--muted); font-size:.92rem }
+</style>
+</head>
+<body>
+<main>
+  <h1>Recall: bring your inspiration</h1>
+  <p class="lede">Set up once on your iPhone (2 minutes). Then every batch of photos takes 10 seconds.</p>
+
+  <h2>Set up, once</h2>
+
+  <div class="step"><div class="n">1</div><div>
+    <p>Open the team link from {{OWNER}} on your iPhone.</p>
+    <div class="phone"><div class="bar"></div><div class="bubble">Recall for the brand session: <u class="tap">{{HOST}}/team/…</u></div></div>
+  </div></div>
+
+  <div class="step"><div class="n">2</div><div>
+    <p>Sign in with Google.</p>
+    <div class="phone"><div class="bar"></div><b>Recall</b><div>Sign in with your Google account.</div><div class="gbtn tap">G&nbsp; Sign in with Google</div></div>
+  </div></div>
+
+  <div class="step"><div class="n">3</div><div>
+    <p>Scroll down. Tap Phone shortcut.</p>
+    <div class="phone"><div class="bar"></div><div class="btn">Save</div><div class="row">Dream board<small>everyone's inspiration, by project</small></div><div class="row tap">Phone shortcut<small>pick photos, say one sentence, done</small></div></div>
+  </div></div>
+
+  <div class="step"><div class="n">4</div><div>
+    <p>Tap Add Shortcut.</p>
+    <div class="phone"><div class="bar"></div><b>Share to Recall</b><div class="btn tap" style="background:var(--ios)">Add Shortcut</div></div>
+    <p class="note">If Safari asks to download it first, tap Download, then tap the download to open it.</p>
+  </div></div>
+
+  <h2>Every time</h2>
+
+  <div class="step"><div class="n">5</div><div>
+    <p>In Photos, tap Select. Tap your photos. Tap Share.</p>
+    <div class="phone"><div class="bar"></div><div class="grid"><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i></i><i class="on"></i></div><div style="display:flex;justify-content:space-between;margin-top:13px"><span class="tap" style="padding:2px 6px">⬆︎ Share</span><span>4 selected</span><span>🗑</span></div></div>
+  </div></div>
+
+  <div class="step"><div class="n">6</div><div>
+    <p>Scroll down. Tap Share to Recall.</p>
+    <div class="phone"><div class="bar"></div><div class="sheet"><div class="it">Copy Photos</div><div class="it">Add to Album</div><div class="it tap">Share to Recall</div><div class="it">Save to Files</div></div></div>
+  </div></div>
+
+  <div class="step"><div class="n">7</div><div>
+    <p>Pick the lounge.</p>
+    <div class="phone menu"><div class="bar"></div><div style="text-align:center;color:#666">Which project are these for?</div><div class="sheet" style="margin-top:8px"><div class="it tap">Zero Proof Lounge</div><div class="it">Frequency Wellness Lounge</div><div class="it">Let Recall sort it</div></div></div>
+  </div></div>
+
+  <div class="step"><div class="n">8</div><div>
+    <p>Tap the mic. Say one sentence. Tap Done.</p>
+    <div class="phone"><div class="bar"></div><div>What are these?</div><div class="field">brass bar top, this warmth for the bar</div><div class="kb"><span>space</span><span class="tap" style="padding:2px 8px">🎤</span><span style="color:var(--ios);font-weight:600">Done</span></div></div>
+    <div class="say"><b>What to say</b><ul><li>What it is</li><li>What you love about it</li><li>Where it goes: bar, lobby, menu, signage, lighting</li></ul></div>
+  </div></div>
+
+  <div class="step"><div class="n">9</div><div>
+    <p>First time only: tap Always Allow.</p>
+    <div class="phone"><div class="bar"></div><div style="text-align:center">Allow "Share to Recall" to send 4 items to "{{HOST}}"?</div><div class="sheet" style="margin-top:8px"><div class="it">Allow Once</div><div class="it tap" style="color:var(--ios);text-align:center">Always Allow</div><div class="it" style="text-align:center">Don't Allow</div></div></div>
+  </div></div>
+
+  <div class="step"><div class="n">✓</div><div>
+    <p>"Saved to Recall." It's on the Dream board.</p>
+    <p class="note" style="font-weight:400">The lounge you pick is shared with the team. "Let Recall sort it" stays in your own library.</p>
+  </div></div>
+
+  <h2>On a laptop</h2>
+  <div class="step"><div class="n">↳</div><div>
+    <p>Open the team link. Sign in. Drag photos onto Save. Pick the lounge. Write one sentence. Save.</p>
+  </div></div>
+</main>
+</body>
+</html>

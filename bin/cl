@@ -1,0 +1,188 @@
+#!/bin/zsh
+# cl — the context library from the command line.
+#
+#   cl twin start|stop|status       a scratch copy of the app for testing (ports 4344-4346)
+#   cl team-link [--new]           the one link for the team (open, sign in with Google); --new retires the old one
+#   cl invite <name> [email]       a personal link to Recall on the web (works on 3 browsers)
+#   cl save <url> [--note "..."]   save a web page
+#   cl add <file|folder> ...        add notes, markdown, docx, pdf, txt, html
+#   cl note "text"                  jot a thought straight into the inbox
+#   cl sync                         index anything still unindexed (new items index on their own)
+#   cl ask "question"               search the library
+#   cl status                       what's in the library
+#   cl server stop|start|status     pause or resume the shared server
+#   cl app start|stop|restart|status   the web app on :3344
+#   cl keys                         paste service keys (Higgsfield, Deepgram) into a page; never shown again
+#   cl soul start|stop|restart|status|build   the Soul Map on :3355 (reached at <app>/soul)
+#   cl soul sync                    connect evidence sources for every profile (nightly: com.soulmap.sync)
+#
+set -euo pipefail
+export OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-http://localhost:11434/v1}"
+HERE="$(cd "$(dirname "${0:A}")/.." && pwd)"
+TOOLS="$HERE/tools"
+
+need() { command -v "$1" >/dev/null 2>&1 || { echo "cl: missing $1 — run $HERE/install.sh" >&2; exit 1; }; }
+# Commands that don't touch the library run without gbrain (pasting keys, the twin, onboarding resets).
+case "${1:-}" in higgsfield-key|deepgram-key|keys|welcome-reset|twin) ;; *) need gbrain ;; esac
+
+# The shared server (launchd com.gbrain.serve) owns the single-writer brain while
+# it runs, so route gbrain through it as the `cl` thin client: a separate
+# GBRAIN_HOME whose config points at the server. Child tools (add-doc, save-link)
+# inherit this. The secret comes from the private handoff, never from the config.
+# When the server is stopped (cl server stop), gbrain opens the brain directly.
+CL_HOME="$HOME/.gbrain/serve/cl-home"; CL_CRED="$HOME/.gbrain/serve/clients/cl.json"
+ROUTED=0
+if [[ "${1:-}" != server && -f "$CL_HOME/.gbrain/config.json" && -r "$CL_CRED" ]] \
+   && curl -sf --max-time 2 http://127.0.0.1:3131/health >/dev/null 2>&1; then
+  export GBRAIN_HOME="$CL_HOME"
+  export GBRAIN_REMOTE_CLIENT_SECRET="$(jq -r .client_secret "$CL_CRED")"
+  ROUTED=1
+fi
+
+ensure_ollama() {
+  curl -s localhost:11434/api/version >/dev/null 2>&1 && return
+  (ollama serve >/dev/null 2>&1 &)
+  for i in {1..20}; do curl -s localhost:11434/api/version >/dev/null 2>&1 && return; sleep 0.5; done
+  echo "cl: could not start Ollama" >&2; exit 1
+}
+
+# add_one <file> [type] [prefix]  — md, txt, docx, pdf, html
+add_one() {
+  local f="${1:A}"
+  (cd "$TOOLS" && bun run add-doc.ts "$f" --type "${2:-note}" --prefix "${3:-docs}" ${=CL_ADD_FLAGS}) || true
+}
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+  twin)
+    exec "$HERE/tools/twin.sh" "$@" ;;
+  boards-migrate)
+    exec bun "$HERE/tools/boards-migrate.ts" "$@" ;;
+  team-link)
+    exec bun "$HERE/tools/team-link.ts" "$@" ;;
+  invite)
+    exec bun "$HERE/tools/invite.ts" "$@" ;;
+  deepgram-key)
+    # Copy the key in Deepgram's dashboard first. This saves what's on the clipboard, never prints it.
+    k="$(pbpaste | tr -d '[:space:]')"
+    [[ ${#k} -ge 20 ]] || { echo "The clipboard doesn't hold a Deepgram key. Copy it in the Deepgram dashboard, then run this again." >&2; exit 1; }
+    umask 077; print -rn -- "$k" > "$HOME/.gbrain/serve/deepgram.key"
+    code=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Token $k" https://api.deepgram.com/v1/projects)
+    [[ "$code" == "200" ]] && echo "Saved, and Deepgram accepted it." || echo "Saved, but Deepgram answered $code. Check the key was copied whole."
+    print -n "" | pbcopy ;;
+  keys)
+    # The Keys page, opened in Chrome with that service's box ready: cl keys [deepgram|higgsfield].
+    # Pasting saves it (checked with the service, clipboard emptied); it's never shown again.
+    curl -sf -o /dev/null http://127.0.0.1:3399/status || { nohup bun "$HERE/app/service-keys.ts" >/dev/null 2>&1 & sleep 1; }
+    open -a "Google Chrome" "http://127.0.0.1:3399/?key=${1:-}" 2>/dev/null || open "http://127.0.0.1:3399/?key=${1:-}" ;;
+  higgsfield-key)
+    # Copy the API key in Higgsfield's console (console.higgsfield.ai) first: "key-id:secret", or the id and the
+    # secret one after the other. This saves what's on the clipboard, never prints it.
+    k="$(pbpaste | tr -s '[:space:]' ':' | sed 's/^://; s/:$//')"
+    [[ ${#k} -ge 20 && "$k" == *:* ]] || { echo "The clipboard doesn't hold a Higgsfield key (it needs the key id and the secret). Copy both from console.higgsfield.ai, then run this again." >&2; exit 1; }
+    umask 077; print -rn -- "$k" > "$HOME/.gbrain/serve/higgsfield.key"
+    echo "Saved. It's checked the first time Recall makes a picture."
+    print -n "" | pbcopy ;;
+  welcome-reset)
+    [[ -n "${1:-}" ]] || { echo "usage: cl welcome-reset <email> [--sign-out]  (their next Google sign-in shows the welcome page again; --sign-out also signs them out everywhere, to see it as a first-timer)" >&2; exit 2; }
+    exec bun -e 'import { setWelcomed } from "'"$HERE"'/app/identity.ts"; import { endSessions } from "'"$HERE"'/app/door.ts"; const ok = await setWelcomed(Bun.argv[1], false); console.log(ok ? "reset: next sign-in shows the welcome page" : "no such person"); if (ok && Bun.argv[2] === "--sign-out") console.log(`signed out on ${await endSessions(Bun.argv[1])} browser(s)`);' "$1" "${2:-}" ;;
+  save)
+    ensure_ollama
+    [[ -n "${1:-}" ]] || { echo "usage: cl save <url> [--note \"...\"]" >&2; exit 2; }
+    (cd "$TOOLS" && bun run save-link.ts "$@") ;;
+  add)
+    ensure_ollama
+    [[ $# -gt 0 ]] || { echo "usage: cl add <file|folder> ... [--type note|writing|media] [--prefix docs]" >&2; exit 2; }
+    typ=note; pre=docs; paths=(); export CL_ADD_FLAGS=""
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --type) typ="$2"; shift 2 ;;
+        --prefix) pre="$2"; shift 2 ;;
+        --no-date) CL_ADD_FLAGS="$CL_ADD_FLAGS --no-date"; shift ;;
+        *) paths+=("$1"); shift ;;
+      esac
+    done
+    for p in "${paths[@]}"; do
+      if [[ -d "$p" ]]; then
+        find "$p" -type f \( -iname '*.md' -o -iname '*.txt' -o -iname '*.docx' -o -iname '*.pdf' -o -iname '*.html' \) -not -path '*/.*' | while read -r f; do add_one "$f" "$typ" "$pre"; done
+      else
+        add_one "$p" "$typ" "$pre"
+      fi
+    done ;;
+  note)
+    ensure_ollama
+    gbrain capture "$*" --quiet ;;
+  sync)
+    ensure_ollama
+    if (( ROUTED )); then
+      # The server indexes every new page itself; a backfill must run on the brain directly.
+      echo "New items are indexed by the shared server as they arrive."
+      echo "To backfill older unindexed pages: cl server stop && cl sync && cl server start"
+    else
+      gbrain embed --stale
+    fi ;;
+  ask)
+    ensure_ollama
+    gbrain query "$*" --no-expand ;;
+  status)
+    gbrain list --limit 10; echo; { gbrain doctor --fast 2>&1 || true; } | tail -8 ;;
+  app)
+    # The web app (launchd com.contextlibrary.app) on port 3344; starts at login, restarts if it dies.
+    svc="gui/$(id -u)/com.contextlibrary.app"; plist="$HOME/Library/LaunchAgents/com.contextlibrary.app.plist"
+    case "${1:-status}" in
+      stop)    launchctl bootout "$svc" 2>/dev/null || true; echo "app stopped" ;;
+      start)   launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null || launchctl kickstart -k "$svc"
+               for i in {1..20}; do curl -sf http://localhost:3344/api/health >/dev/null && break; sleep 1; done
+               curl -s -o /dev/null -w "app: %{http_code}\n" http://localhost:3344/api/health ;;
+      restart) launchctl kickstart -k "$svc"; sleep 3; curl -s -o /dev/null -w "app: %{http_code}\n" http://localhost:3344/api/health ;;
+      status)  launchctl print "$svc" 2>/dev/null | grep -E "state|pid" | head -2; curl -s -o /dev/null -w "app: %{http_code}\n" http://localhost:3344/api/health; tail -5 "$HOME/.gbrain/serve/app.err" 2>/dev/null ;;
+      *)       echo "usage: cl app start|stop|restart|status" >&2; exit 2 ;;
+    esac ;;
+  soul)
+    # The Soul Map (launchd com.soulmap.app): the Next app in ../soul-map/app, production
+    # build, on 127.0.0.1:3355. Phones reach it through the web app at /soul (app/soul.ts).
+    svc="gui/$(id -u)/com.soulmap.app"; plist="$HOME/Library/LaunchAgents/com.soulmap.app.plist"
+    soul="$(cd "$HERE/.." && pwd)/soul-map/app"
+    soul_health() { curl -s -o /dev/null -w "soul: %{http_code}\n" http://127.0.0.1:3355/soul; }
+    case "${1:-status}" in
+      build)   [[ -d "$soul" ]] || { echo "cl: no Soul Map at $soul — run $HERE/install.sh" >&2; exit 1; }
+               (cd "$soul" && npm run build)
+               echo "built; apply it with: cl soul restart" ;;
+      stop)    launchctl bootout "$svc" 2>/dev/null || true; echo "soul stopped" ;;
+      start)   [[ -f "$plist" ]] || sed -e "s#__RECALL__#$HERE#g" -e "s#__SOUL__#$soul#g" -e "s#__HOME__#$HOME#g" "$HERE/server/com.soulmap.app.plist" > "$plist"
+               [[ -d "$soul/.next" ]] || echo "cl: no production build in $soul/.next yet — run: cl soul build" >&2
+               launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null || launchctl kickstart -k "$svc"
+               for i in {1..30}; do curl -sf -o /dev/null http://127.0.0.1:3355/soul && break; sleep 1; done
+               soul_health ;;
+      restart) launchctl kickstart -k "$svc"; sleep 3; soul_health ;;
+      status)  launchctl print "$svc" 2>/dev/null | grep -E "state|pid" | head -2; soul_health; tail -5 "$HOME/.gbrain/serve/soulmap.err" 2>/dev/null ;;
+      sync)    # One POST per profile directory; the app runs each as a detached import -> score -> summary job.
+               # Nightly at 03:30 through server/com.soulmap.sync.plist (cp to ~/Library/LaunchAgents, then
+               # launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.soulmap.sync.plist).
+               profiles="$soul/../data/profiles"
+               [[ -d "$profiles" ]] || { echo "cl: no profiles at $profiles" >&2; exit 1; }
+               curl -sf -o /dev/null http://127.0.0.1:3355/soul || { echo "cl: the Soul Map is not running — cl soul start" >&2; exit 1; }
+               for d in "$profiles"/*/; do
+                 p="$(basename "$d")"
+                 printf '%s: ' "$p"
+                 curl -s -X POST -H 'content-type: application/json' -d '{}' "http://127.0.0.1:3355/soul/api/connectors/sync?p=$p"; echo
+               done ;;
+      *)       echo "usage: cl soul start|stop|restart|status|build|sync" >&2; exit 2 ;;
+    esac ;;
+  server)
+    # The shared server (launchd com.gbrain.serve) owns the PGLite brain while it runs.
+    svc="gui/$(id -u)/com.gbrain.serve"; plist="$HOME/Library/LaunchAgents/com.gbrain.serve.plist"
+    case "${1:-status}" in
+      stop)   launchctl bootout "$svc" 2>/dev/null || true   # SIGTERM; waits for a clean exit
+              echo "shared server stopped; Claude Code and the app are offline until: cl server start" ;;
+      start)  launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null || launchctl kickstart "$svc"
+              for i in {1..30}; do curl -sf http://127.0.0.1:3131/health >/dev/null && break; sleep 1; done
+              curl -s http://127.0.0.1:3131/health; echo ;;
+      status) gbrain mcp expose --status ;;
+      *)      echo "usage: cl server stop|start|status" >&2; exit 2 ;;
+    esac ;;
+  ""|-h|--help|help)
+    sed -n '2,13p' "$0" ;;
+  *)
+    echo "cl: unknown command '$cmd'" >&2; sed -n '2,13p' "$0"; exit 2 ;;
+esac

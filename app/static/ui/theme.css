@@ -1,0 +1,509 @@
+/* Recall theme: "dusk over the delta". The delta behind a dimmed veil, blue-tinted glass lit from behind by a fine
+   white-gold rim, tan and beige for words, gold only for light and the one primary action. Daylight is a token swap.
+   Linked after index.html's inline <style> (so it wins at equal specificity) and before the inline style of
+   welcome.html and board.html (so their page-specific rules win there).
+
+   Backdrop: /static/river-2400 and -1200 (.webp and .jpg). The original install uses a painting whose artist
+   isn't known, so it isn't in the public repo; without it the server sends the delta photograph instead
+   (Saloum Delta, Senegal, by Curioso Photography, Unsplash License). */
+
+/* Fonts: loaded by <link> tags in each page's <head> (Cormorant Garamond for titles, Inter for everything else). */
+
+/* ───────────────────────── Tokens ───────────────────────── */
+:root {
+  --ink-950:#0E1519; --ink-900:#14202A; --river-700:#1F3A4D; --river-500:#3E6A86; --river-300:#8FB3C7;
+  --bone:#F2ECE1; --sand-200:#E3D5BE; --sand-400:#C7AE88; --umber-600:#7A6249;
+  --gold:#E2C487; --gold-light:#F4E3B5; --clay:#C0705C;
+  --s1:3px; --s2:5px; --s3:8px; --s4:13px; --s5:21px; --s6:34px; --s7:55px; --s8:89px;
+  --r-thumb:8px; --r-tile:13px; --r-panel:21px;
+  --fs-1:.786rem; --fs0:1rem; --fs1:1.272rem; --fs2:1.618rem; --fs3:2.058rem; --fs4:2.618rem;
+  --font-ui:"Inter", -apple-system, system-ui, sans-serif; --font-display:"Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --t-micro:.236s; --t-state:.382s; --t-space:.618s; --ease:cubic-bezier(.2,.75,.2,1);
+
+  /* dusk: the default on every screen */
+  --bg:var(--ink-950); --fg:var(--bone); --fg-2:var(--sand-200); --muted:var(--sand-400);
+  --accent:var(--gold); --on-accent:var(--ink-900); --link:var(--river-300);
+  --glass:rgba(16,28,36,.52); --glass-dense:rgba(16,28,36,.68); --glass-soft:rgba(242,236,225,.06);
+  --field:rgba(10,17,22,.46); --rim:rgba(242,236,225,.13); --rim-strong:rgba(244,227,181,.34);
+  --lift:0 13px 34px rgba(5,10,14,.34);
+  --halo:0 0 0 .5px rgba(244,227,181,.20), 0 0 8px rgba(244,227,181,.11), 0 0 34px rgba(244,227,181,.07);
+  --halo-on:0 0 0 .5px rgba(244,227,181,.40), 0 0 13px rgba(244,227,181,.20), 0 0 55px rgba(244,227,181,.12);
+  --rimlight:linear-gradient(180deg, rgba(255,246,220,.66), rgba(244,227,181,.18) 38.2%, rgba(244,227,181,.04) 61.8%, rgba(255,246,220,.16));
+  --veil:linear-gradient(180deg, rgba(14,21,25,.74) 0%, rgba(14,21,25,.58) 38.2%, rgba(14,21,25,.80) 100%);
+  --glow:radial-gradient(61.8% 38.2% at 50% 61.8%, rgba(244,227,181,.08), transparent 72%);
+  --shade:0 0 2px rgba(5,10,14,.55), 0 1px 13px rgba(5,10,14,.65);
+  --primary-fill:linear-gradient(180deg, #F6EBCF, var(--gold)); --primary-fg:var(--ink-900);
+  --primary-glow:0 0 0 .5px rgba(255,246,220,.6), 0 0 21px rgba(244,227,181,.28);
+  --lit-fill:rgba(244,227,181,.14); --lit-rim:rgba(244,227,181,.55);
+  --chip-bg:rgba(143,179,199,.13); --chip-fg:#C3D6E0;
+  --danger:#E5A08E;
+  /* the older names index.html's base styles use, pointed at the same tokens */
+  --paper:var(--glass); --line:var(--rim); --accent-soft:rgba(143,179,199,.12);
+  --lock:var(--sand-400); --lock-soft:rgba(199,174,136,.14);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light) { :root {
+  --bg:var(--bone); --fg:var(--ink-900); --fg-2:#34434E; --muted:#6A5540;
+  --accent:var(--river-700); --on-accent:var(--bone); --link:var(--river-700);
+  --glass:rgba(255,252,246,.64); --glass-dense:rgba(255,252,246,.80); --glass-soft:rgba(31,58,77,.05);
+  --field:rgba(255,253,249,.72); --rim:rgba(122,98,73,.18); --rim-strong:rgba(185,146,72,.50);
+  --lift:0 13px 34px rgba(31,58,77,.12);
+  --halo:0 0 0 .5px rgba(201,165,90,.22), 0 0 13px rgba(244,227,181,.35);
+  --halo-on:0 0 0 .5px rgba(201,165,90,.50), 0 0 21px rgba(244,227,181,.60);
+  --rimlight:linear-gradient(180deg, rgba(255,255,255,.95), rgba(226,196,135,.38) 38.2%, rgba(226,196,135,.10) 61.8%, rgba(255,255,255,.55));
+  --veil:linear-gradient(180deg, rgba(242,236,225,.82), rgba(242,236,225,.72) 38.2%, rgba(242,236,225,.86));
+  --glow:radial-gradient(61.8% 38.2% at 50% 61.8%, rgba(255,250,235,.30), transparent 72%);
+  --shade:0 0 2px rgba(242,236,225,.7), 0 0 13px rgba(242,236,225,.9);
+  --primary-fill:var(--river-700); --primary-fg:var(--bone);
+  --primary-glow:0 0 0 .5px rgba(201,165,90,.45), 0 0 13px rgba(244,227,181,.65);
+  --lit-fill:rgba(255,255,255,.78); --lit-rim:rgba(185,146,72,.60);
+  --chip-bg:rgba(31,58,77,.08); --chip-fg:var(--river-700);
+  --danger:#A4432F;
+  --accent-soft:rgba(31,58,77,.07); --lock:var(--umber-600); --lock-soft:rgba(122,98,73,.10);
+  color-scheme:light;
+} }
+/* Find and the project board used to force their own dark tokens; now the tokens above drive everything. */
+body.wide, .pboard {
+  --bg:inherit; --paper:inherit; --fg:inherit; --muted:inherit; --line:inherit; --accent:inherit; --accent-soft:inherit;
+  --on-accent:inherit; --lock:inherit; --lock-soft:inherit; --danger:inherit; color-scheme:inherit;
+}
+
+/* ───────────────────────── Type ───────────────────────── */
+html { -webkit-text-size-adjust:100%; text-size-adjust:100% }
+body, body.wide { font:400 var(--fs0)/1.618 var(--font-ui); background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased; overflow-x:hidden }
+button, input, select, textarea { font-family:var(--font-ui) }
+h1, .bd-title h2, .pname, .sh-top h2, .vz-title { font-family:var(--font-display); font-weight:600; line-height:1.236; letter-spacing:0 }
+header h1 { font-size:var(--fs2); text-shadow:var(--shade) } #who { font-family:var(--font-ui); font-size:var(--fs0); color:var(--fg-2) }
+.bd-title h2 { font-size:var(--fs3) } .pname { font-size:var(--fs1) } .sh-top h2 { font-size:var(--fs2) }
+.muted { color:var(--muted) }
+.status { color:var(--fg); text-shadow:var(--shade) } /* sits on the veil: full-strength text */
+.card:not(#find) .status, .sh .status, #recentbar .status { color:var(--fg-2); text-shadow:none }
+.err { color:var(--danger) } .ok { color:var(--fg); font-weight:600 }
+label.small, .small.muted { color:var(--fg-2) }
+a { color:var(--link) }
+
+/* ───────────────────────── The delta, behind the veil (every screen) ───────────────────────── */
+body::before, body.wide::before { content:""; position:fixed; inset:0; z-index:-2; pointer-events:none; filter:none;
+  background:var(--ink-950) url('/static/river-2400.jpg') center 38.2% / cover no-repeat;
+  background-image:image-set(url('/static/river-2400.webp') type('image/webp'), url('/static/river-2400.jpg') type('image/jpeg')); }
+body::after { content:""; position:fixed; inset:0; z-index:-1; pointer-events:none; background:var(--glow), var(--veil) }
+@media (max-width:900px) {
+  body::before, body.wide::before {
+    background-image:url('/static/river-1200.jpg');
+    background-image:image-set(url('/static/river-1200.webp') type('image/webp'), url('/static/river-1200.jpg') type('image/jpeg'));
+    background-position:50% center }
+}
+/* The board is a window onto the same world: the photo stays put while the board grows over it. */
+.pboard { background:var(--bg); color:var(--fg); border:1px solid var(--rim); box-shadow:var(--lift), var(--halo) }
+.pboard.open { border-color:transparent; box-shadow:none }
+.pboard::before { content:""; position:absolute; inset:0; z-index:-1; filter:none; pointer-events:none;
+  background:var(--ink-950) url('/static/river-2400.jpg') center 38.2% / cover no-repeat fixed;
+  background-image:image-set(url('/static/river-2400.webp') type('image/webp'), url('/static/river-2400.jpg') type('image/jpeg')); }
+.pboard::after { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; background:var(--glow), var(--veil) }
+@media (max-width:900px) { .pboard::before {
+  background-image:url('/static/river-1200.jpg');
+  background-image:image-set(url('/static/river-1200.webp') type('image/webp'), url('/static/river-1200.jpg') type('image/jpeg'));
+  background-position:50% center } }
+/* Phones and tablets ignore background-attachment:fixed and scale the photo with the board; keep it centred instead. */
+@media (hover:none) { .pboard::before { background-attachment:scroll } }
+
+/* ───────────────────────── Glass, lit from behind ───────────────────────── */
+.card, .panel, .bucket, .due, .item:not(.rtile), .cue, .proposal, .receipt, #recentbar, .mv, .proj, .proj-hit, .photo, .shelf, .teamlink,
+body.wide .due, body.wide #find .item:not(.rtile) {
+  background:var(--glass); border:1px solid var(--rim); color:var(--fg);
+  -webkit-backdrop-filter:blur(21px) saturate(1.15); backdrop-filter:blur(21px) saturate(1.15);
+  box-shadow:var(--lift), var(--halo); }
+.card, .panel, .bucket, #recentbar, .mv { border-radius:var(--r-panel) }
+.due, .item:not(.rtile), .cue, .proposal, .receipt, .proj, .proj-hit, .photo, .shelf, .teamlink, .bd-card, .bd-pic { border-radius:var(--r-tile) }
+/* The fine white-gold rim: brightest along the top edge, as if lit from behind. */
+.card, .panel, .bucket, .due, .item:not(.rtile), .cue, .bd-card, .bd-pic, #recentbar { position:relative; isolation:isolate }
+.card::after, .panel::after, .bucket::after, .due::after, .item:not(.rtile)::after, .cue::after, .bd-card::after, .bd-pic::after, #recentbar::after {
+  content:""; position:absolute; inset:0; border-radius:inherit; padding:1px; pointer-events:none; z-index:2;
+  background:var(--rimlight);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite:exclude; }
+body.wide #find.card { background:none; border:0; padding:0; box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; isolation:auto }
+body.wide #find.card::after { display:none }
+.card { padding:var(--s5) }
+.panel, .bd-pic, .bd-card, .item, .cue, .proj, .photo, .shelf, .teamlink, .proj-hit {
+  transition:box-shadow var(--t-state) var(--ease), border-color var(--t-state) var(--ease), background var(--t-state) var(--ease), flex-grow var(--t-state) var(--ease), opacity var(--t-state), transform var(--t-state) }
+.panel { transition:flex-grow var(--t-state) var(--ease), height var(--t-state) var(--ease), box-shadow var(--t-state) var(--ease), border-color var(--t-state), background var(--t-state) }
+.dock .panel.on, .bd-pic:hover, .bd-card:hover, .item:not(.rtile):hover, .proj:hover, .photo:hover, .shelf:hover, .teamlink:hover, .proj-hit:hover {
+  box-shadow:var(--lift), var(--halo-on); border-color:var(--rim-strong) }
+.dock .panel.on { background:var(--glass-dense) }
+.mosaic i { border-radius:var(--r-thumb); box-shadow:inset 0 0 0 .5px rgba(242,236,225,.10) }
+
+/* ───────────────────────── Header and tabs ───────────────────────── */
+header { margin-bottom:var(--s5) }
+nav { gap:var(--s2) }
+.badge { background:var(--gold); color:var(--ink-900); font-weight:600; margin-left:var(--s2) }
+@media (prefers-color-scheme: light) { .badge { background:var(--river-700); color:var(--bone) } }
+
+/* ───────────────────────── Buttons: one system ─────────────────────────
+   Every button on every screen is one of four kinds, in three sizes:
+     secondary  glass fill, fine rim, top sheen (the default)
+     primary    .primary: the gold fill, used once per screen for the action people came to do
+     quiet      .quiet: no fill, no rim, for Close and Cancel
+     icon       .bd-close, .viz-x: a round secondary, the same height as its row
+   Sizes: --btn-h (38, or 44 on touch screens), small chips (32 / 38), large (.big, 55).
+   States: hover lifts the rim, pressed sinks 3%, focus-visible is a river-blue ring, disabled fades,
+   and aria-busy="true" swaps the label for a spinner without changing the button's size. */
+:root {
+  --btn-h:38px; --btn-h-sm:32px; --btn-h-lg:55px; --btn-pad:var(--s4); --btn-pad-sm:var(--s4); --btn-pad-lg:var(--s5);
+  --btn-fill:rgba(242,236,225,.07); --btn-fill-hover:rgba(242,236,225,.12); --btn-fill-press:rgba(242,236,225,.04);
+  --btn-rim:rgba(242,236,225,.16); --btn-rim-hover:rgba(244,227,181,.44);
+  --btn-sheen:inset 0 1px 0 rgba(255,246,220,.10);
+  --btn-primary-sheen:inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(122,98,73,.18);
+}
+@media (prefers-color-scheme: light) { :root {
+  --btn-fill:rgba(255,253,249,.58); --btn-fill-hover:rgba(255,253,249,.86); --btn-fill-press:rgba(255,253,249,.42);
+  --btn-rim:rgba(122,98,73,.22); --btn-rim-hover:rgba(185,146,72,.58);
+  --btn-sheen:inset 0 1px 0 rgba(255,255,255,.75);
+  --btn-primary-sheen:inset 0 1px 0 rgba(255,255,255,.18);
+} }
+@media (pointer:coarse) { :root { --btn-h:44px; --btn-h-sm:38px } }
+
+:is(nav button, .primary, .bd-actions button, .actions button, .actions a, .sh-links a, .sh-links button, .inv-act button, a.inv-open,
+  .moveto button, .seg button, .cue .copts button, .toast button, .capture .big, .bd-topics button, .bd-people button,
+  .viz-btn, .viz-mic, .viz-add, .viz-keepbtn, .viz-keepgo, .viz-over, .bd-close, .viz-x) {
+  --bf:var(--fg); --bb:var(--btn-fill); --br:var(--btn-rim); --bs:var(--btn-sheen);
+  position:relative; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; gap:var(--s3);
+  min-height:var(--btn-h); margin:0; padding:0 var(--btn-pad);
+  font:500 .875rem/1.2 var(--font-ui); letter-spacing:.01em; text-align:center; text-decoration:none; white-space:nowrap;
+  cursor:pointer; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+  color:var(--bf); background-color:var(--bb); border:1px solid var(--br); border-radius:999px; box-shadow:var(--bs);
+  -webkit-backdrop-filter:blur(13px) saturate(1.15); backdrop-filter:blur(13px) saturate(1.15);
+  transition:background-color var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease), box-shadow var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease), transform var(--t-micro) var(--ease), opacity var(--t-micro) var(--ease), filter var(--t-micro) var(--ease) }
+@media (hover:hover) {
+  :is(nav button, .primary, .bd-actions button, .actions button, .actions a, .sh-links a, .sh-links button, .inv-act button, a.inv-open,
+    .moveto button, .seg button, .cue .copts button, .toast button, .capture .big, .bd-topics button, .bd-people button,
+    .viz-btn, .viz-mic, .viz-add, .viz-keepbtn, .viz-keepgo, .viz-over, .bd-close, .viz-x):hover {
+    --bb:var(--btn-fill-hover); --br:var(--btn-rim-hover); --bs:var(--btn-sheen), var(--halo) }
+}
+:is(nav button, .primary, .bd-actions button, .actions button, .actions a, .sh-links a, .sh-links button, .inv-act button, a.inv-open,
+  .moveto button, .seg button, .cue .copts button, .toast button, .capture .big, .bd-topics button, .bd-people button,
+  .viz-btn, .viz-mic, .viz-add, .viz-keepbtn, .viz-keepgo, .viz-over, .bd-close, .viz-x):active {
+  --bb:var(--btn-fill-press); transform:scale(.97); transition-duration:80ms }
+:is(nav button, .primary, .bd-actions button, .actions button, .actions a, .sh-links a, .sh-links button, .inv-act button, a.inv-open,
+  .moveto button, .seg button, .cue .copts button, .toast button, .capture .big, .bd-topics button, .bd-people button,
+  .viz-btn, .viz-mic, .viz-add, .viz-keepbtn, .viz-keepgo, .viz-over, .bd-close, .viz-x):focus-visible {
+  outline:2px solid var(--river-300); outline-offset:2px }
+@media (prefers-color-scheme: light) { :focus-visible { outline-color:var(--river-500) !important } }
+/* Selected: a lit fill and a gold rim, never the gold fill (that belongs to the primary). */
+:is(nav button, .bd-topics button, .bd-people button, .seg button, .bd-actions button)[aria-current="page"], :is(nav button, .bd-topics button, .bd-people button, .seg button, .bd-actions button)[aria-pressed="true"],
+:is(nav button, .bd-topics button, .bd-people button, .seg button, .bd-actions button)[aria-current="page"]:hover, :is(nav button, .bd-topics button, .bd-people button, .seg button, .bd-actions button)[aria-pressed="true"]:hover {
+  --bb:var(--lit-fill); --br:var(--lit-rim); --bs:var(--btn-sheen), var(--halo-on); --bf:var(--fg) }
+/* Primary: the gold. */
+:is(.primary, .bd-actions button.primary, .actions button.primary, .inv-act button.primary, .viz-btn.primary, .viz-keepgo.primary),
+.cue:first-child .copts button:first-child {
+  --bf:var(--primary-fg); --br:transparent; --bs:var(--primary-glow), var(--btn-primary-sheen);
+  background:var(--primary-fill); font-weight:600 }
+@media (hover:hover) {
+  :is(.primary, .bd-actions button.primary, .actions button.primary, .inv-act button.primary, .viz-btn.primary, .viz-keepgo.primary):hover,
+  .cue:first-child .copts button:first-child:hover {
+    --br:transparent; --bs:var(--primary-glow), 0 0 34px rgba(244,227,181,.30), var(--btn-primary-sheen); filter:brightness(1.04) }
+}
+:is(.primary, .bd-actions button.primary, .actions button.primary, .inv-act button.primary, .viz-btn.primary):active { filter:brightness(.96) }
+/* Quiet: Close, Cancel. */
+:is(.inv-act button, .bd-actions button, .actions button).quiet { --bb:transparent; --br:transparent; --bs:none; --bf:var(--fg-2); -webkit-backdrop-filter:none; backdrop-filter:none }
+@media (hover:hover) { :is(.inv-act button, .bd-actions button, .actions button).quiet:hover { --bb:var(--btn-fill); --br:var(--btn-rim); --bs:none; --bf:var(--fg) } }
+/* Danger: Delete. Red only on hover, so a list of them doesn't shout. */
+:is(.actions button, .sh-links button).danger, #shdel { --bf:var(--danger); --br:color-mix(in srgb, var(--danger) 45%, transparent) }
+@media (hover:hover) { :is(.actions button, .sh-links button).danger:hover, #shdel:hover { --bb:var(--clay); --br:transparent; --bf:var(--bone); --bs:none } }
+/* Disabled and busy. */
+:is(nav button, .primary, .bd-actions button, .actions button, .sh-links button, .inv-act button, .moveto button, .cue .copts button,
+  .viz-btn, .viz-mic, .viz-add, .viz-keepbtn, .viz-keepgo, .viz-over):disabled {
+  opacity:.42; cursor:default; transform:none; filter:none; --bs:none }
+[aria-busy="true"]:is(.primary, .bd-actions button, .actions button, .inv-act button, .viz-btn, .viz-keepgo) { color:transparent !important; cursor:progress; opacity:1 !important }
+[aria-busy="true"]:is(.primary, .bd-actions button, .actions button, .inv-act button, .viz-btn, .viz-keepgo)::after {
+  content:""; position:absolute; inset:0; margin:auto; width:16px; height:16px; box-sizing:border-box; border-radius:50%;
+  border:1.5px solid color-mix(in srgb, var(--bf) 28%, transparent); border-top-color:var(--bf); animation:btnspin .618s linear infinite }
+@keyframes btnspin { to { transform:rotate(360deg) } }
+/* Sizes. */
+:is(nav button, .primary, .bd-actions button, .actions button, .actions a, .sh-links a, .sh-links button, .inv-act button, a.inv-open,
+  .moveto button, .seg button, .cue .copts button, .toast button, .capture .big, .bd-topics button, .bd-people button,
+  .viz-btn, .viz-mic, .viz-add, .viz-keepbtn, .viz-keepgo, .viz-over, .bd-close, .viz-x):is(.bd-topics button, .bd-people button, .moveto button, .seg button, .toast button, a.inv-open, .viz-over, .viz-keepbtn, .sh-links a, .sh-links button) {
+  min-height:var(--btn-h-sm); padding:0 var(--btn-pad-sm); font-size:.8125rem }
+:is(nav button, .primary, .bd-actions button, .actions button, .actions a, .sh-links a, .sh-links button, .inv-act button, a.inv-open,
+  .moveto button, .seg button, .cue .copts button, .toast button, .capture .big, .bd-topics button, .bd-people button,
+  .viz-btn, .viz-mic, .viz-add, .viz-keepbtn, .viz-keepgo, .viz-over, .bd-close, .viz-x):is(.bd-topics.sub button) { font-size:var(--fs-1) }
+:is(nav button, .primary, .bd-actions button, .actions button, .actions a, .sh-links a, .sh-links button, .inv-act button, a.inv-open,
+  .moveto button, .seg button, .cue .copts button, .toast button, .capture .big, .bd-topics button, .bd-people button,
+  .viz-btn, .viz-mic, .viz-add, .viz-keepbtn, .viz-keepgo, .viz-over, .bd-close, .viz-x):is(.primary, .capture button).big { min-height:var(--btn-h-lg); width:100%; padding:0 var(--btn-pad-lg); border-radius:var(--r-panel); font-size:1.0625rem; font-weight:600 }
+/* Icon buttons: round, the height of the row. */
+:is(nav button, .primary, .bd-actions button, .actions button, .actions a, .sh-links a, .sh-links button, .inv-act button, a.inv-open,
+  .moveto button, .seg button, .cue .copts button, .toast button, .capture .big, .bd-topics button, .bd-people button,
+  .viz-btn, .viz-mic, .viz-add, .viz-keepbtn, .viz-keepgo, .viz-over, .bd-close, .viz-x):is(.bd-close, .viz-x) { flex:none; width:44px; min-height:44px; height:44px; padding:0; border-radius:50% }
+:is(nav button, .primary, .bd-actions button, .actions button, .actions a, .sh-links a, .sh-links button, .inv-act button, a.inv-open,
+  .moveto button, .seg button, .cue .copts button, .toast button, .capture .big, .bd-topics button, .bd-people button,
+  .viz-btn, .viz-mic, .viz-add, .viz-keepbtn, .viz-keepgo, .viz-over, .bd-close, .viz-x):is(.viz-x) { width:var(--btn-h); height:var(--btn-h); min-height:var(--btn-h) }
+:is(.bd-close, .viz-x) svg { width:18px; height:18px; stroke:currentColor; stroke-width:1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; pointer-events:none }
+/* Tabs: the same weight selected or not, so the row never shifts by a pixel. */
+nav button, body.wide nav button { font-weight:500 }
+/* A person pill on the team board starts with their face. */
+:is(nav button, .primary, .bd-actions button, .actions button, .actions a, .sh-links a, .sh-links button, .inv-act button, a.inv-open,
+  .moveto button, .seg button, .cue .copts button, .toast button, .capture .big, .bd-topics button, .bd-people button,
+  .viz-btn, .viz-mic, .viz-add, .viz-keepbtn, .viz-keepgo, .viz-over, .bd-close, .viz-x):is(.bd-people button):has(.who) { padding-left:var(--s1) }
+.bd-topics button span, .bd-people button span:last-child { opacity:.62; font-variant-numeric:tabular-nums }
+/* The one primary on a board gives way while Creator mode is open: then Create is the action. */
+.pboard.viz-on .bd-actions .primary { --bf:var(--fg); --br:var(--btn-rim); --bs:var(--btn-sheen); background:var(--btn-fill); font-weight:500 }
+/* Creator mode, on: the moving rainbow rim (index.html) keeps the button's size; 1 px of padding pays for the 2 px rim. */
+.pboard .bd-actions .creatorbtn.on { --bs:0 0 21px rgba(255,120,200,.40), 0 0 34px rgba(112,161,255,.30); --bf:#fff; padding:0 calc(var(--btn-pad) - 1px) }
+.linkbtn, .crumb button { color:var(--link) }
+.proj-link { color:var(--link) !important }
+:focus-visible { outline:2px solid var(--river-300); outline-offset:3px }
+.panel:focus-visible, .bd-pic:focus-visible, .bd-card:focus-visible { outline:2px solid var(--river-300); outline-offset:2px }
+@media (prefers-color-scheme: light) { .panel:focus-visible, .bd-pic:focus-visible, .bd-card:focus-visible { outline-color:var(--river-500) } }
+.savebar { background:none }
+.receipt select, .state { font-family:var(--font-ui); background:var(--glass-soft); color:var(--fg); border:1px solid var(--rim); border-radius:999px }
+
+/* ───────────────────────── Fields ───────────────────────── */
+textarea, input[type=text], input[type=url], input[type=search], select {
+  background:var(--field); color:var(--fg); border:1px solid var(--rim); border-radius:var(--r-tile);
+  transition:border-color var(--t-micro), box-shadow var(--t-micro) }
+textarea::placeholder, input::placeholder { color:var(--muted); opacity:1 }
+textarea:focus, input:focus { outline:none; border-color:var(--rim-strong); box-shadow:var(--halo-on) }
+#q, body.wide #q { font:400 var(--fs1)/1.4 var(--font-ui); padding:var(--s4) var(--s5); border-radius:var(--r-panel);
+  background:var(--glass); border:1px solid var(--rim); box-shadow:var(--lift), var(--halo);
+  -webkit-backdrop-filter:blur(21px) saturate(1.15); backdrop-filter:blur(21px) saturate(1.15) }
+#q:focus, body.wide #q:focus { outline:none; border-color:var(--rim-strong); box-shadow:var(--lift), var(--halo-on) }
+.drop { border:1.5px dashed color-mix(in srgb, var(--muted) 60%, transparent); border-radius:var(--r-panel); color:var(--fg-2); background:var(--glass-soft);
+  transition:border-color var(--t-micro), background var(--t-micro), box-shadow var(--t-micro) }
+.drop strong { color:var(--fg); font-weight:600 }
+.drop.over, .drop:hover, body.dragging .drop { border-color:var(--lit-rim); background:var(--lit-fill); box-shadow:var(--halo-on) }
+@media (prefers-color-scheme: dark) { .drop.over, .drop:hover, body.dragging .drop { background:rgba(244,227,181,.07) } }
+.drop .linkline { background:var(--field) }
+.chip { background:var(--chip-bg); color:var(--chip-fg); font-size:var(--fs-1) }
+.chip.lock { background:var(--lock-soft); color:var(--lock) }
+.mic { background:var(--glass); border:1px solid var(--rim); color:var(--fg); -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px);
+  transition:border-color var(--t-micro), box-shadow var(--t-micro) }
+.mic:hover { border-color:var(--rim-strong); box-shadow:var(--halo) }
+.mic.rec { background:var(--bone); border-color:var(--bone); color:var(--ink-900); box-shadow:var(--halo-on) }
+.notes-wrap { border-radius:var(--r-tile) }
+@media (prefers-color-scheme: light) {
+  .mic.rec { background:var(--river-700); border-color:var(--river-700); color:var(--bone) }
+  .notes-wrap.listening textarea { border-color:var(--river-500);
+    box-shadow:0 0 0 1px rgba(62,106,134,.9), 0 0 calc(8px + 22px * var(--vol)) calc(1px + 5px * var(--vol)) rgba(226,196,135, calc(.35 + .5 * var(--vol))) }
+  .ripple { background:radial-gradient(circle, rgba(226,196,135,.55) 0%, rgba(226,196,135,.18) 45%, rgba(226,196,135,0) 70%); mix-blend-mode:multiply }
+}
+.receipt { padding:var(--s4) var(--s5) } .receipt.local { background:var(--glass) ; border-color:color-mix(in srgb, var(--lock) 40%, transparent) }
+.proposal { border-style:dashed; border-color:color-mix(in srgb, var(--muted) 55%, transparent) }
+details.more summary { color:var(--fg-2) }
+.reader pre, .reader-hero, .item .hero { background:var(--field) }
+
+/* ───────────────────────── Find ───────────────────────── */
+body.wide .wrap { max-width:1440px }
+.stage-label, .rb-label { font:500 var(--fs-1)/1.4 var(--font-ui); letter-spacing:.16em; text-transform:uppercase; color:var(--fg-2); text-shadow:var(--shade) }
+#recentbar .rb-label { text-shadow:none; color:var(--muted) }
+body.wide #find .status, body.wide .stage-label { text-shadow:var(--shade) }
+#recentbar { padding:var(--s4); margin-top:var(--s3); background:var(--glass-dense) }
+.rtile img, .rtile i { border-radius:var(--r-tile); background:var(--glass-soft); color:var(--muted); box-shadow:inset 0 0 0 .5px var(--rim) }
+.rtile span { font-size:var(--fs-1); color:var(--fg-2) }
+.rtile:hover img, .rtile:hover i { box-shadow:inset 0 0 0 .5px var(--rim-strong), var(--halo-on) }
+.rtile.filing { animation:filing 2.618s ease-in-out infinite }
+.due { padding:var(--s4); display:grid; gap:var(--s3) }
+.due > b { font:500 var(--fs-1)/1.4 var(--font-ui); letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin:0 }
+.due .item:not(.rtile), body.wide .due .item:not(.rtile), body.wide #find .due .item { margin:0; background:var(--glass-soft); box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none }
+.due .item:not(.rtile)::after { display:none }
+.due .item:not(.rtile):hover { box-shadow:var(--halo-on) }
+.item:not(.rtile) { padding:var(--s4) var(--s5) }
+.item.tile { padding:0 }
+.item b { font-weight:600 } .item span { color:var(--fg-2) } .item .lk { color:var(--lock) }
+.item.pending { opacity:.72 }
+.list { gap:var(--s3) }
+#find .stage { margin-top:var(--s5) }
+.dock { gap:var(--s3) }
+.panel { border-radius:var(--r-panel); background:var(--glass); border:1px solid var(--rim) }
+.mosaic { padding:var(--s2); gap:var(--s1) }
+.ptext { padding:var(--s3) var(--s4) var(--s4); gap:var(--s1) }
+.pname { font-size:var(--fs1); font-weight:600; letter-spacing:.005em }
+.pmeta { color:var(--muted); font-size:var(--fs-1) }
+.pkicker { font:500 .7rem/1.4 var(--font-ui); letter-spacing:.16em; text-transform:uppercase; color:var(--gold) }
+@media (prefers-color-scheme: light) { .pkicker { color:#8A6A2E } }
+.pchip { font-size:.72rem; color:var(--fg-2); border:1px solid var(--rim); background:var(--glass-soft) }
+.panel.teampanel { border-color:var(--rim-strong) }
+/* A project with no pictures: a typographic cover, not an empty slab. */
+.panel.empty { justify-content:flex-end;
+  background:radial-gradient(100% 61.8% at 50% 0%, rgba(62,106,134,.32), transparent 70%), var(--glass) }
+@media (prefers-color-scheme: light) { .panel.empty { background:radial-gradient(100% 61.8% at 50% 0%, rgba(143,179,199,.34), transparent 70%), var(--glass) } }
+.panel.empty .mosaic { display:none }
+.panel.empty .ptext { flex:1 1 auto; align-content:end; padding:var(--s5) }
+.panel.empty .pname { font-size:var(--fs2); white-space:normal; line-height:1.15 }
+@media (max-width:720px) {
+  .panel.empty { justify-content:flex-start }
+  .panel.empty .ptext { padding:var(--s4) var(--s5); align-content:center }
+  .panel.empty .pname { font-size:var(--fs1); white-space:nowrap }
+  .dock { gap:var(--s3) }
+}
+/* Carrying something onto a project. */
+body.carrying .panel:not(.teampanel) { border-color:var(--rim-strong); border-style:dashed }
+.panel.drop { border-color:var(--gold-light) !important; border-style:solid !important; box-shadow:0 0 0 1px var(--gold-light), 0 0 34px rgba(244,227,181,.35) !important }
+@keyframes took { 40% { box-shadow:0 0 0 1.5px var(--gold-light), 0 0 55px rgba(244,227,181,.50) } }
+@keyframes bump { 30% { color:var(--gold-light); transform:scale(1.08) } }
+@media (prefers-color-scheme: light) { @keyframes bump { 30% { color:var(--river-700); transform:scale(1.08) } } }
+.mv { padding:var(--s4) }
+.mv-it { border:1.5px solid var(--lit-rim); background:var(--glass-soft); border-radius:var(--r-tile) }
+.mv-it i { color:var(--muted) }
+.mv-it.off { border-color:transparent }
+.proj-hit { border-color:var(--rim-strong) }
+.proj .nocover { background:radial-gradient(100% 80% at 50% 0%, rgba(62,106,134,.35), transparent 70%) }
+.proj .cover, .photo img, .proj-hit img { background:var(--field) }
+
+/* An item opened in Find (the view with a ← Back crumb) sits on glass, not straight on the photo. */
+#browse:has(> .crumb) { margin-top:var(--s4); padding:var(--s5); border-radius:var(--r-panel); background:var(--glass-dense); border:1px solid var(--rim);
+  -webkit-backdrop-filter:blur(21px) saturate(1.15); backdrop-filter:blur(21px) saturate(1.15); box-shadow:var(--lift), var(--halo), inset 0 1px 0 rgba(255,246,220,.22) }
+#browse:has(> .crumb) .status { color:var(--fg-2); text-shadow:none }
+#browse:has(> .crumb) h2 { font:600 var(--fs2)/1.236 var(--font-display) }
+.crumb { color:var(--muted) }
+
+/* ───────────────────────── Clarify ───────────────────────── */
+.cue { padding:var(--s4); gap:var(--s4); margin-bottom:var(--s4) }
+.cue .cthumb { border-radius:var(--r-thumb); background:var(--field) }
+.cue .cthumb.blank { color:var(--muted); background:radial-gradient(100% 80% at 50% 0%, rgba(62,106,134,.35), transparent 75%), var(--field); box-shadow:inset 0 0 0 .5px var(--rim) }
+.cue .csnip { color:var(--fg-2) }
+/* The suggested answer on every card has a brighter rim; on the top card it is the gold primary (Buttons, above). */
+.cue .copts button:first-child { --br:var(--rim-strong); font-weight:600; background:var(--bb); color:var(--bf); border-color:var(--br) } /* beats index.html's old gold fill */
+.cue .copts kbd { font:500 .6875rem/1 var(--font-ui); opacity:.55; margin-right:var(--s1) }
+
+/* ───────────────────────── The project board ───────────────────────── */
+.bd-title h2 { text-shadow:var(--shade) }
+.bd-title span { color:var(--fg-2); font-size:var(--fs-1); text-shadow:var(--shade) }
+.bd-actions { gap:var(--s3) }
+.bd-topics { gap:var(--s3) }
+/* Buckets take the room their content needs, not half the screen. */
+.bd-grid { gap:var(--s4); align-items:start }
+.bucket { max-height:100%; align-self:start; background:var(--glass) }
+.bucket h3 { font:500 var(--fs-1)/1.4 var(--font-ui); letter-spacing:.16em; text-transform:uppercase; color:var(--muted); padding:var(--s4) var(--s4) var(--s3) }
+.bucket h3 span { color:var(--gold) }
+@media (prefers-color-scheme: light) { .bucket h3 span { color:#8A6A2E } }
+.bk { gap:var(--s3); padding:0 var(--s4) var(--s4) }
+.bucket:not(.pictures) .bk { grid-template-columns:repeat(auto-fill, minmax(min(100%, 233px), 1fr)) }
+.bucket.pictures .bk { column-gap:var(--s3) }
+.bd-pic { background:var(--field); margin:0 0 var(--s3) }
+.bd-pic em { background:rgba(14,21,25,.62); color:var(--bone) }
+.bd-pic span { color:var(--bone); background:linear-gradient(transparent, rgba(14,21,25,.78)) }
+.bd-card { background:var(--glass-soft); border:1px solid var(--rim); padding:var(--s4) }
+.bd-card .ic { color:var(--muted) }
+.bd-card p { color:var(--fg-2) }
+.bd-card small { color:var(--muted) }
+.bd-card .host { color:var(--link) }
+.bd-card .lt { border-radius:var(--r-thumb) }
+/* Item sheet: the same glass, denser. */
+.bd-sheet { background:rgba(14,21,25,.42) }
+@media (prefers-color-scheme: light) { .bd-sheet { background:rgba(242,236,225,.46) } }
+.bd-sheet .sh { background:var(--glass-dense); border:1px solid var(--rim); border-radius:var(--r-panel); gap:var(--s4); padding:var(--s5); color:var(--fg);
+  -webkit-backdrop-filter:blur(34px) saturate(1.15); backdrop-filter:blur(34px) saturate(1.15);
+  box-shadow:var(--lift), var(--halo-on), inset 0 1px 0 rgba(255,246,220,.30) }
+.sh-top span { color:var(--muted) }
+.sh img, .sh video { border-radius:var(--r-tile); background:var(--field) }
+.sh .said { font-size:var(--fs1); line-height:1.5; color:var(--fg) }
+.sh .cap { color:var(--fg-2) }
+.sh .moveto input { background:var(--field); border-color:var(--rim); color:var(--fg) }
+.sh .moveto span, .moveto span { color:var(--muted) }
+@media (max-width:820px) {
+  .bd-title h2 { font-size:var(--fs2) }
+  .bd-actions { gap:var(--s3) }
+}
+@media (prefers-color-scheme: dark) { .bd-preview .mosaic { opacity:.9 } }
+
+/* ───────────────────────── Delete on hover (right-hand side) ───────────────────────── */
+.tile-wrap { position:relative; break-inside:avoid; margin:0 0 var(--s3) }
+.tile-wrap > .bd-pic, .tile-wrap > .bd-card, .tile-wrap > .item:not(.rtile) { margin:0; width:100% } /* a <button> doesn't stretch by itself */
+.list .tile-wrap, .due .tile-wrap, .bucket:not(.pictures) .tile-wrap, .rb-strip .tile-wrap { margin:0 }
+.tile-x { all:unset; box-sizing:border-box; position:absolute; top:var(--s3); right:var(--s3); z-index:3; width:34px; height:34px; border-radius:50%;
+  display:grid; place-items:center; cursor:pointer; color:var(--bone); background:rgba(14,21,25,.62); border:1px solid rgba(242,236,225,.18);
+  -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px); opacity:0; transform:scale(.85);
+  transition:opacity var(--t-micro) var(--ease), transform var(--t-micro) var(--ease), background var(--t-micro), border-color var(--t-micro) }
+.tile-x svg { width:16px; height:16px; stroke:currentColor; stroke-width:1.5; fill:none }
+.tile-x::before { content:""; position:absolute; inset:-5px } /* 44 px hit area */
+.tile-wrap:hover .tile-x, .tile-wrap:focus-within .tile-x { opacity:1; transform:none }
+.tile-x:hover, .tile-x:focus-visible { background:var(--clay); border-color:transparent; color:var(--bone) }
+.rb-strip .tile-x { top:var(--s2); right:var(--s2); width:28px; height:28px }
+@media (hover:none) { .tile-x { display:none } } /* phones: Delete lives in the item sheet */
+.tile-wrap.gone { animation:gone var(--t-state) var(--ease) forwards } @keyframes gone { to { opacity:0; transform:scale(.94) } }
+.toast { position:fixed; left:50%; bottom:calc(var(--s6) + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); z-index:90;
+  display:flex; align-items:center; gap:var(--s4); max-width:calc(100vw - 32px);
+  padding:var(--s3) var(--s3) var(--s3) var(--s5); border-radius:999px; color:var(--fg); font-size:.9rem;
+  background:var(--glass-dense); border:1px solid var(--rim); box-shadow:var(--lift), var(--halo);
+  -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px); animation:toastin var(--t-state) var(--ease) }
+@keyframes toastin { from { opacity:0; transform:translate(-50%, 8px) } }
+
+/* ───────────────────────── The person's avatar (top right of a project on a team board) ───────────────────────── */
+.who { width:34px; height:34px; border-radius:50%; overflow:hidden; flex:none;
+  display:grid; place-items:center; background:var(--river-500); color:var(--bone); font:600 var(--fs1)/1 var(--font-display);
+  box-shadow:0 0 0 1.5px rgba(242,236,225,.92), 0 0 13px rgba(244,227,181,.35); }
+.who img { width:100%; height:100%; object-fit:cover; display:block }
+/* In a panel's corner: on its own, or stacked in .faces (a project two people share overlaps by 13). */
+.faces { position:absolute; top:var(--s3); right:var(--s3); z-index:3; display:flex; flex-direction:row-reverse }
+.faces .who + .who { margin-right:-13px }
+.panel > .who { position:absolute; top:var(--s3); right:var(--s3); z-index:3 }
+.panel > .who + .who { right:calc(var(--s3) + 21px) }
+@media (max-width:720px) { .panel:has(> .faces, > .who) .ptext { padding-right:calc(var(--s4) + 34px) } }
+/* Inside a person filter pill on the team board. */
+.bd-people { gap:var(--s3) }
+.bd-people .who { width:26px; height:26px; font-size:var(--fs0); box-shadow:0 0 0 1px rgba(242,236,225,.85) }
+/* A recent save the librarian has a question about: lit, not alarmed. */
+.tile-wrap.asks .rtile img, .tile-wrap.asks .rtile i { box-shadow:0 0 0 1.5px var(--gold-light), 0 0 13px rgba(244,227,181,.35) }
+@media (prefers-color-scheme: light) { .tile-wrap.asks .rtile img, .tile-wrap.asks .rtile i { box-shadow:0 0 0 1.5px var(--lit-rim), 0 0 13px rgba(226,196,135,.55) } }
+
+/* ───────────────────────── Phones ───────────────────────── */
+@media (max-width:520px) {
+  .wrap { padding-left:var(--s4); padding-right:var(--s4) }
+  header h1 { font-size:var(--fs1) }
+  nav { gap:var(--s1) } nav button, body.wide nav button { padding:var(--s3) var(--s1); min-width:0 }
+  .card { padding:var(--s4) }
+  #q, body.wide #q { font-size:var(--fs0); padding:var(--s4) }
+}
+
+/* ───────────────────────── Motion ───────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration:.01ms !important; animation-duration:.01ms !important; animation-iteration-count:1 !important }
+  .rtile.filing { animation:none }
+}
+
+/* ───────────────────────── Polish: views, loading, pictures, dialogs ───────────────────────── */
+/* Moving between tabs: the new view fades in where it stands (no slide, so nothing shifts). */
+section.card:not([hidden]) { animation:viewin var(--t-state) var(--ease) }
+@keyframes viewin { from { opacity:0 } }
+/* Pictures fade in when they arrive (index.html marks them .in); the tile behind holds their place. */
+:is(.bd-pic, .rtile, .bd-card, .item, .proj-hit, .proj, .photo, .mv-it, .viz-res, .sh, .cue, #browse, .chip) img { transition:opacity var(--t-state) var(--ease) }
+:is(.bd-pic, .rtile, .bd-card, .item, .proj-hit, .proj, .photo, .mv-it, .viz-res, .sh, .cue, #browse) img:not(.in) { opacity:0 }
+/* Find, loading: the projects row is held by empty glass panels that breathe. */
+.dock.skel .panel { cursor:default; pointer-events:none; animation:skel 1.618s ease-in-out infinite }
+.dock.skel .panel:nth-child(2) { animation-delay:.118s } .dock.skel .panel:nth-child(3) { animation-delay:.236s } .dock.skel .panel:nth-child(4) { animation-delay:.354s }
+@keyframes skel { 50% { opacity:.55 } }
+/* The Dream board's folders: names readable on the painting. */
+.fname { text-shadow:var(--shade) } .fmeta { color:var(--fg-2); text-shadow:var(--shade) }
+/* Toast: leaves the way it came. */
+.toast { gap:var(--s4); padding:var(--s2) var(--s2) var(--s2) var(--s5); min-height:44px; font-size:.875rem; transition:opacity var(--t-micro) var(--ease), transform var(--t-micro) var(--ease) }
+.toast.out { opacity:0; transform:translate(-50%, 8px) }
+/* Invite: the same dense glass as the item sheet, rising in. */
+.invite, dialog.invite { width:min(460px, calc(100vw - 32px)); padding:0; border-radius:var(--r-panel); border:1px solid var(--rim); color:var(--fg);
+  background:var(--glass-dense); -webkit-backdrop-filter:blur(34px) saturate(1.15); backdrop-filter:blur(34px) saturate(1.15);
+  box-shadow:var(--lift), var(--halo-on), inset 0 1px 0 rgba(255,246,220,.26) }
+.invite[open] { animation:dlgin var(--t-state) var(--ease) }
+@keyframes dlgin { from { opacity:0; transform:translateY(8px) scale(.98) } }
+.invite::backdrop { background:rgba(8,12,15,.50); -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px) }
+.invite[open]::backdrop { animation:fadein var(--t-state) var(--ease) } @keyframes fadein { from { opacity:0 } }
+.inv-in { display:grid; gap:var(--s4); padding:var(--s5) }
+.inv-in h3 { margin:0; font:600 var(--fs2)/1.236 var(--font-display) }
+.inv-in p { margin:0 } .inv-in > p.muted { color:var(--fg-2) }
+.inv-in input[readonly] { min-height:44px; padding:0 var(--s4); font:400 .875rem/1.2 var(--font-ui); color:var(--fg); background:var(--field); border:1px solid var(--rim); border-radius:var(--r-tile); text-overflow:ellipsis; width:100% }
+.inv-msg { min-height:1.4em; font-size:.8125rem; color:var(--fg-2) }
+.inv-act { display:flex; gap:var(--s3); justify-content:flex-end; margin-top:var(--s2) }
+@media (max-width:520px) { .inv-act { display:grid; grid-auto-flow:column; grid-auto-columns:1fr } }
+/* Save on a phone: the camera and the picker are a matched pair of secondaries; Save is the one gold button. */
+.capture { gap:var(--s3) }
+.capture .big { --br:var(--rim-strong) }
+@media (pointer:coarse) { #drop { padding:var(--s4) } #drop .linkline { margin-top:0 } #drop .chips:empty { display:none } }
+/* Save: the microphone's line takes room only when it has something to say; the save line keeps its room so Save never jumps. */
+#mic-status:empty { min-height:0; margin:0 }
+.savebar { margin-top:var(--s3); padding-top:var(--s3) }
+@media (max-width:520px) { :is(#tab-save, #tab-find, #tab-cues, #tab-improve) { padding:0 var(--s2) } nav { gap:var(--s2) } }
+/* A board's actions on a phone: tighter pills so Send, Creator mode and Copy for Claude share one row. */
+@media (max-width:520px) { .pboard .bd-actions :is(button) { padding:0 11px; font-size:.8125rem } .pboard .bd-actions .creatorbtn.on { padding:0 10px } .bd-actions { gap:var(--s3) } }
+.toast { background:rgba(16,28,36,.86) }
+@media (prefers-color-scheme: light) { .toast { background:rgba(255,252,246,.92) } }
+/* Creator mode's Clear: a quiet action (no fill, no rim until hovered), never the gold. */
+.viz .viz-opts .viz-over { --bb:transparent; --br:transparent; --bs:none; --bf:var(--fg-2); -webkit-backdrop-filter:none; backdrop-filter:none; margin-left:calc(-1 * var(--s3)) }

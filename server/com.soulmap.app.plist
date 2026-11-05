@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The Soul Map, in production, on 127.0.0.1:3355. Phones reach it through Recall's
+  gate at <recall address>/soul (app/soul.ts). Loopback only; the gate is the door.
+
+  `npm run start` serves the last `npm run build`. Build first, or `cl soul build`:
+  a start without a build fails with "Could not find a production build".
+  Install: cp to ~/Library/LaunchAgents and `cl soul start` (install.sh does both).
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.soulmap.app</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/npm</string>
+    <string>run</string>
+    <string>start</string>
+    <string>--</string>
+    <string>-H</string>
+    <string>127.0.0.1</string>
+    <string>-p</string>
+    <string>3355</string>
+  </array>
+  <key>WorkingDirectory</key><string>__SOUL__/app</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    <key>HOME</key><string>__HOME__</string>
+    <key>NODE_ENV</key><string>production</string>
+    <key>PORT</key><string>3355</string>
+    <key>HOSTNAME</key><string>127.0.0.1</string>
+    <key>OLLAMA_BASE_URL</key><string>http://localhost:11434/v1</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>5</integer>
+  <key>StandardOutPath</key><string>__HOME__/.gbrain/serve/soulmap.out</string>
+  <key>StandardErrorPath</key><string>__HOME__/.gbrain/serve/soulmap.err</string>
+</dict>
+</plist>

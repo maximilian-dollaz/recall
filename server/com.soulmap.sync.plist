@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Nightly Soul Map connector sync, 03:30 every day: `cl soul sync`, which POSTs
+  http://127.0.0.1:3355/soul/api/connectors/sync?p=<id> for every profile under
+  soul-map/data/profiles. The app (com.soulmap.app) must be running; the sync itself
+  runs as a detached job inside it (claude_code, granola, claude_ai, otter inbox).
+  Install: cp to ~/Library/LaunchAgents and
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.soulmap.sync.plist
+  Run it now instead: cl soul sync
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.soulmap.sync</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__RECALL__/bin/cl</string>
+    <string>soul</string>
+    <string>sync</string>
+  </array>
+  <key>WorkingDirectory</key><string>__RECALL__</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>__HOME__/.bun/bin:__HOME__/.local/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    <key>HOME</key><string>__HOME__</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key><integer>3</integer>
+    <key>Minute</key><integer>30</integer>
+  </dict>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>__HOME__/.gbrain/serve/soulmap-sync.out</string>
+  <key>StandardErrorPath</key><string>__HOME__/.gbrain/serve/soulmap-sync.err</string>
+</dict>
+</plist>

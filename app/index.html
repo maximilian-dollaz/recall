@@ -1,0 +1,1294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recall</title>
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icon-180.png">
+<link rel="icon" href="/static/icon-32.png">
+<style>
+  :root { --bg:#f3f1ec; --paper:#fffdf9; --fg:#1f1d19; --muted:#6c665b; --line:#dcd6cb; --accent:#2d5a46; --accent-soft:#e3ede7; --lock:#8a5a1b; --lock-soft:#f5e9d6; --danger:#9b2d2d; --on-accent:#fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#17161300; --bg:#171613; --paper:#201e1a; --fg:#ece7dd; --muted:#a59d8f; --line:#3a362f; --accent:#7fc3a2; --accent-soft:#223129; --lock:#e2b067; --lock-soft:#30271a; --danger:#e07a7a; --on-accent:#10261c; color-scheme: dark; } }
+  * { box-sizing:border-box } html,body{height:100%}
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 -apple-system, "Atkinson Hyperlegible", system-ui, sans-serif; }
+  .wrap { max-width:720px; margin:0 auto; padding:20px 16px 60px; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px }
+  h1 { font-size:1.25rem; margin:0; letter-spacing:-.01em }
+  nav { display:flex; gap:6px } nav button { font:inherit; padding:8px 14px; border-radius:999px; border:1px solid var(--line); background:var(--paper); color:var(--fg); cursor:pointer }
+  nav button[aria-current="page"] { background:var(--accent); color:var(--on-accent); border-color:var(--accent) }
+  .actions .primary { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600 }
+  .card { background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:18px; }
+  .capture { display:grid; gap:10px; margin-bottom:13px } .capture .big { width:100%; min-height:56px; font-size:1.05rem }
+  .chip img, .chip video { width:44px; height:44px; object-fit:cover; border-radius:8px; vertical-align:middle; margin-right:6px }
+  .drop { border:2px dashed var(--line); border-radius:14px; padding:26px 16px; text-align:center; color:var(--muted); cursor:pointer; transition:border-color .15s, background .15s }
+  .drop.over, .drop:hover { border-color:var(--accent); background:var(--accent-soft) } .drop strong{color:var(--fg)}
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px } .chip { font-size:.85rem; padding:4px 10px; border-radius:999px; background:var(--accent-soft); color:var(--accent); display:inline-flex; gap:6px; align-items:center }
+  .chip.lock { background:var(--lock-soft); color:var(--lock) } .chip button { all:unset; cursor:pointer; opacity:.7 }
+  #q { font-size:1.15rem; line-height:1.4; min-height:0; resize:none; overflow:hidden; padding:14px 16px }
+  textarea, input[type=text], input[type=url], input[type=search] { width:100%; font:inherit; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:var(--bg); color:var(--fg) }
+  textarea { min-height:120px; resize:vertical } label.small { display:block; font-size:.85rem; color:var(--muted); margin:14px 0 6px }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; flex-wrap:wrap }
+  .toggle { display:inline-flex; align-items:center; gap:10px; cursor:pointer; color:var(--muted); font-size:.95rem } .toggle input{width:18px;height:18px;accent-color:var(--lock)}
+  .primary { font:inherit; font-weight:600; padding:12px 22px; border-radius:12px; border:0; background:var(--accent); color:var(--on-accent); cursor:pointer } .primary:disabled{opacity:.5;cursor:default}
+  .receipt { margin-top:16px; padding:14px 16px; border-radius:12px; background:var(--accent-soft); display:none } .receipt.show{display:block} .receipt .t{font-weight:600}
+  .receipt.local { background:var(--lock-soft) } .receipt select { font:inherit; padding:4px 8px; border-radius:8px; border:1px solid var(--line); background:var(--paper); color:var(--fg) }
+  .shelves { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px } .shelf { text-align:left; font:inherit; padding:14px; border-radius:12px; border:1px solid var(--line); background:var(--paper); color:var(--fg); cursor:pointer }
+  .shelf:hover{border-color:var(--accent)} .shelf b{display:block} .shelf span{color:var(--muted); font-size:.85rem}
+  .list { display:grid; gap:8px; margin-top:12px } .item { display:block; width:100%; text-align:left; font:inherit; padding:12px 14px; border-radius:12px; border:1px solid var(--line); background:var(--paper); color:var(--fg); cursor:pointer }
+  .item:hover{border-color:var(--accent)} .item b{display:block} .item span{color:var(--muted); font-size:.9rem; display:block; margin-top:2px} .item .lk{color:var(--lock); font-size:.8rem}
+  .item.tile { padding:0; overflow:hidden; display:flex; align-items:stretch } .item .hero { flex:0 0 120px; width:120px; height:130px; object-fit:contain; background:var(--bg) } .tile-text { flex:1; min-width:0; padding:10px 12px; align-self:center }
+  .item.tile b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis } .item.tile span { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden }
+  .reader-hero { width:100%; max-height:55vh; object-fit:contain; border-radius:12px; background:var(--bg); display:block }
+  .actions .primary { flex:1 1 140px; text-align:center }
+  body.wide .actions .primary { flex:0 0 auto; min-width:144px }
+  details.more { margin-top:16px } details.more summary { cursor:pointer; color:var(--muted) }
+  .crumb { color:var(--muted); font-size:.9rem; margin-bottom:10px } .crumb button{all:unset; color:var(--accent); cursor:pointer}
+  .reader h2,.reader h3{margin:18px 0 6px} .reader img{max-width:100%; border-radius:10px} .reader pre{overflow:auto; background:var(--bg); padding:10px; border-radius:8px}
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 } .actions button, .actions a { font:inherit; padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:var(--paper); color:var(--fg); cursor:pointer; text-decoration:none }
+  .proposal { margin-top:14px; padding:12px 14px; border:1px dashed var(--lock); border-radius:12px; background:var(--lock-soft) }
+  .muted{color:var(--muted)} .status{font-size:.95rem; color:var(--muted); min-height:1.4em; margin-top:8px} .err{color:var(--danger)} .ok{color:var(--accent); font-weight:600}
+  .linkline { margin-top:12px; text-align:left; font-size:.95rem } .drop .linkline { background:var(--paper) }
+  .savebar { position:sticky; bottom:0; padding:12px 0 calc(8px + env(safe-area-inset-bottom, 0px)); background:linear-gradient(to top, var(--paper) 70%, transparent); margin-top:14px }
+  .primary.big { width:100%; font-size:1.15rem; padding:16px 20px; border-radius:14px }
+  .notes-wrap { position:relative } .notes-wrap textarea { padding-right:56px; min-height:150px; max-height:62vh; overflow-y:auto; resize:none }
+  .mic { position:absolute; right:10px; bottom:10px; width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--paper); font-size:1.2rem; cursor:pointer; display:flex; align-items:center; justify-content:center }
+  @media (pointer: coarse) { .mic { width:52px; height:52px; right:8px; bottom:8px } .mic svg { width:24px; height:24px } }
+  .mic.rec { background:#fff; border-color:#fff; color:#111 } .mic:disabled{opacity:.5}
+  /* Listening: a quick white ripple inside the box, then the edge breathes gently. */
+  .notes-wrap { --vol: 0 }
+  .notes-wrap.listening textarea { border-color:#fff; box-shadow:0 0 0 1px rgba(255,255,255,.95), 0 0 calc(8px + 22px * var(--vol)) calc(1px + 5px * var(--vol)) rgba(255,255,255, calc(.25 + .55 * var(--vol))); transition:box-shadow .08s linear }
+  .notes-wrap { overflow:hidden; border-radius:12px } .ripple { position:absolute; right:30px; bottom:30px; width:12px; height:12px; border-radius:50%; pointer-events:none; background:radial-gradient(circle, rgba(255,255,255,.55) 0%, rgba(255,255,255,.18) 45%, rgba(255,255,255,0) 70%); animation:ripple .7s cubic-bezier(.2,.7,.2,1) forwards; mix-blend-mode:screen }
+  @keyframes ripple { 0%{transform:translate(50%,50%) scale(1); opacity:1} 100%{transform:translate(50%,50%) scale(70); opacity:0} }
+  @media (prefers-reduced-motion: reduce) { .notes-wrap.listening textarea { animation:none; box-shadow:0 0 0 1px #fff } .ripple { display:none } }
+  .seg { display:flex; flex-wrap:wrap; gap:6px } .seg button { font:inherit; font-size:.9rem; padding:7px 12px; border-radius:999px; border:1px solid var(--line); background:var(--paper); color:var(--fg); cursor:pointer }
+  .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; border-color:var(--accent) }
+  #when { margin-top:8px }
+  .due { margin-bottom:14px; padding:12px 14px; border-radius:12px; background:var(--accent-soft) } .due b{display:block; margin-bottom:6px} .due .item{margin-top:6px}
+  .state { font:inherit; font-size:.85rem; padding:4px 8px; border-radius:8px; border:1px solid var(--line); background:var(--paper); color:var(--fg) }
+  .actions button.danger { color:var(--danger); border-color:var(--danger) }
+  .projects { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:10px; margin-top:10px }
+  .proj { text-align:left; font:inherit; padding:0; border-radius:12px; border:1px solid var(--line); background:var(--paper); color:var(--fg); cursor:pointer; overflow:hidden }
+  .proj .cover { display:block; width:100%; height:96px; object-fit:cover; background:var(--bg) } .proj .nocover { height:96px; background:var(--accent-soft) }
+  #who { font-weight:400; color:var(--muted) }
+  .proj b { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; padding:8px 10px 0; overflow:hidden; line-height:1.25 } .proj span { display:block; padding:0 10px 10px; color:var(--muted); font-size:.85rem }
+  .proj-hit { display:flex; align-items:center; gap:12px; width:100%; text-align:left; font:inherit; padding:10px 12px; border-radius:12px; border:1px solid var(--accent); background:var(--accent-soft); color:var(--fg); cursor:pointer; margin-top:12px }
+  .proj-hit img { width:56px; height:56px; object-fit:cover; border-radius:8px; background:var(--bg) } .proj-hit b { display:block } .proj-hit span { color:var(--muted); font-size:.9rem }
+  .photos { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; margin-top:10px }
+  .photo { text-align:left; font:inherit; padding:0; border-radius:12px; border:1px solid var(--line); background:var(--paper); color:var(--fg); cursor:pointer; overflow:hidden }
+  .photo img { display:block; width:100%; aspect-ratio:1; object-fit:cover; background:var(--bg) } .photo b { display:block; padding:8px 10px 10px; font-size:.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .proj-head h2 { margin:0 0 4px } .proj-head .muted { margin:0 0 8px }
+  [hidden]{display:none!important}
+
+  /* ── Find: living panels (sacred geometry: φ = 1.618; spacing 3·5·8·13·21·34·55; motion 0.618 s) ── */
+  body.wide .wrap { max-width:1440px }
+  /* The top bar keeps one width and place on every tab, so moving between Save and Find never shifts it. */
+  html { scrollbar-gutter:stable }
+  .wrap > header { width:min(1408px, calc(100vw - 32px)); position:relative; left:50%; transform:translateX(-50%) }
+  .stage { position:relative; border-radius:21px; overflow:hidden; color:#f3eee6; padding:13px; margin-top:13px;
+    background: radial-gradient(120% 70% at 70% 8%, rgba(232,169,92,.55), transparent 55%), linear-gradient(180deg, #2b2f38 0%, #4a4038 46%, #2c3433 62%, #1e2a2a 100%) }
+  .stage::before { content:""; position:absolute; inset:auto 0 0 0; height:58%; pointer-events:none;
+    background: linear-gradient(160deg, transparent 38%, rgba(18,26,26,.9) 39%) 0 0/55% 100% no-repeat, linear-gradient(200deg, transparent 42%, rgba(24,34,33,.85) 43%) 100% 0/60% 100% no-repeat, linear-gradient(180deg, transparent, rgba(10,14,14,.75)) }
+  .stage > * { position:relative }
+  .stage-label { font-size:.78rem; letter-spacing:.06em; color:#c9c1b6; padding:0 3px 8px }
+  .dock { display:flex; gap:8px; height:clamp(233px, 42vh, 377px) }
+  .panel { all:unset; box-sizing:border-box; position:relative; flex:1 1 0; min-width:0; cursor:pointer; border-radius:13px; overflow:hidden; display:flex; flex-direction:column;
+    background:rgba(28,30,32,.52); border:1px solid rgba(255,255,255,.14); -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px);
+    transition:flex-grow .382s cubic-bezier(.25,.1,.25,1), background .382s }
+  .dock.hovering .panel { flex-grow:.85 }
+  .dock .panel.on { flex-grow:1.618; background:rgba(52,54,56,.62) }
+  [data-level="sub"] .dock { height:clamp(144px, 26vh, 233px) } /* a sub-topic row is 0.618 of a topic row */
+  .panel:focus-visible { outline:2px solid #e8a95c; outline-offset:2px }
+  .mosaic { flex:1; display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:1fr; gap:3px; padding:3px; min-height:0 }
+  .mosaic i { display:block; border-radius:8px; background-size:cover; background-position:center; min-height:0 }
+  .mosaic i:first-child { grid-row:span 2; grid-column:span 2 }
+  .ptext { padding:8px 13px 13px; display:grid; gap:3px; min-width:0 }
+  .pname { font-weight:700; font-size:1.0rem; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .pmeta { font-size:.8rem; color:#c9c1b6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .pkinds { display:flex; gap:5px; flex-wrap:wrap; max-height:0; opacity:0; overflow:hidden; transition:opacity .382s, max-height .382s }
+  .panel.on .pkinds { max-height:55px; opacity:1; margin-top:3px }
+  .pkinds { align-items:flex-start; align-content:flex-start }
+  .pchip { flex:none; line-height:1.4; font-size:.7rem; padding:2px 8px; border-radius:99px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06) }
+  @media (max-width:720px) { .desk-only { display:none } .ptext { align-content:end } .dock { flex-direction:column; height:auto } .panel { flex:none; height:89px; flex-direction:row; transition:height .382s cubic-bezier(.25,.1,.25,1) } .dock .panel.on { height:144px } .mosaic { flex:0 0 38.2% } .dock.hovering .panel { flex-grow:0 } }
+  @media (prefers-reduced-motion: reduce) { .panel, .pkinds { transition:none } }
+
+
+  /* ── Find, remade: one landscape behind the whole tab, frosted glass over it, amber for what's active.
+     Panels hold only the pictures saved into them; the one under the cursor widens and shows more. ── */
+  body.wide { --bg:rgba(10,12,12,.28); --paper:rgba(255,255,255,.06); --fg:#f3eee6; --muted:#c9c1b6; --line:rgba(255,255,255,.14);
+    --accent:#e8a95c; --accent-soft:rgba(232,169,92,.16); --on-accent:#1d1a17; background:#1d1a17; color:var(--fg); color-scheme:dark }
+  body.wide::before { content:""; position:fixed; inset:-34px; z-index:-1; background:url('/static/find-landscape.svg') center/cover no-repeat; filter:blur(3px) saturate(1.1) }
+  body.wide #find.card { background:none; border:0; padding:0; box-shadow:none }
+  body.wide #find .status, body.wide .stage-label { text-shadow:0 1px 8px rgba(0,0,0,.55) }
+  body.wide .due, body.wide #find .item { -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px); background:rgba(36,31,27,.42) }
+  body.wide #q { background:rgba(30,26,22,.42); border-color:rgba(255,255,255,.16); border-radius:16px; -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px) } body.wide #q:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(232,169,92,.22) }
+  .stage { background:none; padding:0; border-radius:0; overflow:visible; margin-top:21px }
+  .stage::before { display:none }
+  .stage-label { font-size:.72rem; letter-spacing:.16em; text-transform:uppercase; color:#c9c1b6; padding:0 3px 8px }
+  .panel { background:rgba(36,31,27,.42); border:1px solid rgba(255,255,255,.13); border-radius:16px; -webkit-backdrop-filter:blur(21px) saturate(1.2); backdrop-filter:blur(21px) saturate(1.2);
+    box-shadow:0 13px 34px rgba(0,0,0,.28); transition:flex-grow .382s cubic-bezier(.25,.1,.25,1), background .382s, border-color .382s, box-shadow .382s }
+  .dock .panel.on { background:rgba(52,44,36,.55); border-color:rgba(232,169,92,.5); box-shadow:0 13px 34px rgba(0,0,0,.32), 0 0 34px rgba(232,169,92,.14) }
+  .dock.hovering .panel.near { flex-grow:1.05 }
+  /* Pictures only: columns of two that run sideways, so a wider panel shows more of them. */
+  .mosaic { display:grid; grid-template-rows:repeat(2, minmax(0,1fr)); grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:minmax(110px,1fr); grid-auto-rows:auto; gap:4px; padding:4px; overflow:hidden }
+  .mosaic.one { grid-template-rows:minmax(0,1fr) }
+  .mosaic i { border-radius:12px } .mosaic i:first-child { grid-row:auto; grid-column:auto }
+  .mosaic.odd i:first-child { grid-row:span 2 }
+  .panel.empty { justify-content:flex-end }
+  .panel.empty .ptext { padding:21px } .panel.empty .pname { font-size:1.25rem; white-space:normal }
+  @media (max-width:720px) { .mosaic { grid-auto-columns:minmax(72px,1fr) } }
+
+  /* ── The project board: grows out of its panel to fill the screen; glass buckets over the same landscape. ── */
+  body.boarded { overflow:hidden }
+  .pboard { position:fixed; z-index:60; isolation:isolate; overflow:hidden; display:flex; flex-direction:column; border-radius:16px; color:#f3eee6; background:#1d1a17;
+    --fg:#f3eee6; --muted:#c9c1b6; --line:rgba(255,255,255,.14); --accent:#e8a95c; --on-accent:#1d1a17; color-scheme:dark;
+    top:0; left:0; width:100vw; height:100%;
+    /* Opening is a window widening from the panel you clicked: the board is laid out full size from the start and
+       only the visible part grows (clip-path), so nothing inside is squeezed or reflowed on the way in or out. */
+    clip-path:inset(var(--ct,0) var(--cr,0) var(--cb,0) var(--cl,0) round 16px);
+    transition:clip-path .618s cubic-bezier(.2,.75,.2,1), opacity .382s, transform .382s }
+  .pboard::before { content:""; position:absolute; inset:-34px; z-index:-1; background:url('/static/find-landscape.svg') center/cover no-repeat; filter:blur(3px) saturate(1.1) }
+  .pboard.open { clip-path:inset(0 0 0 0 round 0) }
+  .pboard.fade { clip-path:none; opacity:0; transform:scale(.97) } .pboard.fade.open { opacity:1; transform:none }
+  /* The clicked panel's pictures, held at the panel's own size and place while the window opens around them. */
+  .bd-preview { position:absolute; display:flex; pointer-events:none; border-radius:16px; overflow:hidden; transition:opacity .382s .118s } .bd-preview .mosaic { flex:1 }
+  .pboard.open .bd-preview { opacity:0; transition-delay:0s }
+  .bd-top, .bd-body { opacity:0; transition:opacity .236s } .pboard.open .bd-top, .pboard.open .bd-body { opacity:1; transition:opacity .382s .236s }
+  .bd-top { display:flex; align-items:center; gap:13px; padding:max(13px, env(safe-area-inset-top, 0px)) max(21px, env(safe-area-inset-right, 0px)) 13px max(21px, env(safe-area-inset-left, 0px)) }
+  .bd-close { all:unset; cursor:pointer; flex:none; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; font-size:1.3rem; background:rgba(30,26,22,.45); border:1px solid rgba(255,255,255,.14); -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px) }
+  .bd-close:hover, .bd-close:focus-visible { border-color:#e8a95c }
+  .bd-title { flex:1; min-width:0 } .bd-title h2 { margin:0; font-size:1.6rem; line-height:1.15; text-shadow:0 1px 13px rgba(0,0,0,.5) } .bd-title span { font-size:.85rem; color:#c9c1b6; text-shadow:0 1px 8px rgba(0,0,0,.5) }
+  .invite { width:min(440px, calc(100vw - 32px)); padding:0; border-radius:21px; border:1px solid var(--rim, rgba(255,255,255,.14)); background:rgba(20,30,38,.82); color:var(--fg); -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px); box-shadow:0 13px 55px rgba(5,10,14,.5) }
+  .invite::backdrop { background:rgba(8,12,15,.55) }
+  .inv-in { display:grid; gap:8px; padding:21px } .inv-in h3 { margin:0 0 5px } .inv-in p { margin:0 }
+  .inv-act { display:flex; gap:8px; justify-content:flex-end; margin-top:8px } .inv-act button { font:inherit; padding:10px 18px; border-radius:999px; cursor:pointer }
+  .inv-act .quiet { background:transparent; color:var(--fg); border:1px solid var(--rim, rgba(255,255,255,.14)) }
+  #invlink { font-size:.9rem; text-overflow:ellipsis } .inv-msg { min-height:1.3em }
+  .inv-pick { display:flex; gap:4px; padding:3px; border-radius:999px; border:1px solid var(--rim, rgba(255,255,255,.14)); justify-self:start; margin-bottom:5px }
+  .inv-pick button { font:inherit; font-size:.9rem; min-height:36px; padding:6px 16px; border:0; border-radius:999px; background:transparent; color:var(--fg); cursor:pointer }
+  .inv-pick button[aria-pressed="true"] { background:rgba(255,255,255,.14) }
+  .bd-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end }
+  .bd-actions button, .sh-links a, .sh-links button { font:inherit; font-size:.9rem; padding:9px 14px; border-radius:999px; border:1px solid rgba(255,255,255,.16); background:rgba(30,26,22,.45); color:#f3eee6; cursor:pointer; text-decoration:none; -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px) }
+  .bd-actions .primary { background:#e8a95c; color:#1d1a17; border-color:#e8a95c; font-weight:600 }
+  .bd-body { flex:1; min-height:0; display:flex; flex-direction:column; gap:13px; padding:0 max(21px, env(safe-area-inset-right, 0px)) max(21px, env(safe-area-inset-bottom, 0px)) max(21px, env(safe-area-inset-left, 0px)) }
+  .bd-topics { display:flex; gap:8px; flex-wrap:wrap } .bd-topics.sub { margin-top:-5px }
+  .bd-topics button { font:inherit; font-size:.88rem; padding:7px 13px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(30,26,22,.42); color:#f3eee6; cursor:pointer; -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px) }
+  .bd-topics.sub button { font-size:.8rem; padding:5px 11px } .bd-topics button span { opacity:.6; margin-left:3px }
+  .bd-topics button[aria-pressed="true"] { background:#e8a95c; color:#1d1a17; border-color:#e8a95c; font-weight:600 }
+  .bd-grid { flex:1; min-height:0; display:grid; gap:13px }
+  .bucket { min-width:0; min-height:0; display:flex; flex-direction:column; border-radius:16px; background:rgba(36,31,27,.42); border:1px solid rgba(255,255,255,.13); -webkit-backdrop-filter:blur(21px) saturate(1.2); backdrop-filter:blur(21px) saturate(1.2); box-shadow:0 13px 34px rgba(0,0,0,.28) }
+  .bucket h3 { margin:0; padding:13px 16px 8px; font-size:.72rem; font-weight:600; letter-spacing:.16em; text-transform:uppercase; color:#c9c1b6 } .bucket h3 span { color:#e8a95c; margin-left:5px }
+  .bk { flex:1; min-height:0; overflow-y:auto; padding:0 13px 13px; display:grid; gap:8px; align-content:start; scrollbar-width:thin }
+  .bucket.pictures .bk { display:grid; grid-template-columns:repeat(auto-fill, minmax(112px, 136px)); grid-auto-rows:max-content; gap:21px; justify-content:start; padding:8px 21px 21px }
+  /* The team board's projects: iPhone-folder squares on a golden grid (13 · 21 · 34 · 55). */
+  .folders { display:grid; grid-template-columns:repeat(auto-fill, minmax(144px, 178px)); justify-content:center; gap:55px 34px; padding:34px 0 55px; align-content:start }
+  .folder { all:unset; box-sizing:border-box; display:grid; gap:8px; justify-items:center; text-align:center; cursor:pointer; -webkit-tap-highlight-color:transparent }
+  .fbox { position:relative; width:100%; aspect-ratio:1; border-radius:23%; padding:13%; box-sizing:border-box; background:rgba(242,236,225,.10); border:1px solid rgba(255,255,255,.16); -webkit-backdrop-filter:blur(21px) saturate(1.2); backdrop-filter:blur(21px) saturate(1.2); box-shadow:0 8px 34px rgba(0,0,0,.28); transition:transform .236s ease, border-color .236s ease }
+  .folder:hover .fbox, .folder:focus-visible .fbox { transform:scale(1.04); border-color:rgba(244,227,181,.55) } .folder:active .fbox { transform:scale(.97) }
+  .folder:focus-visible { outline:none } .folder:focus-visible .fbox { outline:2px solid var(--river-300, #8FB3C7); outline-offset:3px }
+  .fmini { display:grid; grid-template-columns:1fr 1fr; gap:13%; width:100%; height:100% }
+  .fmini i { display:block; aspect-ratio:1; border-radius:22%; background:center/cover no-repeat rgba(0,0,0,.25) } .fmini i.blank { background:rgba(255,255,255,.06) }
+  .ffaces { position:absolute; right:-6px; bottom:-6px; display:flex } .ffaces .who { width:24px; height:24px; font-size:.7rem; margin-left:-8px; border:2px solid #1d1a17 }
+  .fname { font-size:.95rem; font-weight:600; line-height:1.25; max-width:100%; overflow-wrap:anywhere } .fmeta { font-size:.78rem; color:#a59d8f; margin-top:-5px }
+  @media (max-width:520px) { .folders { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:34px 21px; padding:21px 0 34px } }
+  /* Creator mode's button: lit with a moving rainbow while it's on. */
+  .creatorbtn.on { color:#fff; border:2px solid transparent !important; background-image:linear-gradient(var(--ink-900, #14202A), var(--ink-900, #14202A)), linear-gradient(90deg, #ff6b6b, #ffb347, #ffe66d, #7bed9f, #70a1ff, #b884ff, #ff6b6b) !important; background-origin:border-box; background-clip:padding-box, border-box; background-size:100% 100%, 200% 100%; animation:rainbow 2.618s linear infinite; box-shadow:0 0 21px rgba(255,120,200,.45), 0 0 34px rgba(112,161,255,.35) }
+  @keyframes rainbow { to { background-position:0 0, 200% 0 } }
+  @media (prefers-reduced-motion: reduce) { .creatorbtn.on { animation:none } }
+  .viz-on .bd-pic, .viz-on .bd-card { cursor:copy } .bd-pic.added, .bd-card.added { outline:2px solid var(--gold-light, #F4E3B5); outline-offset:2px }
+  .bd-pic { all:unset; box-sizing:border-box; position:relative; display:block; break-inside:avoid; margin:0; border-radius:12px; overflow:hidden; cursor:pointer; background:rgba(0,0,0,.2) }
+  .bd-pic img { display:block; width:100%; aspect-ratio:1; object-fit:cover } .bd-pic em { position:absolute; top:8px; left:8px; font-style:normal; font-size:.8rem; padding:2px 8px; border-radius:99px; background:rgba(0,0,0,.55) }
+  .bd-pic span { position:absolute; inset:auto 0 0 0; padding:21px 10px 8px; font-size:.8rem; background:linear-gradient(transparent, rgba(0,0,0,.7)); opacity:0; transition:opacity .2s }
+  .bd-pic:hover span, .bd-pic:focus-visible span { opacity:1 } .bd-pic:focus-visible, .bd-card:focus-visible { outline:2px solid #e8a95c; outline-offset:2px }
+  .bd-card { all:unset; box-sizing:border-box; display:block; padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); cursor:pointer; transition:border-color .2s }
+  .bd-card:hover { border-color:rgba(232,169,92,.6) }
+  .bd-card b { display:block; line-height:1.3 } .bd-card .ic { color:#e8a95c; margin-right:6px }
+  .bd-card p { margin:5px 0 0; font-size:.88rem; color:#ddd5c9; display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; white-space:pre-line }
+  .bd-card small { display:block; margin-top:6px; color:#a59d8f; font-size:.75rem } .bd-card .host { margin:0 0 3px; color:#e8a95c }
+  .bd-card .lt { display:block; width:100%; height:110px; object-fit:cover; border-radius:8px; margin-bottom:8px }
+  .bd-sheet { position:absolute; inset:0; z-index:2; display:grid; place-items:center; padding:21px; background:rgba(12,10,9,.55); -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px); animation:sheetin .3s ease-out } @keyframes sheetin { from { opacity:0 } }
+  .bd-sheet .sh { width:min(980px, 100%); max-height:100%; overflow:auto; display:grid; gap:13px; padding:21px; border-radius:16px; background:rgba(36,31,27,.88); border:1px solid rgba(255,255,255,.14) }
+  .sh-top { display:flex; gap:13px; align-items:flex-start; justify-content:space-between } .sh-top h2 { margin:0 0 3px; font-size:1.3rem } .sh-top span { color:#c9c1b6; font-size:.85rem }
+  .sh img, .sh video { display:block; width:100%; max-height:70vh; object-fit:contain; border-radius:12px; background:rgba(0,0,0,.3) }
+  .sh .said { margin:0; white-space:pre-wrap; font-size:1.05rem } .sh .cap { margin:0; color:#c9c1b6 }
+  .sh-links { display:flex; gap:8px; flex-wrap:wrap }
+  @media (max-width:820px) {
+    .bd-top { flex-wrap:wrap } .bd-actions { width:100%; justify-content:flex-start } .bd-title h2 { font-size:1.3rem }
+    .bd-body { overflow-y:auto } .bd-grid { display:flex; flex-direction:column; flex:none } .bucket { flex:none } .bk { overflow:visible }
+    .bucket.pictures .bk { grid-template-columns:repeat(3, minmax(0, 1fr)); gap:13px; padding:8px 13px 13px }
+  }
+  @media (prefers-reduced-motion: reduce) { .pboard, .bd-top, .bd-body, .bd-preview { transition:none } .bd-sheet { animation:none } }
+
+  /* Moving things: drag from Recently saved onto a panel, a Move to row on an item, or "move … to …" in Find. */
+  #recentbar { margin-top:8px; padding:13px; border-radius:16px; background:rgba(30,26,22,.55); border:1px solid var(--line); -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px) }
+  .rb-label { font-size:.72rem; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin:0 0 8px }
+  .rb-strip { display:flex; gap:8px; overflow-x:auto; padding-bottom:3px; scrollbar-width:thin }
+  .rtile { all:unset; box-sizing:border-box; flex:none; width:110px; cursor:grab; display:grid; gap:5px; transition:opacity .382s, transform .382s }
+  .rtile img, .rtile i { display:grid; place-items:center; width:110px; height:110px; object-fit:cover; border-radius:12px; background:rgba(255,255,255,.06); font-style:normal; font-size:1.6rem; color:var(--accent) }
+  .rtile span { font-size:.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .tile-wrap.asks .rtile img, .tile-wrap.asks .rtile i { box-shadow:0 0 0 2px #e8a95c }
+  .bd-pic.filing { animation:filing 1.618s ease-in-out infinite }
+  .rtile.filing { cursor:default; opacity:.6; animation:filing 1.618s ease-in-out infinite } @keyframes filing { 50% { opacity:.35 } }
+  .rtile.carried, .due .item.carried { opacity:.45 } .rtile.gone { opacity:0; transform:scale(.9) }
+  .due .item[draggable="true"] { cursor:grab }
+  body.carrying .panel:not(.teampanel) { border-color:rgba(232,169,92,.45); border-style:dashed }
+  .panel.drop { border-color:#e8a95c !important; border-style:solid !important; box-shadow:0 0 0 2px #e8a95c, 0 0 34px rgba(232,169,92,.35) !important }
+  .panel.took { animation:took .618s ease-out } @keyframes took { 40% { box-shadow:0 0 0 3px #e8a95c, 0 0 55px rgba(232,169,92,.55) } }
+  #browse .said { margin:8px 0 13px; font-size:1.1rem; line-height:1.5; white-space:pre-wrap }
+  #browse .reader .hit { background:rgba(214,178,94,.22); border-radius:6px; box-shadow:0 0 0 5px rgba(214,178,94,.22) }
+  .moveto { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:8px 0 13px } .moveto span { font-size:.85rem; color:var(--muted); margin-right:3px }
+  .moveto button { font:inherit; font-size:.85rem; padding:6px 12px; border-radius:999px; border:1px solid var(--line); background:var(--paper); color:var(--fg); cursor:pointer }
+  .moveto button:hover { border-color:var(--accent) } .moveto input { flex:1 1 140px; min-width:120px; padding:6px 12px; border-radius:999px; font-size:.85rem }
+  .sh .moveto button, .sh .moveto input { background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.16); color:#f3eee6 } .sh .moveto span { color:#c9c1b6 }
+  .mv { display:grid; gap:13px; margin-top:13px; padding:13px; border-radius:16px; background:rgba(36,31,27,.42); border:1px solid var(--line); -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px) }
+  .mv-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(120px,1fr)); gap:8px }
+  .mv-it { all:unset; box-sizing:border-box; cursor:pointer; border-radius:12px; overflow:hidden; border:2px solid var(--accent); background:var(--paper); display:grid; transition:opacity .2s }
+  .mv-it img { width:100%; aspect-ratio:1; object-fit:cover; display:block } .mv-it i { display:grid; place-items:center; aspect-ratio:1; font-style:normal; font-size:1.6rem; color:var(--accent) }
+  .mv-it span { font-size:.78rem; padding:5px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis } .mv-it.off { opacity:.35; border-color:transparent }
+  .mosaic i.new { animation:popin .618s cubic-bezier(.2,.9,.3,1.3) } @keyframes popin { from { transform:scale(.3); opacity:0 } }
+  .pmeta.bump { animation:bump .618s ease-out } @keyframes bump { 30% { color:#e8a95c; transform:scale(1.08) } }
+  @media (prefers-reduced-motion: reduce) { .mosaic i.new, .pmeta.bump { animation:none } }
+
+  /* The team board panel, and the team board's first level: its shared projects as a full-height dock. */
+  .panel.teampanel { border-color:rgba(232,169,92,.45) } .pkicker { font-size:.66rem; letter-spacing:.16em; text-transform:uppercase; color:#e8a95c }
+  .bd-dock { flex:1; min-height:0; display:flex } .bd-dock .dock { flex:1; height:auto; min-height:min(377px, 60vh) }
+  .bd-body.arrive > * { animation:arrive .382s ease-out } @keyframes arrive { from { opacity:0; transform:translateY(8px) } }
+  @media (max-width:720px) { .bd-dock { display:block } .bd-dock .dock { min-height:0 } }
+  @media (prefers-reduced-motion: reduce) { .bd-body.arrive > * { animation:none } }
+  .toast { position:fixed; z-index:90; left:50%; bottom:max(34px, env(safe-area-inset-bottom, 0px)); transform:translateX(-50%); display:flex; gap:13px; align-items:center; padding:8px 8px 8px 16px; border-radius:999px; background:rgba(30,26,22,.85); color:#f3eee6; border:1px solid rgba(255,255,255,.16); -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px); animation:sheetin .3s ease-out }
+  .toast button { font:inherit; font-weight:600; padding:6px 13px; border-radius:999px; border:0; background:#e8a95c; color:#1d1a17; cursor:pointer }
+  .tile-wrap { position:relative; break-inside:avoid; transition:opacity .382s, transform .382s } .bucket.pictures .tile-wrap { margin:0 } .bucket.pictures .tile-wrap .bd-pic { margin:0 }
+  .rb-strip .tile-wrap { flex:none }
+  .tile-x { all:unset; box-sizing:border-box; position:absolute; top:8px; right:8px; z-index:3; width:30px; height:30px; border-radius:50%; display:grid; place-items:center; cursor:pointer; font-size:1.1rem; line-height:1; color:#f3eee6; background:rgba(14,21,25,.62); border:1px solid rgba(242,236,225,.18); -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px); opacity:0; transform:scale(.85); transition:opacity .236s, transform .236s, background .236s }
+  .tile-x::before { content:""; position:absolute; inset:-7px }
+  .tile-wrap:hover .tile-x, .tile-wrap:focus-within .tile-x { opacity:1; transform:none } .tile-x:hover, .tile-x:focus-visible { background:#c0705c; border-color:transparent }
+  @media (hover:none) { .tile-x { display:none } }
+  .tile-wrap.gone { opacity:0; transform:scale(.94); pointer-events:none }
+  .faces { position:absolute; top:8px; right:8px; z-index:3; display:flex; flex-direction:row-reverse } .faces .who + .who { margin-right:-8px }
+  .who { width:30px; height:30px; border-radius:50%; overflow:hidden; display:grid; place-items:center; flex:none; background:#3E6A86; color:#F2ECE1; font:600 .9rem/1 Georgia, serif; box-shadow:0 0 0 1.5px rgba(242,236,225,.92), 0 0 13px rgba(244,227,181,.35) }
+  .who img { width:100%; height:100%; object-fit:cover; display:block }
+  .bd-topics button.drop { box-shadow:0 0 0 1.5px var(--gold-light, #F4E3B5), 0 0 21px rgba(244,227,181,.35) }
+  .bd-people { display:flex; gap:8px; flex-wrap:wrap }
+  .bd-people button { display:inline-flex; gap:8px; align-items:center; font:inherit; font-size:.88rem; padding:4px 13px 4px 4px; border-radius:999px; border:1px solid rgba(255,255,255,.14); background:rgba(30,26,22,.42); color:#f3eee6; cursor:pointer; -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px) }
+  .bd-people button:first-child { padding-left:13px } .bd-people button span:last-child { opacity:.6 } .bd-people .who { width:26px; height:26px; font-size:.8rem }
+  .bd-people button[aria-pressed="true"] { background:#e8a95c; color:#1d1a17; border-color:#e8a95c; font-weight:600 }
+  .linkbtn { all:unset; cursor:pointer; color:var(--accent); font-size:.9rem; margin-top:5px; text-decoration:underline; text-underline-offset:3px }
+  body.dragging .drop { border-color:var(--accent); background:var(--accent-soft) }
+  .teamlinks { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:8px; margin-top:21px }
+  .teamlink { display:block; padding:13px 16px; border-radius:13px; border:1px solid var(--line); background:var(--bg); color:var(--fg); text-decoration:none; font-weight:600 }
+  .teamlink:hover { border-color:var(--accent) } .teamlink span { display:block; font-weight:400; color:var(--muted); font-size:.88rem }
+  @media (max-width:520px) { header { flex-wrap:wrap } nav { width:100% } nav button { flex:1 1 0; padding:8px 4px; min-width:0 } }
+  /* Clarify: one decision per card (φ proportions: thumb 89, gaps 8/13/21) */
+  .badge { display:inline-block; min-width:1.2em; margin-left:5px; padding:0 5px; border-radius:99px; background:var(--lock); color:#fff; font-size:.72rem; line-height:1.5; text-align:center }
+  .cue { display:grid; grid-template-columns:89px minmax(0,1fr); gap:13px; padding:13px; border:1px solid var(--line); border-radius:13px; background:var(--paper); margin-bottom:13px; transition:opacity .382s, transform .382s }
+  .cue.gone { opacity:0; transform:translateX(21px) }
+  .cue .cthumb { width:89px; height:89px; border-radius:8px; object-fit:cover; background:var(--accent-soft) }
+  .cue .cthumb.blank { display:grid; place-items:center; font-size:1.6rem; color:var(--accent) }
+  .cue b { display:block } .cue .csnip { color:var(--muted); font-size:.88rem; margin:3px 0 8px }
+  .cue .cq { font-weight:600; margin:0 0 8px }
+  .cue .copts { display:flex; gap:8px; flex-wrap:wrap }
+  .cue .copts button { font:inherit; padding:8px 13px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--fg); cursor:pointer }
+  .cue .copts button:first-child { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600 }
+  .cue .copts kbd { font:inherit; font-size:.72rem; opacity:.6; margin-right:5px }
+  @media (max-width:520px) { .cue { grid-template-columns:55px minmax(0,1fr) } .cue .cthumb { width:55px; height:55px } }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/ui/visualize.css">
+<link rel="stylesheet" href="/static/ui/theme.css"><!-- the look: palette, glass, backlight (overrides the base styles above) -->
+</head>
+<body>
+<div class="wrap">
+  <div id="signedout" class="status" hidden style="background:var(--lock-soft);color:var(--fg);padding:12px 14px;border-radius:12px;margin-bottom:12px">This browser is signed out. Open your invite link again to get back in.</div>
+  <header>
+    <h1>Recall<span id="who"></span></h1>
+    <nav>
+      <button id="tab-save" aria-current="page">Save</button>
+      <button id="tab-find">Find</button>
+      <button id="tab-cues">Clarify<span id="cue-count" class="badge" hidden></span></button>
+      <button id="tab-improve">Improve</button>
+    </nav>
+  </header>
+
+  <section id="save" class="card">
+    <form id="form">
+      <div class="capture" id="capture" hidden>
+        <input type="file" id="camera" accept="image/*,video/*" capture="environment" hidden>
+        <button type="button" class="big" id="cam">Take a photo or video</button>
+        <button type="button" class="big" id="pick">Choose from Photos or Files</button>
+      </div>
+      <div class="drop" id="drop">
+        <input type="file" id="files" name="files" multiple hidden>
+        <strong id="attach-label">Drop files here, or click to choose</strong>
+        <div class="chips" id="chips"></div>
+        <input type="url" id="url" name="url" placeholder="…or paste a link here" autocomplete="off" class="linkline">
+      </div>
+      <label class="small" for="notes">Add context</label>
+      <div class="notes-wrap">
+        <textarea id="notes" name="notes" placeholder="What is this? What's it for, and why do you love it?"></textarea>
+        <button type="button" id="mic" class="mic" aria-label="Speak your note" title="Speak your note"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></button>
+      </div>
+      <div class="status" id="mic-status"></div>
+      <button type="button" id="typeinstead" class="linkbtn" hidden>Type instead</button>
+      <input type="hidden" id="remind" name="remind" value="2m">
+      <input type="hidden" id="when" name="remind_when" value="">
+      <input type="checkbox" id="local" name="local" hidden>
+      <div class="status" id="status"></div>
+      <div class="savebar"><button class="primary big" id="submit" type="submit">Save</button></div>
+    </form>
+    <div class="receipt" id="receipt"></div>
+  </section>
+
+  <section id="find" class="card" hidden>
+    <textarea id="q" rows="1" placeholder="Describe what you're looking for…" autocomplete="off" enterkeyhint="search"></textarea>
+    <div id="recentbar" hidden></div>
+    <div id="results"></div>
+    <div id="browse"></div>
+  </section>
+
+  <section id="cues" class="card" hidden>
+    <p class="small muted" style="margin:0 0 13px">Answer these so Recall can sort your saves. On a computer, press 1, 2, 3 or 4 to answer the top card.</p>
+    <div id="cue-list"></div>
+  </section>
+
+  <section id="improve" class="card" hidden>
+    <form id="wish">
+      <label class="small" for="wish-text">What do you wish this did?</label>
+      <textarea id="wish-text" placeholder="e.g. I want it to do my granola notes too"></textarea>
+      <div class="status" id="wish-status">Requests go to {{OWNER}}. Nothing changes until {{OWNER}} has tested it and said yes.</div>
+      <div class="savebar"><button class="primary big" type="submit">Send</button></div>
+    </form>
+  </section>
+</div>
+
+<script src="/static/ui/visualize.js"></script>
+<script>
+// A signed-out browser gets the door's HTML page instead of JSON. Say so plainly instead of failing with a parse error.
+const _fetch = window.fetch.bind(window);
+window.fetch = async (...a) => { const r = await _fetch(...a); if (r.status === 401) { const bar = document.getElementById('signedout'); if (bar) bar.hidden = false; } return r; };
+const $ = (s) => document.querySelector(s);
+// Pictures fade in when they arrive instead of popping in; the tile already holds their space. One already in the
+// browser's cache shows at once (no fade on every redraw).
+const fadeIn = (e) => { if (e.target.tagName === 'IMG') e.target.classList.add('in'); };
+document.addEventListener('load', fadeIn, true); document.addEventListener('error', fadeIn, true); // (an element's load never reaches window)
+new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) for (const i of (n.tagName === 'IMG' ? [n] : n.querySelectorAll('img'))) if (i.complete) i.classList.add('in'); }).observe(document.documentElement, { childList: true, subtree: true });
+const tabs = { save: $('#tab-save'), find: $('#tab-find'), cues: $('#tab-cues'), improve: $('#tab-improve') };
+function show(which) {
+  document.body.classList.toggle('wide', which === 'find');
+  for (const k of Object.keys(tabs)) { $('#' + k).hidden = which !== k; if (which === k) tabs[k].setAttribute('aria-current', 'page'); else tabs[k].removeAttribute('aria-current'); }
+  if (which === 'cues') loadCues();
+  if (which === 'find') { if ($('#q').value.trim()) { loadIndex(); instant(); doSearch(); } else { loadShelves(); loadIndex(); } setTimeout(() => { $('#q').focus(); grow(); }, 50); }
+  try { localStorage.setItem('cl-tab', which); } catch {}
+}
+for (const k of Object.keys(tabs)) tabs[k].onclick = () => show(k);
+// The home-screen app stays open for days: refresh Find whenever it comes back to the front.
+// Only the home screen refreshes on resume; an open item or project stays put.
+document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('#find').hidden && view === 'home') { loadIndex(); if (!qbox.value.trim()) loadShelves(); else doSearch(); } });
+window.addEventListener('pageshow', (e) => { if (e.persisted && !$('#find').hidden && view === 'home') { loadIndex(); loadShelves(); } });
+
+// ----- Save -----
+const drop = $('#drop'), fileInput = $('#files'), chips = $('#chips');
+let picked = [], links = [], webImages = [];
+const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
+function renderChips() {
+  const rows = [...picked.map((f, i) => ['f', i, f.name, f]), ...links.map((u, i) => ['l', i, host(u)]), ...webImages.map((u, i) => ['w', i, 'image from ' + host(u)])];
+  const thumb = (f) => !f ? '' : /^image\//.test(f.type) ? `<img src="${URL.createObjectURL(f)}" alt="">` : /^video\//.test(f.type) ? `<video src="${URL.createObjectURL(f)}#t=0.1" muted playsinline preload="metadata"></video>` : '';
+  chips.innerHTML = rows.map(([k, i, label, f]) => `<span class="chip">${thumb(f)}${thumb(f) ? '' : esc(label)} <button type="button" data-k="${k}" data-i="${i}" aria-label="remove">×</button></span>`).join('');
+  chips.querySelectorAll('button').forEach(b => b.onclick = (e) => { e.stopPropagation(); ({ f: picked, l: links, w: webImages })[b.dataset.k].splice(+b.dataset.i, 1); renderChips(); });
+}
+// Something landed: show it, and start listening so the person can say what it is.
+// The notes box grows with what's said or typed, up to most of the screen, then scrolls.
+function fitNotes() { const b = $('#notes'); b.style.height = 'auto'; b.style.height = Math.min(b.scrollHeight + 2, innerHeight * .62) + 'px'; }
+$('#notes').addEventListener('input', fitNotes);
+function attached() { renderChips(); if (!$('#notes').value.trim()) window.recallMic?.start(); }
+function addLink(u) { u = u.trim(); if (/^https?:\/\/\S+$/i.test(u) && !links.includes(u)) links.push(u); }
+// What a drag from a web page carries: the image's own address (from the HTML), and the page it links to.
+function fromDrag(dt) {
+  const html = dt.getData('text/html') || '';
+  const imgs = [...html.matchAll(/<img[^>]+src=["']([^"']+)["']/gi)].map(m => m[1].replace(/&amp;/g, '&')).filter(u => /^https?:/i.test(u));
+  const list = (dt.getData('text/uri-list') || dt.getData('text/plain') || '').split(/\r?\n/).filter(l => l && !l.startsWith('#'));
+  for (const u of imgs) if (!webImages.includes(u)) webImages.push(u);
+  for (const u of list) if (!imgs.includes(u.trim())) addLink(u);
+}
+drop.onclick = (e) => { if (e.target.id === 'url' || e.target.closest('.chip')) return; fileInput.click(); };
+$('#url').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); $('#notes').focus(); } };
+fileInput.onchange = () => { picked.push(...fileInput.files); fileInput.value = ''; attached(); };
+// Phones: the camera first (Photo or Video, swipe between them), then Photos or Files.
+if (matchMedia('(pointer: coarse)').matches) {
+  $('#capture').hidden = false; $('#attach-label').hidden = true; $('#url').placeholder = 'Paste a link';
+  const cam = $('#camera');
+  $('#cam').onclick = () => cam.click();
+  $('#pick').onclick = () => fileInput.click();
+  cam.onchange = () => { picked.push(...cam.files); cam.value = ''; attached(); };
+}
+// The whole window takes drops: files from Finder, images and links straight off any web page.
+let dragDepth = 0;
+// (Not an item being carried to a project inside Recall: that's the panels' to take.)
+const inside = (e) => e.dataTransfer?.types?.includes('text/x-recall-item');
+document.addEventListener('dragenter', e => { if (inside(e)) return; e.preventDefault(); dragDepth++; document.body.classList.add('dragging'); });
+document.addEventListener('dragover', e => { if (!inside(e)) e.preventDefault(); });
+document.addEventListener('dragleave', (e) => { if (inside(e)) return; if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
+document.addEventListener('drop', e => {
+  if (inside(e)) return;
+  e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragging');
+  if ($('#save').hidden) show('save');
+  const fs = [...(e.dataTransfer?.files ?? [])];
+  if (fs.length) picked.push(...fs); else fromDrag(e.dataTransfer);
+  attached();
+});
+// ⌘V: a copied image or file, or a copied link (when you're not typing in a box).
+document.addEventListener('paste', e => {
+  const fs = [...(e.clipboardData?.files ?? [])];
+  const typing = /input|textarea/i.test(document.activeElement?.tagName || '');
+  if (fs.length) { e.preventDefault(); if ($('#save').hidden) show('save'); picked.push(...fs); attached(); return; }
+  const t = (e.clipboardData?.getData('text') || '').trim();
+  if (!typing && /^https?:\/\/\S+$/i.test(t)) { e.preventDefault(); if ($('#save').hidden) show('save'); addLink(t); attached(); }
+});
+// ⌘↩ saves.
+document.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !$('#save').hidden) { e.preventDefault(); $('#form').requestSubmit(); } });
+
+// "on '2026-10-31T00:00:00.000Z'" → "on October 31, 2026": dates as people say them.
+const plainDate = (s) => String(s).replace(/'?(\d{4}-\d\d-\d\d)(T[\d:.]+Z?)?'?/g, (m, day) => { const d = new Date(day + 'T00:00:00Z'); return isNaN(d) ? m : d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' }); });
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// Speak your note. Deepgram's live words when it's on; else the browser's own live speech; else it records and
+// transcribes in rolling passes (a few seconds behind), with the final pass landing when you tap stop.
+// The box's glow follows your voice. Every step is logged to the Mac so Max can see what happened.
+(() => {
+  const mic = $('#mic'), st = $('#mic-status'), box = $('#notes'), wrap = $('.notes-wrap');
+  const log = (ev, extra) => { try { fetch('/api/log', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ev, extra, ua: navigator.userAgent.slice(0, 80), standalone: !!navigator.standalone, secure: window.isSecureContext }) }); } catch {} };
+  const canRecord = !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+  if (!canRecord) { mic.hidden = true; log('no-recorder'); return; }
+  if (!window.isSecureContext) { mic.hidden = true; log('insecure'); return; } // the site is always https; plain http has no microphone
+  let listening = false, base = '', rec = null, chunks = [], stream = null, busy = false, timer = null, audioCtx = null, raf = 0;
+  const glowOn = () => { wrap.classList.add('listening'); mic.classList.add('rec'); const rp = document.createElement('span'); rp.className = 'ripple'; wrap.appendChild(rp); setTimeout(() => rp.remove(), 800); };
+  const glowOff = () => { wrap.classList.remove('listening'); mic.classList.remove('rec'); wrap.style.removeProperty('--vol'); };
+  const setText = (t) => { box.value = (base ? base.trimEnd() + ' ' : '') + t; fitNotes(); box.scrollTop = box.scrollHeight; try { box.selectionStart = box.selectionEnd = box.value.length; } catch {} };
+  const cursorOn = () => { box.setAttribute('inputmode', 'none'); box.focus({ preventScroll: true }); try { box.selectionStart = box.selectionEnd = box.value.length; } catch {} };
+  const cursorOff = () => { box.removeAttribute('inputmode'); };
+  const fail = (m) => { st.innerHTML = `<span class="err">${esc(m)}</span>`; log('fail', m); };
+
+  // The glow follows the voice: an analyser on the mic stream drives a CSS variable.
+  function meter(s, ctx) {
+    try {
+      audioCtx = ctx || new (window.AudioContext || window.webkitAudioContext)(); // one sound context per recording: two on one mic can go silent on an iPhone
+      const src = audioCtx.createMediaStreamSource(s); const an = audioCtx.createAnalyser(); an.fftSize = 512; src.connect(an);
+      const buf = new Uint8Array(an.frequencyBinCount); let smooth = 0;
+      const tick = () => { if (!listening) return; an.getByteTimeDomainData(buf); let sum = 0; for (const v of buf) { const d = (v - 128) / 128; sum += d * d; } const rms = Math.sqrt(sum / buf.length); smooth = smooth * 0.8 + Math.min(1, rms * 6) * 0.2; wrap.style.setProperty('--vol', smooth.toFixed(3)); raf = requestAnimationFrame(tick); };
+      tick();
+    } catch (e) { log('meter-error', String(e)); }
+  }
+  async function send(final) {
+    if (busy || !chunks.length) return; busy = true;
+    try {
+      const blob = new Blob(chunks, { type: rec.mimeType || 'audio/mp4' });
+      const fd = new FormData(); fd.append('audio', blob, 'note.' + ((rec.mimeType||'').includes('webm') ? 'webm' : 'm4a'));
+      const r = await fetch('/api/transcribe', { method: 'POST', body: fd }); const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'transcription failed');
+      if (d.text) setText(d.text); log(final ? 'final' : 'partial', (d.text || '').length);
+    } catch (e) { if (final) fail(e.message); else log('partial-error', String(e)); }
+    busy = false;
+  }
+  // Live speech (Chrome, Safari): the browser's own recognizer, words as you speak and nothing to wait for at the end.
+  // The same engine as the Chrome extension. If it isn't there or fails, the recording below goes to the Mac.
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let live = null, liveFinal = '', liveEnded = null, liveBroken = false;
+  async function startLive() {
+    live = new SR(); live.continuous = true; live.interimResults = true; live.lang = navigator.language || 'en-US'; liveFinal = '';
+    let done; liveEnded = new Promise(r => (done = r));
+    live.onresult = (e) => { let interim = ''; liveFinal = ''; for (const r of e.results) { if (r.isFinal) liveFinal += r[0].transcript; else interim += r[0].transcript; } setText((liveFinal + interim).trim()); };
+    live.onerror = (e) => { log('live-error', e.error); if (['not-allowed', 'service-not-allowed', 'audio-capture'].includes(e.error)) { liveBroken = e.error !== 'not-allowed'; if (e.error === 'not-allowed') fail(/iPhone|iPad/.test(navigator.userAgent) ? 'Allow the microphone: tap aA in the address bar → Website Settings → Microphone → Allow.' : 'Allow the microphone for this site (the icon at the right of the address bar), then tap the mic again.'); } else if (e.error === 'network') liveBroken = true; };
+    live.onend = () => { if (listening && live && !liveBroken) { base = box.value; try { live.start(); return; } catch {} } done(); if (listening && liveBroken) { listening = false; glowOff(); cursorOff(); } }; // keep listening through pauses
+    live.start();
+  }
+  // Deepgram live (on when Max has added a Deepgram key): the page streams the voice to Recall, which streams it
+  // on to Deepgram, and words land as fast as they're said. If it's off or doesn't connect, the browser's
+  // own speech below takes over.
+  let dg = null, dgOff = false;
+  async function startDeepgram(ctx, passP) {
+    const pass = await passP;
+    if (pass.off || !pass.path) { dgOff = true; return false; }
+    const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${pass.path}?rate=${ctx.sampleRate}`);
+    // Sound is captured from the first moment and held until the connection is open, so no first words are lost.
+    const held = [], stats = { frames: 0, peak: 0, msgs: 0 };
+    const src = ctx.createMediaStreamSource(stream), node = ctx.createScriptProcessor(2048, 1, 1);
+    node.onaudioprocess = (e) => {
+      const f = e.inputBuffer.getChannelData(0), pcm = new Int16Array(f.length);
+      for (let i = 0; i < f.length; i++) { const v = Math.max(-1, Math.min(1, f[i])); if (Math.abs(v) > stats.peak) stats.peak = Math.abs(v); pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff; }
+      stats.frames++;
+      if (ws.readyState === 1) { while (held.length) ws.send(held.shift()); ws.send(pcm.buffer); } else if (held.length < 200) held.push(pcm.buffer);
+    };
+    src.connect(node); node.connect(ctx.destination);
+    const open = await new Promise(res => { ws.onopen = () => res(true); ws.onerror = () => res(false); setTimeout(() => res(false), 4000); });
+    if (!open) { try { node.disconnect(); ws.close(); } catch {} log('deepgram-noopen', ctx.state); return false; }
+    let heard = '', closed; const ended = new Promise(r => (closed = r));
+    ws.onmessage = (m) => { stats.msgs++; try { const d = JSON.parse(m.data); if (d.type !== 'Results') return; const t = d.channel?.alternatives?.[0]?.transcript || ''; if (d.is_final) { if (t) heard += (heard ? ' ' : '') + t; setText(heard); } else setText((heard + ' ' + t).trim()); } catch {} };
+    ws.onclose = (e) => { closed(); if (dg?.ws === ws && listening) { log('deepgram-closed', { code: e.code, ...stats }); listening = false; dg = null; cancelAnimationFrame(raf); glowOff(); cursorOff(); $('#typeinstead').hidden = true; stream?.getTracks().forEach(t => t.stop()); try { ctx.close(); } catch {} } };
+    dg = { ws, ctx, node, ended, stats };
+    // Some iPhones hand sound processing a silent feed. If nothing at all is heard in the first moment,
+    // switch to the browser's own live speech (Apple's on an iPhone), which reads the mic another way.
+    setTimeout(async () => {
+      if (dg?.ws !== ws || stats.peak > 0 || !SR || liveBroken) return; // a dead feed is exactly 0; a quiet room isn't
+      log('deepgram-silent', { frames: stats.frames, state: ctx.state });
+      try { node.disconnect(); ws.close(); ctx.close(); } catch {} dg = null; dgOff = true;
+      stream?.getTracks().forEach(t => t.stop());
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); meter(stream); await startLive(); log('live-start', 'after silent feed'); }
+      catch (e) { listening = false; glowOff(); cursorOff(); fail('Microphone not available: ' + (e.message || e)); }
+    }, 1200);
+    return true;
+  }
+  async function stopDeepgram() {
+    listening = false; const d = dg; dg = null; if (!d) return;
+    try { d.node.disconnect(); } catch {}
+    try { d.ws.send(JSON.stringify({ type: 'CloseStream' })); } catch {} // Deepgram sends the last words, then closes
+    await Promise.race([d.ended, new Promise(r => setTimeout(r, 2000))]);
+    log('deepgram-heard', { chars: box.value.length, frames: d.stats.frames, peak: +d.stats.peak.toFixed(3), msgs: d.stats.msgs, state: d.ctx.state });
+    try { d.ws.close(); } catch {} try { d.ctx.close(); } catch {}
+  }
+  async function stopLive() { listening = false; const wait = liveEnded; try { live?.stop(); } catch {} await Promise.race([wait, new Promise(r => setTimeout(r, 1500))]); live = null; }
+  mic.onclick = async () => {
+    if (listening && dg) {
+      cancelAnimationFrame(raf); glowOff(); cursorOff(); $('#typeinstead').hidden = true;
+      await stopDeepgram(); stream?.getTracks().forEach(t => t.stop()); try { audioCtx?.close(); } catch {} log('deepgram-stop', box.value.length); box.focus();
+      return;
+    }
+    if (!listening && !dgOff) {
+      st.textContent = ''; base = box.value;
+      const passP = fetch('/api/listen', { method: 'POST' }).then(r => r.json()).catch(() => ({ off: true })); // asked while the mic starts
+      try { if (navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch {} // Safari: let sound processing hear the mic
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+      catch (e) { return fail('Microphone not available: ' + (e.message || e)); }
+      // Made after the microphone is on: an iPhone feeds silence to sound processing made before it.
+      const ctx = new (window.AudioContext || window.webkitAudioContext)(); ctx.resume().catch(() => {});
+      listening = true; cursorOn(); glowOn(); meter(stream, ctx); $('#typeinstead').hidden = false;
+      if (await startDeepgram(ctx, passP)) { log('deepgram-start', ctx.state); return; }
+      try { ctx.close(); } catch {} dgOff = true; listening = false; cancelAnimationFrame(raf); glowOff(); cursorOff(); $('#typeinstead').hidden = true;
+      stream.getTracks().forEach(t => t.stop());
+    }
+    if (listening && live) {
+      cancelAnimationFrame(raf); glowOff(); cursorOff(); $('#typeinstead').hidden = true;
+      await stopLive(); stream?.getTracks().forEach(t => t.stop()); try { audioCtx?.close(); } catch {} log('live-stop', box.value.length); box.focus();
+      return;
+    }
+    if (!listening && SR && !liveBroken) {
+      st.textContent = ''; base = box.value;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true }); // for the glow; also asks for the microphone once
+        listening = true; await startLive(); cursorOn(); glowOn(); meter(stream); log('live-start'); $('#typeinstead').hidden = false;
+      } catch (e) { listening = false; glowOff(); cursorOff(); fail('Microphone not available: ' + (e.message || e)); }
+      return;
+    }
+    if (listening) {
+      listening = false; clearInterval(timer); cancelAnimationFrame(raf); glowOff(); cursorOff(); $('#typeinstead').hidden = true;
+      await new Promise(res => { if (!rec || rec.state !== 'recording') return res(); rec.onstop = res; rec.stop(); });
+      stream?.getTracks().forEach(t => t.stop()); try { audioCtx?.close(); } catch {}
+      log('stop', chunks.length);
+      if (!chunks.length) return fail(/iPhone|iPad/.test(navigator.userAgent) ? 'Nothing was recorded. Allow the microphone: tap aA in the address bar → Website Settings → Microphone → Allow.' : 'Nothing was recorded. Allow the microphone for this site in your browser settings, then try again.');
+      mic.disabled = true; st.textContent = 'Transcribing…'; while (busy) await new Promise(r => setTimeout(r, 100));
+      await send(true); st.textContent = ''; mic.disabled = false; box.focus();
+      return;
+    }
+    st.textContent = ''; base = box.value; chunks = [];
+    try {
+      log('start');
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const type = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find(t => MediaRecorder.isTypeSupported(t)) || '';
+      rec = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+      rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+      rec.onerror = e => log('rec-error', String(e.error || e));
+      rec.start(1000); listening = true; cursorOn(); glowOn(); meter(stream); log('recording', type || 'default'); $('#typeinstead').hidden = false;
+      timer = setInterval(() => { if (listening) send(false); }, 3000);
+    } catch (e) { listening = false; glowOff(); cursorOff(); fail('Microphone not available: ' + (e.message || e)); }
+  };
+  // For the rest of the page: start listening when something lands; Save and "Type instead" stop it first.
+  let stopping = null;
+  window.recallMic = {
+    start: () => { if (!listening && !busy) mic.onclick(); },
+    stop: () => listening ? (stopping ??= mic.onclick().finally(() => { stopping = null; })) : (stopping ?? Promise.resolve()),
+  };
+  $('#typeinstead').onclick = async () => { await window.recallMic.stop(); box.focus(); };
+})();
+
+
+$('#form').onsubmit = async (e) => {
+  e.preventDefault();
+  await window.recallMic?.stop(); $('#mic-status').textContent = '';
+  addLink($('#url').value);
+  const fd = new FormData();
+  picked.forEach(f => fd.append('files', f));
+  links.forEach(u => fd.append('url', u)); webImages.forEach(u => fd.append('image_url', u)); fd.append('notes', $('#notes').value.trim());
+  fd.append('remind', $('#remind').value); fd.append('remind_when', $('#when').value.trim());
+  if ($('#local').checked) fd.append('local', 'on');
+  if (!picked.length && !links.length && !webImages.length && !$('#notes').value.trim()) { $('#status').textContent = 'Attach something or write a note.'; return; }
+  $('#submit').disabled = true; $('#submit').setAttribute('aria-busy', 'true'); $('#status').textContent = '';
+  try {
+    const r = await fetch('/api/save', { method: 'POST', body: fd }); const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'save failed');
+    picked = []; links = []; webImages = []; renderChips(); $('#url').value = ''; $('#notes').value = ''; fitNotes(); $('#when').value = ''; $('#local').checked = false;
+    $('#status').innerHTML = '<span class="ok">✓ Saved. The librarian will file it.</span>'; indexRows = null; loadIndex();
+    followSave(d.id);
+  } catch (err) { $('#status').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
+  $('#submit').disabled = false; $('#submit').removeAttribute('aria-busy');
+};
+
+// After a save: wait for the librarian, then say where it went (a project, or Clarify asking which one).
+async function followSave(jobId) {
+  const mine = Symbol(); followSave.cur = mine;
+  for (let i = 0; i < 120 && followSave.cur === mine; i++) {
+    await new Promise(r => setTimeout(r, 5000)); if (followSave.cur !== mine) return;
+    const it = await fetch('/api/item?id=' + encodeURIComponent('pending:' + jobId)).then(r => r.ok ? r.json() : null).catch(() => null);
+    if (!it || it.pending) continue;
+    if (it.failed) { $('#status').innerHTML = '<span class="err">Saved, but not sorted yet. Recall tries again every hour.</span>'; return; }
+    const proj = it.project ? (projectRows.find(p => p.id === it.project)?.name || it.project) : '';
+    $('#status').innerHTML = proj ? `<span class="ok">✓ In <button class="linkbtn" id="rgo">${esc(proj)}</button></span>` : `<span class="ok">✓ Saved. <button class="linkbtn" id="rgo">Clarify</button> will ask which project.</span>`;
+    const go = $('#rgo'); if (go) go.onclick = () => { if (proj) { show('find'); openProject(it.project); } else show('cues'); };
+    setTimeout(() => { if (followSave.cur === mine) $('#status').textContent = ''; }, 30000);
+    return;
+  }
+}
+let shelvesCache = null;
+async function shelves() { if (!shelvesCache) shelvesCache = (await (await fetch('/api/shelves')).json()).shelves; return shelvesCache; }
+async function showReceipt(d) {
+  const sh = await shelves();
+  const el = $('#receipt'); el.className = 'receipt show' + (d.local ? ' local' : '');
+  el.innerHTML = `<div class="t">${esc(d.title)}</div>
+    <div>${d.local ? '🔒 Kept local, in' : 'In'} <select id="refile">${sh.map(s => `<option value="${s.id}" ${s.id===d.shelf?'selected':''}>${esc(s.name)}</option>`).join('')}</select>
+    ${d.tags.length ? ' · ' + d.tags.map(t => `<span class="chip">${esc(t)}</span>`).join(' ') : ''}</div>
+    ${d.summary ? `<div class="muted" style="margin-top:6px">${esc(d.summary)}</div>` : ''}
+    ${d.bring_back ? `<div class="muted" style="margin-top:6px">Comes back ${esc(plainDate(d.bring_back))}.</div>` : ''}
+    ${d.proposed ? `<div class="muted" style="margin-top:6px">Librarian wasn't sure; it suggested a new shelf: <b>${esc(d.proposed)}</b>. It'll ask once a few items point the same way.</div>` : ''}
+    <div class="status" id="rstatus"></div>`;
+  $('#refile').onchange = async (e) => {
+    const to = e.target.value; $('#rstatus').textContent = 'Moving…';
+    const r = await fetch('/api/move', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ id: d.id, to }) });
+    const x = await r.json(); $('#rstatus').textContent = r.ok ? 'Moved. The librarian will remember.' : (x.error || 'move failed'); if (r.ok) d.id = x.id;
+  };
+}
+
+// ----- Find -----
+// Find: instant local matching on every keystroke, then the library's full search refines it.
+let homeSig = '', recentRows = [], teamSig = '', teamRows = [], teamBoard = 'tnm', teamMember = true, me = { id: '' };
+let t, ctrl = null, indexRows = null, projectRows = [], lastQ = '', pendingPoll = null, backTo = null, view = 'home';
+let openSeq = 0; // bumped on every navigation, so a stale refresh never replaces the screen you're on
+const qbox = $('#q');
+const grow = () => { qbox.style.height = 'auto'; qbox.style.height = Math.min(qbox.scrollHeight, 220) + 'px'; };
+addEventListener('resize', () => grow());
+qbox.oninput = () => { grow(); instant(); clearTimeout(t); t = setTimeout(doSearch, 350); };
+qbox.addEventListener('focus', showRecent); qbox.addEventListener('click', showRecent);
+qbox.addEventListener('input', () => { if (qbox.value.trim()) hideRecent(); else showRecent(); });
+document.addEventListener('mousedown', (e) => { if (!e.target.closest('#recentbar, #q') && !document.body.classList.contains('carrying')) hideRecent(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#recentbar').hidden) hideRecent(); });
+qbox.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); clearTimeout(t); doSearch(); } };
+async function loadIndex() {
+  try { indexRows = (await (await fetch('/api/index')).json()).items; } catch { indexRows = []; }
+  try { projectRows = (await (await fetch('/api/projects')).json()).projects || []; } catch {}
+}
+// A query that names a project ("elemental", "zero proof bar") opens the whole project, not one item.
+function projectMatches(q) {
+  const n = q.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\b(the|a|an|our|my|for|at|in)\b/g, ' ').replace(/\s+/g, ' ').trim(); if (n.length < 3) return [];
+  return projectRows.filter(p => { const name = p.name.toLowerCase(); return n === name || n.includes(name) || (name.includes(n) && n.length >= 3); });
+}
+function projectHitHtml(p) {
+  return `<button class="proj-hit" data-proj="${esc(p.id)}">${p.cover ? `<img src="/thumb/${encodeURIComponent(p.cover)}" alt="">` : ''}<div><b>${esc(p.name)}</b><span>Project · ${p.count} item${p.count===1?'':'s'} · open to see everything</span></div></button>`;
+}
+function projectTileHtml(p) {
+  return `<button class="proj" data-proj="${esc(p.id)}">${p.cover ? `<img class="cover" src="/thumb/${encodeURIComponent(p.cover)}" alt="" loading="lazy">` : '<div class="nocover"></div>'}<b>${esc(p.name)}</b><span>${p.count} item${p.count===1?'':'s'}</span></button>`;
+}
+function words(q) { return q.toLowerCase().replace(/[’']s\b/g, '').split(/[^a-z0-9]+/).filter(w => w.length > 1); }
+function localMatches(q) {
+  if (!indexRows) return [];
+  const ws = words(q); if (!ws.length) return [];
+  return indexRows.map(r => { const hay = (r.title + ' ' + (r.snippet || '')).toLowerCase(); const n = ws.filter(w => hay.includes(w)).length; return [n, r]; })
+    .filter(([n]) => n > 0).sort((a, b) => b[0] - a[0]).slice(0, 12).map(([, r]) => r);
+}
+function render(list, note) {
+  const box = $('#results');
+  const hits = projectMatches(qbox.value.trim()).map(projectHitHtml).join('');
+  box.innerHTML = hits + (note ? `<div class="status">${note}</div>` : '') + (list.length ? `<div class="list">${list.map(itemHtml).join('')}</div>` : (hits ? '' : '<div class="status">Nothing yet. Keep describing it.</div>'));
+  wire(box);
+}
+function instant() {
+  const q = qbox.value.trim();
+  if (!q) { $('#results').innerHTML = ''; $('#browse').hidden = false; return; }
+  if (isMoveCommand(q)) return;
+  $('#browse').hidden = true;
+  render(localMatches(q), '');
+}
+// "Move all the Buddha artwork to Frequency Wellness": show what would move, untick any, then move them.
+function isMoveCommand(q) {
+  if (/^(move|put|file)\b/i.test(q)) return true;
+  const m = q.match(/\s(?:to|into)\s+(?:the\s+)?(.+)$/i); if (!m) return false;
+  const n = m[1].toLowerCase(); return projectRows.some(p => n.length >= 4 && p.name.toLowerCase().startsWith(n.slice(0, Math.max(4, n.length - 2))));
+}
+async function movePreview(q) {
+  const d = await (await fetch('/api/move/preview', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: q }) })).json().catch(() => ({ error: 'Try again.' }));
+  if (qbox.value.trim() !== q) return;
+  const R = $('#results'); $('#browse').hidden = true;
+  if (d.error) { R.innerHTML = `<div class="status">${esc(d.error)}</div>`; return; }
+  if (!d.items.length) { R.innerHTML = `<div class="status">Nothing matches “${esc(d.what)}”.</div>`; return; }
+  const off = new Set();
+  const draw = () => {
+    const n = d.items.length - off.size;
+    R.innerHTML = `<div class="mv"><div class="mv-grid">${d.items.map(it => `<button class="mv-it${off.has(it.id) ? ' off' : ''}" data-id="${esc(it.id)}">${it.thumb ? `<img src="${myThumb(it.thumb)}" alt="" loading="lazy">` : `<i>${KIND_ICON[it.kind] || '·'}</i>`}<span>${esc(it.title)}</span></button>`).join('')}</div>
+      <button class="primary" id="mvgo" ${n ? '' : 'disabled'}>Move ${n} to ${esc(d.project.name)}</button></div>`;
+    R.querySelectorAll('.mv-it').forEach(x => x.onclick = () => { off.has(x.dataset.id) ? off.delete(x.dataset.id) : off.add(x.dataset.id); draw(); });
+    $('#mvgo').onclick = async () => {
+      $('#mvgo').disabled = true;
+      const r = await (await fetch('/api/item/project', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids: d.items.filter(it => !off.has(it.id)).map(it => it.id), project: d.project.id || d.project.name }) })).json().catch(() => ({}));
+      if (!r.ok) { $('#mvgo').disabled = false; return; }
+      R.innerHTML = `<div class="status">Moved ${r.moved} to ${esc(r.project.name)}. <button class="linkbtn" id="mvopen">Open it</button></div>`;
+      indexRows = null; qbox.value = ''; grow(); loadShelves();
+      $('#mvopen').onclick = () => { R.innerHTML = ''; openProject(r.project.id); };
+    };
+  };
+  draw();
+}
+async function doSearch() {
+  const q = qbox.value.trim(); if (!q) return; lastQ = q;
+  if (isMoveCommand(q)) return movePreview(q);
+  ctrl?.abort(); ctrl = new AbortController();
+  try {
+    const d = await (await fetch('/api/search?q=' + encodeURIComponent(q), { signal: ctrl.signal })).json();
+    if (qbox.value.trim() !== q) return; // typed on; a newer search is coming
+    const seen = new Set(d.results.map(r => r.id));
+    render([...d.results, ...localMatches(q).filter(r => !seen.has(r.id))], '');
+  } catch (e) { if (e.name !== 'AbortError') render(localMatches(q), 'Library search is slow right now; showing quick matches.'); }
+}
+function caption(s) { s = String(s || '').replace(/[#*_`>|\\]+/g, ' ').replace(/^(The )?owner('s)?\s+(saved|documented|intends to|wants to|detailed notes( on)?|notes)\s*/i, '').replace(/^\w/, c => c.toUpperCase()).replace(/\s+/g, ' ').trim(); if (s.length > 90) s = s.slice(0, 88).replace(/\s+\S*$/, '') + '…'; return s; }
+function itemHtml(it) {
+  const cap = caption(it.snippet ?? it.summary);
+  if (it.pending) return `<button class="item tile pending" data-id="${esc(it.id)}">${it.thumb ? `<img class="hero" src="/thumb/${encodeURIComponent(it.thumb)}" alt="" loading="lazy">` : ''}<div class="tile-text"><b>${esc(it.title)}</b><span>${esc(it.snippet)}</span></div></button>`;
+  if (it.thumb) return `<button class="item tile" data-id="${esc(it.id)}"><img class="hero" src="/thumb/${encodeURIComponent(it.thumb)}" alt="" loading="lazy"><div class="tile-text"><b>${esc(it.title)}</b>${cap ? `<span>${esc(cap)}</span>` : ''}</div></button>`;
+  return `<button class="item" data-id="${esc(it.id)}"><div><b>${it.local ? '🔒 ' : ''}${esc(it.title)}</b>${cap ? `<span>${esc(cap)}</span>` : ''}</div></button>`;
+}
+function wire(root) { root.querySelectorAll('.item').forEach(b => b.onclick = () => openItem(b.dataset.id)); root.querySelectorAll('[data-proj]').forEach(b => b.onclick = () => openProject(b.dataset.proj)); }
+
+// Find's home: the projects (and Brought back). Recent saves live in a strip under the search box instead.
+// A quiet refresh (while saves are being filed) redraws only what changed, in place: no blink, no jump to the top,
+// and never while something is being carried, a panel is under the pointer, or a board is open.
+async function loadShelves(quiet = false) {
+  const my = ++openSeq; view = 'home';
+  const b = $('#browse'); b.hidden = false; if (!quiet && !b.querySelector('#projstage')) b.innerHTML = `<div class="stage" aria-busy="true"><div class="stage-label">Your projects</div><div class="dock skel">${'<div class="panel empty"></div>'.repeat(Math.min(6, Math.max(3, projectRows.length || 4)))}</div></div>`;
+  const d = await (await fetch('/api/browse')).json(); if (my !== openSeq) return;
+  clearTimeout(pendingPoll); if (d.pending) pendingPoll = setTimeout(() => { if (!$('#find').hidden && !qbox.value.trim()) { loadShelves(true); loadIndex(); } }, 5000);
+  try { projectRows = (await (await fetch('/api/projects')).json()).projects || projectRows; } catch {} if (my !== openSeq) return;
+  try { const t = await (await fetch('/api/team')).json(); teamRows = t.projects || []; if (t.board) teamBoard = t.board; if ('member' in t) teamMember = !!t.member; } catch {} if (my !== openSeq) return;
+  teamSig = JSON.stringify(teamRows);
+  refreshRecent();
+  const due = (d.due || []).length ? `<div class="due"><b>Brought back for you</b>${d.due.map(x => `<button class="item" data-id="${esc(x.id)}"><b>${x.local?'🔒 ':''}${esc(x.title)}</b><span>${x.when ? 'for: ' + esc(x.when) : 'saved ' + esc(x.saved)}${x.summary ? ' · ' + esc(x.summary) : ''}</span></button>`).join('')}</div>` : '';
+  const cards = [...(teamRows.length ? [teamCard(teamRows)] : []), ...projectRows.map(p => ({ id: p.id, name: p.name, thumbs: p.thumbs || (p.cover ? [p.cover] : []), meta: `${p.count} item${p.count===1?'':'s'}`, counts: p.counts || {} }))];
+  const projHtml = cards.length ? `<div class="stage" id="projstage"><div class="stage-label">Your projects</div>${dockHtml(cards)}</div>` : '';
+  const html = projHtml + due + d.proposed.map(p => `<div class="proposal"><b>Librarian suggests a new shelf: ${esc(p.name)}</b> <span class="muted">(${p.items.length} items)</span><div class="actions"><button data-p="${esc(p.name)}" data-a="approve">Create shelf</button><button data-p="${esc(p.name)}" data-a="dismiss">Dismiss</button></div></div>`).join('');
+  if (quiet && (html === homeSig || busyHome())) return;
+  homeSig = html; backTo = null;
+  const y = scrollY; b.innerHTML = html; if (quiet) scrollTo(0, y);
+  wire(b); wireHome();
+  b.querySelectorAll('.due .item').forEach(carry);
+  b.querySelectorAll('[data-p]').forEach(x => x.onclick = async () => { await fetch('/api/proposal', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ name: x.dataset.p, action: x.dataset.a }) }); shelvesCache = null; loadShelves(); });
+}
+function busyHome() { return !!boardEl || document.body.classList.contains('carrying') || !!document.querySelector('.dock.hovering') || !$('#recentbar').hidden; }
+// The recent-saves strip under the search box: opens when you click into the empty box; tiles drag onto projects.
+function drawRecent() {
+  const r = $('#recentbar');
+  r.innerHTML = recentRows.length ? `<div class="rb-label">Recently saved</div><div class="rb-strip">${recentRows.map(it => it.pending
+      ? `<div class="rtile filing">${it.thumb ? `<img src="/thumb/${encodeURIComponent(it.thumb)}" alt="" loading="lazy">` : '<i>…</i>'}<span>${esc(it.title)}</span></div>`
+      : `<div class="tile-wrap${it.status === 'unsorted' || it.status === 'waiting' ? ' asks' : ''}"><button class="rtile item" data-id="${esc(it.id)}">${it.thumb ? `<img src="/thumb/${encodeURIComponent(it.thumb)}" alt="" loading="lazy">` : `<i>${KIND_ICON.note}</i>`}<span>${esc(it.title)}</span></button><button class="tile-x" data-x="${esc(it.id)}" aria-label="Delete ${esc(it.title)}" title="Delete"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')}</div>`
+    : '<div class="rb-label">Nothing saved yet</div>';
+  r.querySelectorAll('.rtile.item').forEach(x => { x.onclick = () => { hideRecent(); openItem(x.dataset.id); }; carry(x); });
+  r.querySelectorAll('[data-x]').forEach(x => x.onclick = (e) => { e.stopPropagation(); const w = x.closest('.tile-wrap'); w.classList.add('gone'); deleteItems([x.dataset.x], () => { recentRows = recentRows.filter(it => it.id !== x.dataset.x); setTimeout(() => w.remove(), 382); }, refreshRecent); });
+}
+function refreshRecent() { fetch('/api/recent?limit=24').then(r => r.json()).then(r => { recentRows = (r.items || []).map(it => ({ ...it, pending: it.status === 'filing' || it.status === 'failed' })); drawRecent(); }).catch(() => {}); }
+function showRecent() { if (!qbox.value.trim() && recentRows.length) $('#recentbar').hidden = false; }
+function hideRecent() { $('#recentbar').hidden = true; }
+async function openShelf(id) {
+  const my = ++openSeq; clearTimeout(pendingPoll); view = 'shelf';
+  const b = $('#browse'); b.innerHTML = '<div class="status">Loading…</div>';
+  const d = await (await fetch('/api/browse?shelf=' + id)).json(); if (my !== openSeq) return;
+  b.innerHTML = `<div class="crumb"><button id="back">← All shelves</button> / ${esc(d.shelf?.name ?? id)}</div>` + (d.items.length ? `<div class="list">${d.items.map(itemHtml).join('')}</div>` : '<div class="status">Empty shelf.</div>');
+  $('#back').onclick = loadShelves; wire(b);
+}
+// A project: every asset saved for one business, space or initiative, grouped so it can be looked at, sent, or handed to Claude.
+const KIND = { image: 'Photos', voice: 'Voice notes', video: 'Videos', note: 'Notes', link: 'Links', document: 'Documents' };
+
+// The living dock: panels share the row; the one under the cursor grows to φ². Positions never change.
+const KIND_ICON = { image: '▣', document: '▤', voice: '◉', note: '✎', link: '↗', video: '▶' };
+// Pictures: your own files, or (on the team board) files someone shared.
+const myThumb = (f) => '/thumb/' + encodeURIComponent(f), teamThumb = (f) => '/board/img/' + encodeURIComponent(f) + '?size=small', teamFull = (f) => '/board/img/' + encodeURIComponent(f) + '?size=full';
+const face = (p) => `<span class="who" title="${esc(p.name)}">${p.avatar ? `<img src="${esc(p.avatar)}" alt="">` : esc((p.name || '?').trim()[0].toUpperCase())}</span>`;
+function panelHtml(c, on, thumb = myThumb) {
+  const th = (c.thumbs || []).slice(0, 12), pic = c.thumb || thumb;
+  const tiles = th.map(f => `<i style="background-image:url('${pic(f)}')"></i>`).join('');
+  const mosaic = th.length ? `<div class="mosaic${th.length <= 2 ? ' one' : th.length % 2 ? ' odd' : ''}">${tiles}</div>` : '';
+  const chips = Object.entries(c.counts || {}).filter(([, n]) => n).map(([k, n]) => `<span class="pchip">${KIND_ICON[k] || '·'} ${n} ${esc(((KIND[k] || k).toLowerCase()).replace(n === 1 ? /s$/ : /$^/, ''))}</span>`).join('');
+  return `<button class="panel${on ? ' on' : ''}${th.length ? '' : ' empty'}${c.team ? ' teampanel' : ''}" data-dock="${esc(c.id)}" aria-label="${esc(c.name)}">${mosaic}${(c.faces || []).length ? `<span class="faces">${c.faces.slice(0, 4).map(face).join('')}</span>` : ''}<div class="ptext">${c.team ? '<span class="pkicker">Shared</span>' : ''}<span class="pname">${esc(c.name)}</span><span class="pmeta">${esc(c.meta || '')}</span><div class="pkinds">${chips}</div></div></button>`;
+}
+function dockHtml(cards, thumb = myThumb) { return `<div class="dock">${cards.map((c, i) => panelHtml(c, i === (c.on ?? 0), thumb)).join('')}</div>`; }
+// The team board, kept current: whatever anyone adds or shares shows up within a few seconds, without a reload.
+const TEAM = '__team';
+// The team board is one panel: a few pictures from each shared project, interleaved, and who's in it.
+function teamCard(rows) {
+  const thumbs = []; for (let i = 0; i < 12; i++) rows.forEach(r => { if (r.thumbs[i] && thumbs.length < 12) thumbs.push(r.thumbs[i]); });
+  const people = [...new Set(rows.flatMap(r => r.people))];
+  const faces = [...new Map(rows.flatMap(r => r.contributors || []).map(c => [c.id, c])).values()];
+  return { id: TEAM, name: 'Dream board', team: true, thumbs, thumb: teamThumb, faces, meta: `${rows.length} project${rows.length === 1 ? '' : 's'}${people.length ? ' · ' + people.join(', ') : ''}` };
+}
+function wireHome() { const st = $('#projstage'); if (st) wireDock(st, (id, p) => id === TEAM ? openTeamBoard(p) : openProject(id, false, p), dropInto); }
+async function refreshTeam() {
+  if (document.hidden || $('#find').hidden || view !== 'home' || document.body.classList.contains('carrying') || qbox.value.trim()) return;
+  const rows = await fetch('/api/team').then(r => r.json()).then(d => d.projects || []).catch(() => null);
+  if (!rows || JSON.stringify(rows) === teamSig) return;
+  const had = teamRows.length; teamSig = JSON.stringify(rows); teamRows = rows;
+  if (boardEl) { if (boardFrom === TEAM && boardLevel === 'team') teamLevel(); return; }
+  const old = document.querySelector(`.panel[data-dock="${TEAM}"]`);
+  if (!old || !rows.length || !had) return loadShelves(); // the panel comes or goes: redraw the row
+  old.outerHTML = panelHtml(teamCard(rows), old.classList.contains('on')); wireHome();
+}
+setInterval(refreshTeam, 6000);
+// Drag a saved item (from Recently saved) onto a project panel: it moves there. The panel widens to meet it.
+const CARRY = 'text/x-recall-item'; // the same type the window's drop handler leaves alone
+function carry(el) {
+  el.draggable = true; el.querySelectorAll('img').forEach(i => i.draggable = false);
+  el.addEventListener('dragstart', (e) => { e.dataTransfer.setData(CARRY, el.dataset.id); e.dataTransfer.effectAllowed = 'move'; el.classList.add('carried'); document.body.classList.add('carrying'); });
+  el.addEventListener('dragend', () => { el.classList.remove('carried'); document.body.classList.remove('carrying'); });
+}
+// On the drop: it leaves Recently saved, and its picture pops onto the front of the panel, right where you can see it.
+async function dropInto(projectId, panel, itemId) {
+  const card = document.querySelector(`#recentbar .item[data-id="${CSS.escape(itemId)}"], .due .item[data-id="${CSS.escape(itemId)}"]`);
+  const pic = card?.querySelector('img')?.getAttribute('src');
+  panel.classList.add('took'); card?.classList.add('gone');
+  const twin = teamRows.some(r => r.id === projectId) ? document.querySelector(`.panel[data-dock="${TEAM}"]`) : null;
+  const undo = popInto(panel, pic), undoTeam = twin ? popInto(twin, pic, false) : () => {};
+  const r = await (await fetch('/api/item/project', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids: [itemId], project: projectId }) })).json().catch(() => ({}));
+  setTimeout(() => panel.classList.remove('took'), 640);
+  if (!r.ok) { card?.classList.remove('gone'); undo(); undoTeam(); return; }
+  setTimeout(() => { if (card?.closest('#recentbar')) { (card.closest('.tile-wrap') ?? card).remove(); recentRows = recentRows.filter(r => r.id !== itemId); if (!recentRows.length) hideRecent(); } }, 382);
+  indexRows = null; loadIndex();
+  fetch('/api/projects').then(r => r.json()).then(d => { projectRows = d.projects || projectRows; }).catch(() => {});
+}
+function popInto(panel, pic, count = true) {
+  const meta = count ? panel.querySelector('.pmeta') : null, was = meta?.textContent;
+  const n = parseInt(was) || 0; if (meta) { meta.textContent = `${n + 1} item${n + 1 === 1 ? '' : 's'}`; meta.classList.add('bump'); }
+  if (!pic) return () => { if (meta) meta.textContent = was; };
+  let m = panel.querySelector('.mosaic');
+  if (!m) { m = document.createElement('div'); m.className = 'mosaic'; panel.prepend(m); panel.classList.remove('empty'); }
+  const tile = document.createElement('i'); tile.className = 'new'; tile.style.backgroundImage = `url('${pic}')`; m.prepend(tile);
+  const k = m.children.length; m.classList.toggle('one', k <= 2); m.classList.toggle('odd', k > 2 && k % 2 === 1);
+  return () => { tile.remove(); if (meta) meta.textContent = was; };
+}
+// Carrying something near the top or bottom of the window scrolls the page: the closer to the edge, the faster.
+let carryY = -1, carryLoop = 0;
+document.addEventListener('dragover', (e) => { if (e.dataTransfer?.types?.includes(CARRY)) carryY = e.clientY; });
+document.addEventListener('dragstart', (e) => {
+  if (!e.dataTransfer?.types?.includes(CARRY)) return;
+  const edge = Math.min(180, innerHeight * .25);
+  const tick = () => {
+    if (!document.body.classList.contains('carrying')) { carryLoop = 0; carryY = -1; return; }
+    const y = carryY, up = y >= 0 && y < edge, down = y > innerHeight - edge;
+    if (up || down) { const t = up ? 1 - y / edge : 1 - (innerHeight - y) / edge; window.scrollBy(0, (up ? -1 : 1) * Math.round(4 + 44 * t * t)); }
+    carryLoop = requestAnimationFrame(tick);
+  };
+  if (!carryLoop) carryLoop = requestAnimationFrame(tick);
+});
+function wireDock(root, onPick, onDrop = null) {
+  root.querySelectorAll('.dock').forEach(d => {
+    const ps = [...d.querySelectorAll('.panel')];
+    // The one under the cursor grows most; its neighbours a little, like a dock magnifying.
+    const on = (p) => { const k = ps.indexOf(p); ps.forEach((x, j) => { x.classList.toggle('on', j === k); x.classList.toggle('near', Math.abs(j - k) === 1); }); };
+    ps.forEach(p => { p.onmouseenter = () => { d.classList.add('hovering'); on(p); }; p.onfocus = () => on(p); p.onclick = () => onPick(p.dataset.dock, p); });
+    if (onDrop) ps.filter(p => p.dataset.dock !== TEAM).forEach(p => {
+      p.addEventListener('dragover', (e) => { if (!e.dataTransfer.types.includes(CARRY)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; d.classList.add('hovering'); on(p); p.classList.add('drop'); });
+      p.addEventListener('dragleave', () => p.classList.remove('drop'));
+      p.addEventListener('drop', (e) => { const id = e.dataTransfer.getData(CARRY); p.classList.remove('drop'); d.classList.remove('hovering'); if (id) { e.preventDefault(); e.stopPropagation(); onDrop(p.dataset.dock, p, id); } });
+    });
+    d.onmouseleave = () => d.classList.remove('hovering');
+  });
+}
+// A project opens as a board that fills the screen: the panel you clicked grows into it. Everything saved for the
+// project sits in buckets by kind; the topics the librarian formed narrow every bucket at once.
+const BUCKETS = [
+  { id: 'pictures', name: 'Pictures', kinds: ['image', 'video'] },
+  { id: 'notes', name: 'Notes', kinds: ['note'] },
+  { id: 'documents', name: 'Documents', kinds: ['document'] },
+  { id: 'meetings', name: 'Meetings', kinds: ['meeting', 'voice'] },
+  { id: 'links', name: 'Links', kinds: ['link'] },
+];
+let boardEl = null, boardFrom = null, boardDirty = false, boardLevel = '';
+function openTeamBoard(fromEl) { ++openSeq; clearTimeout(pendingPoll); growBoard(fromEl, TEAM); teamLevel(); }
+function teamLevel() {
+  const el = boardEl; if (!el) return; boardLevel = 'team'; backTo = null; // Create stays open while you move around the board
+  const people = [...new Set(teamRows.flatMap(r => r.people))];
+  el.querySelector('.bd-top').innerHTML = `<button class="bd-close" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><div class="bd-title"><h2>Dream board</h2><span>${teamRows.length} project${teamRows.length === 1 ? '' : 's'}${people.length ? ' · ' + esc(people.join(', ')) : ''}</span></div><div class="bd-actions"><button id="dinvite">Invite</button><button id="dcreate">Creator mode</button></div>`;
+  el.querySelector('#dinvite').onclick = () => openInvite(teamBoard);
+  createToggle(el.querySelector('#dcreate'), el, { boardId: teamBoard, team: true });
+  const body = el.querySelector('.bd-body');
+  body.innerHTML = teamRows.length ? `<div class="folders">${teamRows.map(folderHtml).join('')}</div>` : '<div class="status">Nothing is shared yet. Open a project and click Share to Dream board.</div>';
+  body.classList.remove('arrive'); void body.offsetWidth; body.classList.add('arrive');
+  el.querySelector('.bd-close').onclick = closeBoard;
+  body.querySelectorAll('.folder').forEach(b => b.onclick = () => openProject(b.dataset.dock, true));
+}
+// Create mode: the panel slides in from the right. While it's open, clicking a picture or a note adds it to the
+// panel instead of opening it (dragging still works too).
+// Invite: the team link, ready to copy or share. Whoever opens it and signs in with Google joins the Dream board.
+// Max also gets the friends link (Friends): whoever opens that gets their own Recall, not the Dream board.
+const INV = {
+  team: { h: 'Invite to the Dream board', p: 'Send this link to your team. Anyone who opens it and signs in with Google joins the Dream board.', copied: 'Copied. Paste it in your team chat.', share: 'Open this link and sign in with Google to join the Dream board on Recall.' },
+  friends: { h: 'Invite friends to Recall', p: 'Send this link to friends. Anyone who opens it and signs in with Google gets their own Recall. They don\'t see the Dream board.', copied: 'Copied. Send it to your friends.', share: 'Open this link and sign in with Google to get your own Recall.' },
+};
+function openInvite(boardId) {
+  let d = document.getElementById('invite');
+  if (!d) {
+    d = document.createElement('dialog'); d.id = 'invite'; d.className = 'invite';
+    d.innerHTML = `<div class="inv-in"><div class="inv-pick" hidden><button type="button" data-k="team">Team</button><button type="button" data-k="friends">Friends</button></div><h3></h3>
+      <p class="muted"></p>
+      <input id="invlink" type="text" readonly aria-label="Invite link" value="Getting the link…">
+      <p class="inv-msg small muted" role="status"></p>
+      <div class="inv-act"><button type="button" class="quiet" id="invclose">Close</button>${navigator.share ? '<button type="button" id="invshare">Share</button>' : ''}<button type="button" class="primary" id="invcopy">Copy link</button></div></div>`;
+    document.body.append(d);
+    d.querySelector('#invclose').onclick = () => d.close();
+    d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+  }
+  const box = d.querySelector('#invlink'), msg = d.querySelector('.inv-msg'), pick = d.querySelector('.inv-pick');
+  let kind = 'team', links = {};
+  const show = (k) => {
+    kind = k; const t = INV[k]; d.querySelector('h3').textContent = t.h; d.querySelector('.inv-in > p.muted').textContent = t.p;
+    pick.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.k === k)));
+    box.value = links[k] || 'Getting the link…'; msg.textContent = '';
+  };
+  pick.querySelectorAll('button').forEach(b => b.onclick = () => show(b.dataset.k));
+  show('team');
+  const linkP = fetch(`/api/boards/${encodeURIComponent(boardId)}/link`).then(r => r.json()).catch(() => ({}));
+  linkP.then(r => { links = { team: r.link, friends: r.friends }; pick.hidden = !r.friends; show(kind); if (!r.link) msg.textContent = r.error || "The link didn't load. Close this and try again."; });
+  d.querySelector('#invcopy').onclick = async () => {
+    await linkP; const link = links[kind]; if (!link) return;
+    try { await navigator.clipboard.writeText(link); msg.textContent = INV[kind].copied; }
+    catch { box.focus(); box.select(); msg.textContent = 'Press Copy (⌘C) to copy the selected link.'; }
+  };
+  const sh = d.querySelector('#invshare');
+  if (sh) sh.onclick = async () => { await linkP; const link = links[kind]; if (link) navigator.share({ title: 'Recall', text: INV[kind].share, url: link }).catch(() => {}); };
+  d.showModal();
+}
+function createToggle(btn, el, opts) {
+  if (!btn || !window.Visualize) return;
+  const mark = () => { const on = Visualize.isOpen(); btn.classList.add('creatorbtn'); btn.classList.toggle('on', on); btn.setAttribute('aria-pressed', String(on)); };
+  if (Visualize.isOpen()) Visualize.mount(el, opts);
+  btn.onclick = () => { Visualize.isOpen() ? Visualize.unmount() : Visualize.mount(el, opts); mark(); };
+  creatorMark = mark; // the panel's own × turns the light off too
+  mark();
+}
+let creatorMark = null; document.addEventListener('creator-mode', () => creatorMark?.());
+// A shared project on the team board, drawn like an iPhone folder: a rounded square of four small pictures,
+// the name under it, who added to it in the corner. Every folder is the same size, however much is inside.
+function folderHtml(p) {
+  const th = (p.thumbs || []).slice(0, 4), cells = [...th.map(f => `<i style="background-image:url('${teamThumb(f)}')"></i>`), ...Array(4 - th.length).fill('<i class="blank"></i>')].join('');
+  const faces = (p.contributors || []).slice(0, 3).map(face).join('');
+  return `<button class="folder" data-dock="${esc(p.id)}" aria-label="${esc(p.name)}"><span class="fbox"><span class="fmini">${cells}</span>${faces ? `<span class="ffaces">${faces}</span>` : ''}</span><span class="fname">${esc(p.name)}</span><span class="fmeta">${p.count} item${p.count === 1 ? '' : 's'}</span></button>`;
+}
+async function openProject(id, team = false, fromEl = null, topic = null, who = null) {
+  const my = ++openSeq; clearTimeout(pendingPoll);
+  const req = fetch((team ? `/api/boards/${encodeURIComponent(teamBoard)}/project?id=` : '/api/project?id=') + encodeURIComponent(id)).then(r => r.json()).catch(() => ({ error: true }));
+  const el = boardEl || growBoard(fromEl, id);
+  backTo = () => openProject(id, team, null, topic, who);
+  const d = await req; if (my !== openSeq || el !== boardEl) return;
+  if (d.error) { el.querySelector('.bd-body').innerHTML = '<div class="status">This project isn\'t available any more.</div>'; return; }
+  const thumb = team ? teamThumb : myThumb, full = team ? teamFull : (f) => '/files/' + encodeURIComponent(f);
+  const again = (t, w = who) => openProject(id, team, null, t, w);
+  const groups = d.groups || [];
+  const all = groups.flatMap(g => [g, ...(g.children || [])]);
+  const T = topic ? all.find(g => g.id === topic) : null;
+  const parent = T ? (groups.find(g => g === T || (g.children || []).includes(T))) : null;
+  const people = team ? (d.people || []) : [];
+  const W = who ? people.find(p => p.id === who) : null;
+  const pool = (T ? d.items.filter(it => T.items.includes(it.id)) : d.items).filter(it => !W || it.person === W.id);
+  const peopleRow = people.length > 1 ? `<div class="bd-people"><button data-w="" aria-pressed="${!W}">Everyone <span>${d.items.length}</span></button>${people.map(p => `<button data-w="${esc(p.id)}" aria-pressed="${W === p}">${face(p)}${esc(p.name)} <span>${p.count}</span></button>`).join('')}</div>` : '';
+  const chip = (g, on) => `<button data-t="${esc(g.id)}" aria-pressed="${on}">${esc(g.name)} <span>${g.items.length}</span></button>`;
+  const topics = groups.length > 1 ? `<div class="bd-topics"><button data-t="" aria-pressed="${!T}">Everything <span>${d.items.length}</span></button>${groups.map(g => chip(g, g === parent)).join('')}</div>` +
+    (parent && (parent.children || []).length ? `<div class="bd-topics sub">${parent.children.map(c => chip(c, c === T)).join('')}</div>` : '') : '';
+  const meta = (it) => [it.by, it.saved].filter(Boolean).map(esc).join(' · ');
+  const card = (it) => {
+    const words = esc(it.notes || caption(it.summary) || '');
+    if (it.kind === 'image' || it.kind === 'video') return it.thumb ? `<button class="bd-pic${it.pending ? ' filing' : ''}" data-i="${esc(it.id)}"><img src="${thumb(it.thumb)}" alt="" loading="lazy">${it.kind === 'video' ? '<em>▶</em>' : ''}<span>${esc(it.title)}</span></button>` : '';
+    const lead = it.kind === 'link' && it.thumb ? `<img class="lt" src="${thumb(it.thumb)}" alt="" loading="lazy">` : '';
+    const top = it.kind === 'link' && it.url ? `<small class="host">${esc(host(it.url))}</small>` : '';
+    return `<button class="bd-card" data-i="${esc(it.id)}">${lead}${top}<b><span class="ic">${KIND_ICON[it.kind] || '·'}</span>${esc(it.title)}</b>${words ? `<p>${words}</p>` : ''}<small>${meta(it)}</small></button>`;
+  };
+  const buckets = BUCKETS.map(k => ({ ...k, items: pool.filter(it => k.kinds.includes(it.kind) || (k.id === 'notes' && !BUCKETS.some(x => x.kinds.includes(it.kind)))) })).filter(k => k.items.length);
+  const cols = buckets.map(k => k.id === 'pictures' ? 'minmax(0,1.618fr)' : 'minmax(0,1fr)').join(' ');
+  const summary = buckets.map(k => `${k.items.length} ${k.items.length === 1 ? k.name.toLowerCase().replace(/s$/, '') : k.name.toLowerCase()}`).join(' · ');
+  el.querySelector('.bd-top').innerHTML = `<button class="bd-close" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="bd-title"><h2>${esc(d.project.name)}</h2><span>${esc(summary || 'Nothing saved here yet')}</span></div>
+    <div class="bd-actions">${team ? '' : `${d.alwaysShared || !teamMember ? '' : `<button class="${d.shared ? '' : 'primary'}" id="pteam">${d.shared ? 'Stop sharing' : 'Share to Dream board'}</button>`}<button id="pshare">Send</button>`}${teamMember ? '<button id="pviz">Creator mode</button>' : ''}<button id="pcopy">Copy for Claude</button></div>`;
+  const tile = (it) => { const c = card(it); return !c || team ? c : `<div class="tile-wrap">${c}<button class="tile-x" data-x="${esc(it.id)}" aria-label="Delete ${esc(it.title)}" title="Delete"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`; };
+  el.querySelector('.bd-body').innerHTML = peopleRow + topics + (buckets.length ? `<div class="bd-grid" style="grid-template-columns:${cols}">${buckets.map(k => `<section class="bucket ${k.id}"><h3>${k.name} <span>${k.items.length}</span></h3><div class="bk">${k.items.map(tile).join('')}</div></section>`).join('')}</div>`
+    : `<div class="status">Nothing here yet. Save something and say it's for ${esc(d.project.name)}.</div>`);
+  boardLevel = 'project'; const up = boardFrom === TEAM ? teamLevel : closeBoard;
+  el.querySelector('.bd-close').onclick = up;
+  const body = el.querySelector('.bd-body'); if (!topic) { body.classList.remove('arrive'); void body.offsetWidth; body.classList.add('arrive'); }
+  el.querySelectorAll('[data-t]').forEach(x => x.onclick = () => again(x.dataset.t || null));
+  // Your own board: drag a picture or note onto a topic pill and it stays in that topic (the librarian won't move it).
+  if (!team) {
+    el.querySelectorAll('.bd-body [data-i]').forEach(c => { if (c.draggable !== true) c.draggable = true; c.addEventListener('dragstart', (e) => { e.dataTransfer.setData(CARRY, c.dataset.i); e.dataTransfer.effectAllowed = 'copyMove'; }); });
+    el.querySelectorAll('.bd-topics [data-t]').forEach(x => { if (!x.dataset.t || x.dataset.t === 'loose') return;
+      x.addEventListener('dragover', (e) => { if (!e.dataTransfer.types.includes(CARRY)) return; e.preventDefault(); x.classList.add('drop'); });
+      x.addEventListener('dragleave', () => x.classList.remove('drop'));
+      x.addEventListener('drop', async (e) => { const item = e.dataTransfer.getData(CARRY); x.classList.remove('drop'); if (!item) return; e.preventDefault(); e.stopPropagation();
+        const r = await fetch('/api/topic/move', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ project: id, item, topic: x.dataset.t }) }).then(r => r.json()).catch(() => ({}));
+        if (r.ok) { toast(`Moved to ${x.textContent.replace(/\s*\d+\s*$/, '').trim()}`); again(topic); } else toast("Couldn't move that."); });
+    });
+  }
+  el.querySelectorAll('[data-w]').forEach(x => x.onclick = () => again(topic, x.dataset.w || null));
+  const byId = new Map(d.items.map(it => [it.id, it]));
+  el.querySelectorAll('[data-i]').forEach(x => x.onclick = () => {
+    const it = byId.get(x.dataset.i);
+    if (window.Visualize?.isOpen()) { Visualize.addItem(it.id, { title: it.title, kind: it.kind, thumb: it.thumb ? thumb(it.thumb) : undefined }); x.classList.add('added'); setTimeout(() => x.classList.remove('added'), 900); return; }
+    boardItem(it, team, full, thumb);
+  });
+  el.querySelectorAll('[data-x]').forEach(x => x.onclick = (e) => { e.stopPropagation(); x.closest('.tile-wrap').classList.add('gone'); deleteItems([x.dataset.x], () => again(topic)); });
+  const pt = el.querySelector('#pteam'); if (pt) pt.onclick = async () => { pt.disabled = true; pt.setAttribute('aria-busy', 'true'); await fetch('/api/team/share', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ project: id, on: !d.shared }) }); boardDirty = true; again(topic); };
+  // For Claude or any agent: everything in the project as text, with who saved it and their words.
+  const text = d.pack || [`# ${d.project.name} (dream board)`, '', ...d.items.map(it => [`## ${it.title} (${it.kind}, ${it.saved}${it.by ? ', saved by ' + it.by : ''})`, it.summary, it.notes ? 'Why it was saved: ' + it.notes.replace(/\s+/g, ' ') : '', it.url || '', (it.tags || []).length ? 'Tags: ' + it.tags.join(', ') : ''].filter(Boolean).join('\n'))].join('\n\n');
+  const ps = el.querySelector('#pshare'); if (ps) ps.onclick = async () => {
+    try {
+      const files = [];
+      for (const it of d.items.filter(it => it.kind === 'image' && it.thumb).slice(0, 6)) { const f = it.thumb; const blob = await (await fetch('/files/' + encodeURIComponent(f))).blob(); files.push(new File([blob], f.split('/').pop(), { type: blob.type || (VIDEO.test(f) ? 'video/quicktime' : 'image/jpeg') })); }
+      const payload = files.length && navigator.canShare && navigator.canShare({ files }) ? { files, text } : { title: d.project.name, text };
+      if (navigator.share) await navigator.share(payload); else { await navigator.clipboard.writeText(text); ps.textContent = 'Copied'; }
+    } catch (e) { if (e.name !== 'AbortError') ps.textContent = 'Couldn\'t share'; }
+  };
+  const vizBoard = team ? teamBoard : `me-${me.id}`;
+  createToggle(el.querySelector('#pviz'), el, { boardId: vizBoard, projectId: id, projectName: d.project.name, team });
+  const pc = el.querySelector('#pcopy'); pc.onclick = async () => { try { await navigator.clipboard.writeText(text); pc.textContent = 'Copied. Paste it into Claude.'; } catch { pc.textContent = 'Select and copy'; } };
+}
+// The board grows out of the panel that was clicked (or fades in when opened from elsewhere).
+// The board's visible window, and its preview pictures, set to a panel's place on screen.
+function clipTo(el, r) {
+  for (const [k, v] of [['--ct', r.top], ['--cl', r.left], ['--cr', innerWidth - r.right], ['--cb', innerHeight - r.bottom]]) el.style.setProperty(k, v + 'px');
+  const pv = el.querySelector('.bd-preview'); if (pv) Object.assign(pv.style, { top: r.top + 'px', left: r.left + 'px', width: r.width + 'px', height: r.height + 'px' });
+}
+function growBoard(fromEl, id) {
+  const el = document.createElement('div'); el.className = 'pboard';
+  el.innerHTML = `<div class="bd-preview">${fromEl ? (fromEl.querySelector('.mosaic')?.outerHTML || '') : ''}</div><header class="bd-top"></header><div class="bd-body"><div class="status">Opening…</div></div>`;
+  const r = fromEl?.getBoundingClientRect();
+  if (r) clipTo(el, r); else el.classList.add('fade');
+  document.body.append(el); document.body.classList.add('boarded'); boardEl = el; boardFrom = id; view = 'board';
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('open')));
+  return el;
+}
+function closeBoard() {
+  const el = boardEl; if (!el) return; window.Visualize?.unmount(); boardEl = null; backTo = null; openSeq++;
+  const sheet = el.querySelector('.bd-sheet'); if (sheet) sheet.remove();
+  const from = [...document.querySelectorAll('.panel[data-dock]')].find(p => p.dataset.dock === boardFrom && p.offsetParent);
+  const r = from?.getBoundingClientRect();
+  if (r && r.bottom > 0 && r.top < innerHeight) clipTo(el, r); else el.classList.add('fade');
+  el.classList.remove('open'); document.body.classList.remove('boarded'); view = 'home';
+  const dirty = boardDirty; boardDirty = false;
+  const stale = !!$('#browse').querySelector('.crumb'); // an item page was left underneath (Details, then Back)
+  setTimeout(() => { el.remove(); if ((dirty || stale) && view === 'home' && !$('#find').hidden) loadShelves(); }, 640);
+}
+// Delete: no confirm box. The item goes at once; "Deleted · Undo" stays a few seconds (the server keeps a copy).
+async function deleteItems(ids, after, restored = null) {
+  const r = await fetch('/api/delete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(ids.length === 1 ? { id: ids[0] } : { ids }) }).then(r => r.json()).catch(() => ({}));
+  if (!r.ok) { toast("Couldn't delete that."); return; }
+  boardDirty = true; indexRows = null; after?.();
+  toast(`Deleted${ids.length > 1 ? ' ' + ids.length : ''}`, r.undo ? async () => { const u = await fetch('/api/undelete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ undo: r.undo }) }).then(r => r.json()).catch(() => ({})); if (u.ok) { boardDirty = true; indexRows = null; (restored ?? after)?.(); } } : null);
+}
+function toast(text, undo = null, ms = 6000) {
+  document.querySelector('.toast')?.remove();
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status');
+  t.innerHTML = `<span>${esc(text)}</span>${undo ? '<button>Undo</button>' : ''}`;
+  if (undo) t.querySelector('button').onclick = () => { t.remove(); undo(); };
+  document.body.append(t); setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 382); }, ms);
+}
+// Move to: every project as one click, or a name typed (a new name makes the project).
+function moveRow(current) {
+  return `<div class="moveto"><span>Move to</span>${projectRows.filter(p => p.id !== current).map(p => `<button data-mv="${esc(p.id)}">${esc(p.name)}</button>`).join('')}<input class="mvname" placeholder="Type a project" aria-label="Project name"></div>`;
+}
+function wireMove(root, ids, done) {
+  const go = async (project, label) => {
+    root.querySelectorAll('.moveto button, .moveto input').forEach(x => x.disabled = true);
+    const r = await (await fetch('/api/item/project', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids, project }) })).json().catch(() => ({}));
+    if (!r.ok) { root.querySelectorAll('.moveto button, .moveto input').forEach(x => x.disabled = false); return; }
+    projectRows = (await (await fetch('/api/projects')).json()).projects || projectRows; indexRows = null;
+    root.querySelector('.moveto').innerHTML = `<span>Moved to ${esc(r.project?.name || label)}.</span>`;
+    setTimeout(() => done(r), 640);
+  };
+  root.querySelectorAll('[data-mv]').forEach(x => x.onclick = () => go(x.dataset.mv, x.textContent));
+  const box = root.querySelector('.mvname'); if (box) box.onkeydown = (e) => { if (e.key === 'Enter' && box.value.trim()) { e.preventDefault(); go(box.value.trim(), box.value.trim()); } };
+}
+// One item, large, over the board. The full page (move, delete, details) is one click further.
+function boardItem(it, team, full, thumb) {
+  if (!it || !boardEl) return;
+  const pics = (it.files || []).filter(f => VISUAL.test(f)), docs = (it.files || []).filter(f => !VISUAL.test(f));
+  const sh = document.createElement('div'); sh.className = 'bd-sheet';
+  sh.innerHTML = `<div class="sh" role="dialog" aria-label="${esc(it.title)}"><div class="sh-top"><div><h2>${esc(it.title)}</h2><span>${[it.by, it.saved].filter(Boolean).map(esc).join(' · ')}</span></div><button class="bd-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    ${pics.map(f => VIDEO.test(f) ? `<video src="${full(f)}" poster="${thumb(f)}" controls playsinline preload="metadata"></video>` : `<a href="${full(f)}" target="_blank"><img src="${team ? thumb(f) : full(f)}" alt=""></a>`).join('')}
+    ${it.notes ? `<p class="said">${esc(it.notes)}</p>` : ''}
+    ${it.project ? `<p class="cap">In ${esc(projectRows.find(p => p.id === it.project)?.name || teamRows.find(p => p.id === it.project)?.name || it.project)}</p>` : ''}
+    ${it.summary ? `<p class="cap">${esc(it.summary.replace(/^(The )?owner('s)?\s+/i, ''))}</p>` : ''}
+    <div class="sh-links">${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(host(it.url))} ↗</a>` : ''}${docs.map(f => `<a href="${full(f)}" target="_blank">${esc(f.split('/').pop())}</a>`).join('')}${window.Visualize?.isOpen() ? '<button id="shviz">Add to Creator mode</button>' : ''}${team ? '' : '<button id="shmore">Details</button><button id="shdel">Delete</button>'}</div></div>`;
+  if (!team) sh.querySelector('.sh').insertAdjacentHTML('beforeend', moveRow(it.project));
+  boardEl.append(sh);
+  const shut = () => sh.remove();
+  wireMove(sh, [it.id], (r) => { shut(); boardDirty = true; backTo && backTo(); });
+  sh.onclick = (e) => { if (e.target === sh) shut(); };
+  sh.querySelector('.bd-close').onclick = shut;
+  const more = sh.querySelector('#shmore'); if (more) more.onclick = () => { const back = backTo; closeBoard(); backTo = back; openItem(it.id); };
+  const vz = sh.querySelector('#shviz'); if (vz) vz.onclick = async () => { const r = await fetch('/api/visualize/ref', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ board: team ? teamBoard : `me-${me.id}`, id: it.id }) }).then(r => r.json()).catch(() => ({})); vz.textContent = r.ok ? 'Added' : (r.error || "Couldn't add"); vz.disabled = true; };
+  const del = sh.querySelector('#shdel'); if (del) del.onclick = () => { shut(); deleteItems([it.id], () => backTo && backTo()); };
+}
+document.addEventListener('keydown', (e) => { if (e.key !== 'Escape' || !boardEl || document.querySelector('dialog[open]')) return; const sh = boardEl.querySelector('.bd-sheet'); if (sh) sh.remove(); else if (boardFrom === TEAM && boardLevel === 'project') teamLevel(); else closeBoard(); });
+// A team board item: someone else's save, shown from what the board already knows (it isn't in your library).
+function teamTileHtml(it) {
+  const cap = [it.by, it.notes || it.summary].filter(Boolean).join(' · ');
+  return it.thumb ? `<button class="item tile" data-id="${esc(it.id)}"><img class="hero" src="${teamThumb(it.thumb)}" alt="" loading="lazy"><div class="tile-text"><b>${esc(it.title)}</b><span>${esc(cap)}</span></div></button>`
+    : `<button class="item" data-id="${esc(it.id)}"><div><b>${esc(it.title)}</b><span>${esc(cap)}</span></div></button>`;
+}
+function openTeamItem(it, back) {
+  if (!it) return; ++openSeq; view = 'item';
+  const b = $('#browse'); b.hidden = false;
+  const pics = (it.files || []).filter(f => VISUAL.test(f));
+  b.innerHTML = `<div class="crumb"><button id="back">← Back</button></div>
+    <h2 style="margin:0 0 5px">${esc(it.title)}</h2><p class="muted" style="margin:0 0 13px">${esc(it.by || '')}${it.saved ? ' · ' + esc(it.saved) : ''}</p>
+    ${pics.map(f => VIDEO.test(f) ? `<video class="reader-hero" src="${teamFull(f)}" poster="${teamThumb(f)}" controls playsinline preload="metadata"></video>` : `<a href="${teamFull(f)}" target="_blank"><img class="reader-hero" src="${teamThumb(f)}" alt=""></a>`).join('')}
+    ${it.notes ? `<p style="margin:13px 0 5px;white-space:pre-wrap">${esc(it.notes)}</p>` : ''}
+    ${it.summary ? `<p class="muted" style="margin:5px 0">${esc(caption(it.summary))}</p>` : ''}
+    ${it.url ? `<p><a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(host(it.url))}</a></p>` : ''}
+    ${(it.tags || []).length ? `<div class="chips">${it.tags.filter(t => !t.includes(':')).map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div>` : ''}`;
+  $('#back').onclick = back;
+}
+// Photos show as a picture; videos play in place (frame from the server as the poster).
+const VISUAL = /\.(png|jpe?g|gif|webp|heic|mp4|mov|m4v|webm)$/i, VIDEO = /\.(mp4|mov|m4v|webm)$/i;
+function mediaHtml(f) {
+  const e = encodeURIComponent(f);
+  return VIDEO.test(f) ? `<video class="reader-hero" src="/files/${e}" poster="/thumb/${e}" controls playsinline preload="metadata"></video>`
+    : `<a href="/files/${e}" target="_blank"><img class="reader-hero" src="/thumb/${e}" alt=""></a>`;
+}
+// A save the librarian hasn't filed yet: show the photo and note now, then turn into the filed item by itself.
+function showFiling(d, my) {
+  const b = $('#browse');
+  const imgs = (d.files || []).filter(f => VISUAL.test(f));
+  b.innerHTML = `<div class="crumb"><button id="back">← Back</button></div>
+    <h2 style="margin:0 0 10px">${d.local ? '🔒 ' : ''}${esc(d.title)}</h2>
+    ${imgs.map(mediaHtml).join('')}
+    <p class="muted" style="margin:0 0 12px">${esc(d.summary)}${d.pending ? ' This page updates by itself.' : ''}</p>
+    <div class="reader" id="reader"></div>`;
+  $('#reader').innerHTML = md(d.markdown || '');
+  $('#back').onclick = () => { openSeq++; b.innerHTML = ''; loadShelves(); if (qbox.value.trim()) { instant(); doSearch(); } };
+  if (d.pending) setTimeout(() => { if (my === openSeq && !b.hidden) openItem(d.id, true); }, 4000);
+}
+async function openItem(id, quiet, passage) {
+  const my = ++openSeq; clearTimeout(pendingPoll); view = 'item';
+  const b = $('#browse'); $('#results').innerHTML = ''; b.hidden = false; if (!quiet) b.innerHTML = '<div class="status">Opening…</div>';
+  const r = await fetch('/api/item?id=' + encodeURIComponent(id)); if (my !== openSeq) return;
+  if (!r.ok) { b.innerHTML = '<div class="crumb"><button id="back">← Back</button></div><div class="err">Not found.</div>'; $('#back').onclick = () => { b.innerHTML = ''; loadShelves(); }; return; }
+  const d = await r.json();
+  if (d.pending || d.failed) return showFiling(d, my);
+  const imgs = (d.files || []).filter(f => VISUAL.test(f));
+  const said = (d.markdown || '').match(/## Why I saved this\n\n([\s\S]*?)(?:\n\n## |\s*$)/)?.[1]?.trim() || d.from?.quote || '';
+  const projName = d.project ? (projectRows.find(p => p.id === d.project)?.name || d.project) : '';
+  const others = (d.files || []).filter(f => !imgs.includes(f));
+  const cap = caption(d.summary || (d.markdown || '').match(/^> (.+)$/m)?.[1] || '');
+  b.innerHTML = `<div class="crumb"><button id="back">← Back</button></div>
+    <h2 style="margin:0 0 10px">${d.local ? '🔒 ' : ''}${esc(d.title)}</h2>
+    ${imgs.map(mediaHtml).join('')}
+    ${said ? `<p class="said">${esc(said)}</p>` : ''}
+    ${d.from ? `<p class="muted" style="margin:0 0 12px">From <a href="#" data-item="${esc(d.from.id)}" data-passage="${esc(d.from.quote || '')}" style="color:var(--accent);font-weight:600;text-decoration:none">${esc(d.from.title)}</a></p>` : ''}
+    ${projName ? `<p class="muted" style="margin:0 0 12px">For <button class="proj-link" data-proj="${esc(d.project)}" style="all:unset;color:var(--accent);cursor:pointer;font-weight:600">${esc(projName)}</button></p>` : ''}
+    <div class="actions">
+      <button class="primary" id="share">Send</button>
+      <button id="copy">Copy text</button>
+      ${d.url ? `<a href="${esc(d.url)}" target="_blank">Open link</a>` : ''}
+      ${others.map(f => `<a href="/files/${encodeURIComponent(f)}" target="_blank">${esc(f.split('/').pop())}</a>`).join('')}
+    </div>
+    ${cap ? `<p class="muted" style="margin:0 0 12px">${esc(cap)}</p>` : ''}
+    ${d.local ? '' : moveRow(d.project)}
+    <details class="more"><summary>Details</summary>
+      <div class="chips" style="margin:10px 0">${(d.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join('')}</div>
+      ${d.bring_back ? `<div class="muted">Comes back ${esc(plainDate(d.bring_back))}.</div>` : ''}
+      <div class="actions"><button id="del" class="danger">Delete</button></div>
+      <div class="reader" id="reader"></div>
+    </details>`;
+  $('#back').onclick = () => { if (backTo) return backTo(); b.innerHTML = ''; loadShelves(); if (qbox.value.trim()) { instant(); doSearch(); } };
+  wireMove(b, [id], () => openItem(id, true));
+  $('#reader').innerHTML = md((d.markdown || '').replace(/## Why I saved this\n\n[\s\S]*?(?=\n\n## |\s*$)/, ''));
+  const text = (d.title + (cap ? '\n' + cap : '') + (d.url ? '\n' + d.url : '')).trim();
+  // Send: the phone's own share sheet (iMessage, WhatsApp, Mail…) with the picture attached when there is one.
+  $('#share').onclick = async () => {
+    try {
+      const files = [];
+      for (const f of imgs.slice(0, 4)) { const blob = await (await fetch('/files/' + encodeURIComponent(f))).blob(); files.push(new File([blob], f.split('/').pop(), { type: blob.type || (VIDEO.test(f) ? 'video/quicktime' : 'image/jpeg') })); }
+      const payload = files.length && navigator.canShare && navigator.canShare({ files }) ? { files, text } : { title: d.title, text, url: d.url || undefined };
+      if (navigator.share) await navigator.share(payload);
+      else { await navigator.clipboard.writeText(text); $('#share').textContent = 'Copied'; }
+    } catch (e) { if (e.name !== 'AbortError') { $('#share').textContent = 'Couldn\'t share'; } }
+  };
+  $('#copy').onclick = async () => { try { await navigator.clipboard.writeText((d.title + '\n\n' + (d.markdown||'')).trim()); $('#copy').textContent = 'Copied'; } catch { $('#copy').textContent = 'Select and copy'; } };
+  $('#del').onclick = () => deleteItems([d.id], () => { if (backTo) return backTo(); b.innerHTML = ''; loadShelves(); if (qbox.value.trim()) { instant(); doSearch(); } });
+  b.querySelectorAll('.proj-link').forEach(x => x.onclick = () => openProject(x.dataset.proj));
+  // A piece links to the whole item it came from, and the whole item to its pieces.
+  b.querySelectorAll('[data-item]').forEach(x => x.onclick = (e) => { e.preventDefault(); openItem(x.dataset.item, false, x.dataset.passage); });
+  if (passage) {
+    // Opened from a piece: show the whole text at that passage.
+    const key = (t) => t.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const words = key(passage).split(' ').slice(0, 8).join(' ');
+    const hit = [...$('#reader').querySelectorAll('p,li,h2,h3')].find(el => key(el.textContent).includes(words));
+    if (hit) { b.querySelector('details.more').open = true; hit.classList.add('hit'); setTimeout(() => hit.scrollIntoView({ block: 'center', behavior: 'smooth' }), 60); }
+  }
+}
+// tiny markdown: headings, bold, lists, paragraphs, images, links
+function md(s) {
+  return esc(s).replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^&gt; (.*)$/gm,'<p class="muted"><i>$1</i></p>')
+    .replace(/^[-*] (.*)$/gm,'<li>$1</li>').replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g,'<a href="$2" target="_blank">$1</a>')
+    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g,'<a href="#" data-item="$1">$2</a>')
+    .split(/\n{2,}/).map(p => /^<(h\d|ul|p)/.test(p) ? p : `<p>${p.replace(/\n/g,'<br>')}</p>`).join('');
+}
+$('#wish').onsubmit = async (e) => {
+  e.preventDefault(); const text = $('#wish-text').value.trim(); if (!text) return;
+  let who = ''; try { who = localStorage.getItem('cl-who') || ''; } catch {}
+  const r = await fetch('/api/wish', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ text, who }) });
+  $('#wish-status').textContent = r.ok ? 'Got it. {{OWNER}} will see this.' : 'Could not send; try again.'; if (r.ok) $('#wish-text').value = '';
+};
+// Deep links from a Shortcut: ?q=… opens Find with that search; ?tab=save opens Save.
+const params = new URLSearchParams(location.search);
+let initial = 'save'; try { initial = localStorage.getItem('cl-tab') || 'save'; } catch {}
+if (params.get('tab')) initial = params.get('tab');
+if (params.get('q')) { initial = 'find'; }
+show(initial);
+if (params.get('q')) { $('#q').value = params.get('q'); grow(); instant(); doSearch(); }
+
+// Whose library this is, so nobody wonders.
+fetch('/api/me').then(r => r.ok ? r.json() : null).then(m => { if (m?.name) { me = m; const w = document.getElementById('who'); w.textContent = ' · ' + m.name; } }).catch(() => {});
+
+// ── Cues ──
+const CUE_ICON = { privacy: '🔒', when: '⏱', project: '◈' };
+let cueRows = [];
+async function refreshCueCount() {
+  try { cueRows = (await (await fetch('/api/cues')).json()).cues || []; } catch { return; }
+  const c = $('#cue-count'); c.textContent = cueRows.length; c.hidden = !cueRows.length;
+}
+async function loadCues() {
+  await refreshCueCount();
+  const list = $('#cue-list');
+  if (!cueRows.length) { list.innerHTML = '<div class="status">Nothing waiting on you. New questions show up here as things are saved.</div>'; return; }
+  list.innerHTML = cueRows.map(c => `<div class="cue" data-cue="${esc(c.id)}">${c.thumb ? `<img class="cthumb" src="/thumb/${encodeURIComponent(c.thumb)}" alt="">` : `<div class="cthumb blank">${CUE_ICON[c.kind] || '•'}</div>`}<div><b>${esc(c.title)}</b><div class="csnip">${esc(caption(c.snippet))}</div><p class="cq">${esc(c.question)}</p><div class="copts">${c.options.map((o, i) => `<button data-opt="${esc(o.id)}"><kbd>${i + 1}</kbd>${esc(o.label)}</button>`).join('')}</div></div></div>`).join('');
+  list.querySelectorAll('.cue').forEach(card => card.querySelectorAll('[data-opt]').forEach(btn => btn.onclick = () => answerCue(card, btn.dataset.opt)));
+}
+async function answerCue(card, option) {
+  card.querySelectorAll('button').forEach(b => b.disabled = true);
+  const r = await fetch('/api/cues/resolve', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: card.dataset.cue, option }) });
+  if (!r.ok) { card.querySelectorAll('button').forEach(b => b.disabled = false); return; }
+  card.classList.add('gone'); setTimeout(() => { card.remove(); refreshCueCount().then(() => { if (!$('#cue-list').children.length) loadCues(); }); }, 382);
+}
+document.addEventListener('keydown', (e) => {
+  if ($('#cues').hidden || e.metaKey || e.ctrlKey || e.altKey || /input|textarea/i.test(document.activeElement?.tagName || '')) return;
+  const card = $('#cue-list .cue:not(.gone)'); if (!card) return;
+  const btn = card.querySelectorAll('[data-opt]')[Number(e.key) - 1]; if (btn) { e.preventDefault(); btn.click(); }
+});
+refreshCueCount(); setInterval(refreshCueCount, 30000);
+
+
+</script>
+</body>
+</html>

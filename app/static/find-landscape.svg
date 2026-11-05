@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#23262e"/>
+      <stop offset=".32" stop-color="#4a3f3a"/>
+      <stop offset=".52" stop-color="#a8703f"/>
+      <stop offset=".6" stop-color="#e3a25a"/>
+      <stop offset=".7" stop-color="#6f5a48"/>
+      <stop offset="1" stop-color="#1d2423"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="1080" cy="590" r="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffd08a" stop-opacity=".95"/>
+      <stop offset=".25" stop-color="#f0a457" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#f0a457" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7d8c96"/>
+      <stop offset="1" stop-color="#3d4a50"/>
+    </linearGradient>
+    <linearGradient id="mid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a5560"/>
+      <stop offset="1" stop-color="#1f2c2d"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="18"/></filter>
+    <filter id="mist"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#sky)"/>
+  <rect width="1600" height="1000" fill="url(#sun)"/>
+  <g filter="url(#soft)" opacity=".7">
+    <ellipse cx="420" cy="300" rx="380" ry="46" fill="#8a7464"/>
+    <ellipse cx="1180" cy="250" rx="420" ry="40" fill="#7d6a5e"/>
+    <ellipse cx="820" cy="420" rx="520" ry="34" fill="#c08a5c"/>
+    <ellipse cx="300" cy="520" rx="300" ry="26" fill="#b98457"/>
+  </g>
+  <path filter="url(#mist)" fill="url(#haze)" opacity=".85" d="M0 640 L120 590 L230 615 L360 548 L470 600 L590 560 L700 610 L820 575 L930 620 L1060 570 L1180 612 L1300 560 L1420 598 L1600 556 L1600 1000 L0 1000Z"/>
+  <path filter="url(#mist)" fill="url(#mid)" opacity=".95" d="M0 700 L90 660 L200 690 L330 620 L420 650 L520 600 L640 680 L760 640 L880 700 L990 650 L1110 690 L1240 630 L1370 680 L1480 640 L1600 670 L1600 1000 L0 1000Z"/>
+  <path fill="#1b2624" d="M0 790 L140 720 L260 760 L380 700 L470 740 L560 690 L700 780 L840 740 L980 800 L1120 730 L1260 770 L1400 710 L1520 760 L1600 735 L1600 1000 L0 1000Z"/>
+  <path fill="#111816" d="M0 880 L160 830 L300 870 L460 820 L620 880 L780 850 L940 900 L1100 850 L1260 890 L1420 840 L1600 870 L1600 1000 L0 1000Z"/>
+  <rect y="560" width="1600" height="160" fill="#f3c98c" opacity=".08" filter="url(#soft)"/>
+</svg>

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Everything committed here is public: stop secrets and private words before they leave this Mac.
+exec bun "$(git rev-parse --show-toplevel)/tools/check-public.ts"

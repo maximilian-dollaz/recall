@@ -1,0 +1,31 @@
+#!/bin/zsh
+# Claude Code headersHelper for the shared GBrain HTTP server.
+# Prints {"Authorization": "Bearer …"} from a private credential handoff in
+# ~/.gbrain/serve/clients/<client>.json, renewing the access token with the
+# client's own credentials (client_credentials) when it is near expiry.
+# The token never lands in ~/.claude.json, the command line, or a log.
+#
+#   gbrain-mcp-headers [client]      default client: claude-code
+set -euo pipefail
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+umask 077
+
+client="${1:-claude-code}"
+cred="$HOME/.gbrain/serve/clients/${client}.json"
+[[ -r "$cred" ]] || { echo "gbrain-mcp-headers: missing $cred (run install.sh)" >&2; exit 1; }
+
+expires_at=$(jq -r '.expires_at // 0' "$cred")
+if (( expires_at - $(date +%s) < 600 )); then
+  issuer=$(jq -r .issuer_url "$cred")
+  token_endpoint=$(curl -sf --max-time 10 "$issuer/.well-known/oauth-authorization-server" | jq -r .token_endpoint)
+  fresh=$(curl -sf --max-time 10 -X POST "$token_endpoint" \
+    -d grant_type=client_credentials \
+    --data-urlencode "client_id=$(jq -r .client_id "$cred")" \
+    --data-urlencode "client_secret=$(jq -r .client_secret "$cred")")
+  tmp=$(mktemp "${cred}.XXXXXX")
+  jq --argjson r "$fresh" \
+    '.access_token = $r.access_token | .expires_at = (now | floor) + ($r.expires_in // 3600)' \
+    "$cred" > "$tmp" && mv "$tmp" "$cred"
+fi
+
+jq -c '{Authorization: ("Bearer " + .access_token)}' "$cred"

@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Recall",
+  "description": "Right-click anything, Add to Recall, say what it is. Saved and sorted into your Recall library.",
+  "version": "0.3.0",
+  "icons": { "16": "icon-16.png", "48": "icon-48.png", "128": "icon-128.png" },
+  "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
+  "host_permissions": ["https://recall.nextmissionsi.com/*"],
+  "optional_host_permissions": ["https://docs.google.com/*", "https://drive.google.com/*", "https://drive.usercontent.google.com/*", "https://*.googleusercontent.com/*", "https://lh3.google.com/*"],
+  "action": { "default_title": "Add to Recall", "default_popup": "recorder.html" },
+  "commands": { "_execute_action": { "suggested_key": { "default": "Alt+Shift+R" }, "description": "Add to Recall" } },
+  "background": { "service_worker": "background.js" }
+}

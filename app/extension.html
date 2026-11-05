@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recall for Chrome</title>
+<link rel="icon" href="/static/icon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/ui/theme.css">
+<style>
+  /* Adding Recall for Chrome by hand (until the Chrome Web Store has it): one step at a time, a drawn picture each. */
+  * { box-sizing:border-box }
+  body { margin:0 }
+  main { max-width:460px; margin:0 auto; padding:34px 16px 55px; display:grid; gap:21px }
+  .logo { display:block; width:89px; height:89px; border-radius:21px; margin:0 auto; box-shadow:0 0 34px rgba(244,227,181,.25) }
+  .get { display:block; text-align:center; padding:16px; border-radius:13px; font-weight:600; text-decoration:none; font-size:1.1rem }
+  ol { list-style:none; margin:0; padding:0; display:grid; gap:21px; counter-reset:s }
+  li { display:grid; grid-template-columns:30px 1fr; gap:13px; counter-increment:s }
+  li::before { content:counter(s); width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-weight:600; font-size:.9rem; background:rgba(244,227,181,.16); color:#F4E3B5 }
+  li p { margin:3px 0 8px; font-weight:600 }
+  .screen { position:relative; border:1px solid #3a3a3c; border-radius:10px; background:#1c1c1e; color:#f2f2f7; font:13px/1.35 -apple-system, system-ui, sans-serif; padding:13px; box-shadow:0 8px 21px rgba(0,0,0,.35) }
+  .bar { display:flex; align-items:center; gap:8px; padding:7px 11px; border-radius:999px; background:#2c2c2e; color:#d1d1d6 }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:8px }
+  .tap { outline:3px solid #e0352b; outline-offset:3px; border-radius:8px }
+  .toggle { width:34px; height:20px; border-radius:999px; background:#0a84ff; position:relative } .toggle::after { content:""; position:absolute; right:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff }
+  .btn { display:inline-block; padding:6px 11px; border-radius:8px; border:1px solid #48484a; color:#8ab4f8 }
+  .folder { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; background:#2c2c2e }
+  .copy { font:inherit; font-size:.9rem; padding:8px 13px; border-radius:999px; border:1px solid rgba(242,236,225,.2); background:rgba(242,236,225,.06); color:inherit; cursor:pointer }
+  .muted { color:#98989d }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="/static/icon-512.png" alt="">
+  <a class="get primary" id="get" href="/extension/recall-chrome.zip" download>Download Recall for Chrome</a>
+  <ol>
+    <li><div><p>Open the download</p>
+      <div class="screen"><div class="folder tap">📁 <b>recall-chrome</b></div><div class="muted" style="margin-top:8px">It opens as a folder in Downloads.</div></div></div></li>
+    <li><div><p>Copy this, paste it in Chrome's address bar, press Return</p>
+      <button class="copy" id="copy">chrome://extensions</button></div></li>
+    <li><div><p>Turn on Developer mode</p>
+      <div class="screen"><div class="row"><b>Extensions</b><span class="row tap" style="padding:3px 6px">Developer mode <span class="toggle"></span></span></div></div></div></li>
+    <li><div><p>Click Load unpacked, then pick the recall-chrome folder</p>
+      <div class="screen"><div class="row"><span class="btn tap">Load unpacked</span><span class="btn">Pack extension</span><span class="btn">Update</span></div></div></div></li>
+    <li><div><p>Click Allow for the microphone</p>
+      <div class="screen"><div class="bar">🎤 recall wants to use your microphone</div><div class="row" style="justify-content:flex-end;margin-top:8px"><span class="btn">Block</span><span class="btn tap">Allow</span></div></div></div></li>
+  </ol>
+</main>
+<script>
+  // chrome:// pages can't be opened from a link, so the address is copied for pasting.
+  document.getElementById('copy').onclick = async (e) => { try { await navigator.clipboard.writeText('chrome://extensions'); e.target.textContent = 'Copied: chrome://extensions'; } catch {} };
+</script>
+</body>
+</html>

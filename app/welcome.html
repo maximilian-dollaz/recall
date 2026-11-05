@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Welcome to Recall</title>
+<link rel="icon" href="/static/icon-32.png">
+<link rel="apple-touch-icon" href="/static/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/ui/theme.css"><!-- the look: tokens, the delta, glass (page rules below win) -->
+<style>
+  /* Colours, type and the backdrop come from /static/ui/theme.css; the red and iOS blue belong to the drawn guides. */
+  :root { --red:#e0352b; --ios:#0a84ff; }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--fg); font:400 17px/1.5 var(--font-ui) }
+  main { max-width:460px; margin:0 auto; padding:34px 16px 55px; min-height:100vh; display:flex; flex-direction:column; justify-content:center }
+  main.going .get, main.going .logo, main.finished .logo { display:none }
+  .logo { display:block; width:144px; height:144px; border-radius:34px; margin:0 auto 34px; box-shadow:0 0 0 .5px rgba(255,246,220,.55), 0 0 21px rgba(244,227,181,.30), 0 0 55px rgba(244,227,181,.16), 0 13px 34px rgba(5,10,14,.34) }
+  main.finished .step, main.finished .nav { display:none !important }
+  main.finished .done { position:static; display:block; text-align:center; padding:16px; border-radius:21px; background:var(--primary-fill); color:var(--primary-fg); box-shadow:var(--primary-glow); font-weight:600; font-size:1.1rem }
+  main.finished { justify-content:center; padding-top:34px; padding-bottom:55px }
+  main.going { justify-content:flex-start; padding-top:21px; padding-bottom:144px }
+  .nav { position:fixed; left:0; right:0; bottom:calc(34px + env(safe-area-inset-bottom)); max-width:460px; margin:0 auto; padding:0 16px; box-sizing:border-box }
+  .nav button, .get, .done { touch-action:manipulation; -webkit-tap-highlight-color:transparent; user-select:none }
+  .done { position:fixed; left:0; right:0; bottom:calc(98px + env(safe-area-inset-bottom)); margin:0 }
+  .step .screen { cursor:default }
+  h1 { font:600 var(--fs3)/1.236 var(--font-display); margin:0 0 21px }
+  .get { display:block; text-align:center; padding:16px; border-radius:21px; background:var(--primary-fill); color:var(--primary-fg); box-shadow:var(--primary-glow); font-weight:600; text-decoration:none; font-size:1.1rem }
+  .step { display:grid; grid-template-columns:34px 1fr; gap:13px; margin:34px 0 0 }
+  .n { width:34px; height:34px; border-radius:50%; background:var(--glass); color:var(--fg); border:1px solid var(--rim); display:grid; place-items:center; font:600 .9rem/1 var(--font-ui); -webkit-backdrop-filter:blur(13px); backdrop-filter:blur(13px) }
+  main.going .step.now .n { background:var(--lit-fill); border-color:var(--lit-rim); box-shadow:var(--halo-on) }
+  .step p { margin:4px 0 13px; font-weight:600; text-shadow:var(--shade) }
+  .done { display:block; text-align:center; margin-top:44px; color:var(--fg-2); text-decoration:none; text-shadow:var(--shade) }
+  [hidden] { display:none !important }
+  .step { display:none } main.going .step { display:grid; margin:13px 0 0; cursor:pointer; opacity:.5; transition:opacity .2s }
+  main.going .step.now { opacity:1; cursor:default } main.going .step:not(.now) .shot, main.going .step:not(.now) .screen, main.going .step:not(.now) .openin { display:none }
+  main.going .step.now .shot, main.going .step.now .screen { animation:in .382s ease-out } @keyframes in { from { opacity:0; transform:translateY(8px) } }
+  main.going .step p { margin:5px 0 8px } main.going .step:not(.now) p { font-weight:500 }
+  .n { width:30px; height:30px; font-size:.9rem }
+  /* Swipe back to Safari: along the bottom edge, to the right. */
+  .swipe-side { position:absolute; left:15%; right:15%; bottom:12px; height:4px; background:linear-gradient(to right, transparent, var(--red)); border-radius:2px }
+  .swipe-side::after { content:""; position:absolute; right:-15px; top:-13px; width:30px; height:30px; border-radius:50%; background:var(--red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M12 5l7 7-7 7'/%3E%3C/svg%3E") center/16px no-repeat; box-shadow:0 2px 6px rgba(0,0,0,.3) }
+  /* Swipe out: a red pointer with an arrow up from the bottom edge. */
+  .swipe { position:absolute; left:50%; bottom:6px; width:4px; height:55%; margin-left:-2px; background:linear-gradient(to top, var(--red), transparent); border-radius:2px }
+  .swipe::after { content:""; position:absolute; left:50%; bottom:-14px; width:30px; height:30px; margin-left:-15px; border-radius:50%; background:var(--red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19V5M5 12l7-7 7 7'/%3E%3C/svg%3E") center/16px no-repeat; box-shadow:0 2px 6px rgba(0,0,0,.3) }
+  .nav { display:flex; justify-content:space-between; align-items:center }
+  .nav button { all:unset; cursor:pointer; width:44px; height:44px; border-radius:50%; border:1px solid var(--rim); background:var(--glass); box-shadow:var(--lift), var(--halo); -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px); display:grid; place-items:center; font-size:1.4rem; color:var(--fg) }
+  .nav button:focus-visible { outline:2px solid var(--river-300); outline-offset:3px }
+  .nav button:disabled { opacity:.25; cursor:default }
+  /* The arrows and dots sit on their own glass bar, so the steps scrolling under them stay readable. */
+  .nav { left:16px; right:16px; padding:var(--s2); border-radius:999px; background:var(--glass-dense); border:1px solid var(--rim);
+    -webkit-backdrop-filter:blur(21px) saturate(1.15); backdrop-filter:blur(21px) saturate(1.15); box-shadow:var(--lift), inset 0 1px 0 rgba(255,246,220,.14) }
+  @media (min-width:492px) { .nav { left:0; right:0; max-width:428px } }
+  .nav button { box-shadow:none; transition:transform var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease) }
+  .nav button svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round }
+  .nav button:active:not(:disabled) { transform:scale(.94) }
+  @media (hover:hover) { .nav button:hover:not(:disabled) { border-color:var(--rim-strong); background:var(--glass-soft) } }
+  .get, .openin, main.finished .done { transition:transform var(--t-micro) var(--ease), filter var(--t-micro) var(--ease) }
+  .get:active, .openin:active { transform:scale(.97); filter:brightness(.96) }
+  .get:focus-visible, .openin:focus-visible, .done:focus-visible { outline:2px solid var(--river-300); outline-offset:3px }
+  .dots { display:flex; gap:6px } .dots i { width:8px; height:8px; border-radius:50%; background:color-mix(in srgb, var(--fg) 25%, transparent) } .dots i.on { background:var(--accent); box-shadow:0 0 8px rgba(244,227,181,.5) }
+
+  /* Drawn screens. The red ring and the red pointer show exactly what to tap or click. */
+  .screen { position:relative; background:#1c1c1e; color:#f2f2f7; font:13px/1.35 -apple-system, system-ui, sans-serif; overflow:visible }
+  .phone { width:100%; max-width:260px; border:8px solid #3a3a3c; border-radius:30px; padding:21px 13px; min-height:180px }
+  .phone .notch { height:4px; width:80px; background:#3a3a3c; border-radius:4px; margin:-13px auto 13px }
+  .win { width:100%; border:1px solid #3a3a3c; border-radius:10px; box-shadow:0 8px 21px rgba(0,0,0,.35); padding:0 0 13px }
+  .win .bar { display:flex; align-items:center; gap:6px; padding:8px 10px; border-bottom:1px solid #3a3a3c; background:#2c2c2e; border-radius:10px 10px 0 0 }
+  .win .bar i { width:10px; height:10px; border-radius:50%; background:#ff5f57 } .win .bar i:nth-child(2) { background:#febc2e } .win .bar i:nth-child(3) { background:#28c840 }
+  .win .bar span { flex:1; text-align:center; color:#98989d; font-size:12px }
+  .win .body { padding:13px }
+  .tap { outline:3px solid var(--red); outline-offset:3px; border-radius:9px; position:relative }
+  .tap::after { content:""; position:absolute; right:-22px; bottom:-22px; width:30px; height:30px; border-radius:50%; background:var(--red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M5 3l14 7-6 2-2 6z'/%3E%3C/svg%3E") center/16px no-repeat; box-shadow:0 2px 6px rgba(0,0,0,.3); z-index:2 }
+  .btn { display:block; text-align:center; padding:9px; border-radius:10px; background:#E2C487; color:#14202A; font-weight:600; margin:8px 0 }
+  .iosbtn { display:block; text-align:center; padding:9px; border-radius:10px; background:var(--ios); color:#fff; font-weight:600; margin:8px 0 }
+  .sheet { background:#2c2c2e; border-radius:13px } .sheet .it { background:#2c2c2e; padding:10px 12px; border-bottom:1px solid #3a3a3c; text-align:center; color:var(--ios) } .sheet .it:first-child { border-radius:13px 13px 0 0 } .sheet .it:last-child { border:0; border-radius:0 0 13px 13px }
+  .addr { display:flex; align-items:center; gap:8px; background:#eeeef0; border-radius:999px; padding:9px 12px; margin-top:110px } .addr span { flex:1; color:#666 }
+  .cc .ccgrid { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px } .cc .cct { display:grid; place-items:center; min-height:52px; padding:4px; border-radius:16px; background:#3a3a3c; font-size:11px; text-align:center }
+  .cc .ccpull { text-align:right; font-size:26px; margin:-6px 0 8px } .cc .ccplus { display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:#3a3a3c; font-size:20px }
+  .file { display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid #3a3a3c; background:#2c2c2e; border-radius:10px; margin-top:8px } .file b { flex:1 }
+  .icon { width:34px; height:34px; border-radius:8px; background:linear-gradient(135deg,#ff3b6b,#e0352b); color:#fff; display:grid; place-items:center; font-size:16px }
+  .tile { width:110px; height:70px; border-radius:12px; background:linear-gradient(135deg,#ff3b6b,#e0352b); color:#fff; padding:8px; font-weight:600; display:flex; align-items:end }
+  .row { display:flex; gap:8px; align-items:center }
+  .key { display:inline-grid; place-items:center; min-width:44px; height:44px; padding:0 8px; border:1px solid #48484a; border-bottom-width:3px; border-radius:8px; background:#2c2c2e; color:#f2f2f7; font-size:18px; font-weight:600 }
+  .muted { color:#98989d }
+  /* Real screenshots from an iPhone, with the red ring and pointer laid over what to tap. */
+  .shot { position:relative; max-width:340px } .shot img { display:block; width:100%; border-radius:16px; box-shadow:var(--lift), var(--halo) }
+  .ring { position:absolute; border:3px solid var(--red); border-radius:999px; box-sizing:border-box }
+  .ring::after { content:""; position:absolute; right:-18px; bottom:-18px; width:30px; height:30px; border-radius:50%; background:var(--red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M5 3l14 7-6 2-2 6z'/%3E%3C/svg%3E") center/16px no-repeat; box-shadow:0 2px 6px rgba(0,0,0,.3) }
+  .openin { display:inline-block; padding:12px 21px; border-radius:999px; background:var(--primary-fill); color:var(--primary-fg); box-shadow:var(--primary-glow); font-weight:600; text-decoration:none; margin:5px 0 8px }
+  .glyph { height:1.25em; vertical-align:-.3em; border-radius:50% }
+  /* After the steps (Mac): how to save, shown with Done. */
+  .howto { display:none } main.finished .howto { display:grid; gap:21px; margin-bottom:34px }
+  .howto h2 { font:600 var(--fs2)/1.236 var(--font-display); margin:0 }
+  .howto p { margin:0 0 8px; font-weight:600; text-shadow:var(--shade) }
+  .screen { box-shadow:var(--lift), var(--halo) } .screen.row { box-shadow:none }
+  @media (prefers-reduced-motion: reduce) { main.going .step.now .shot, main.going .step.now .screen { animation:none } }
+  .menu { background:#2c2c2e; border:1px solid #48484a; border-radius:8px; padding:4px; width:150px; box-shadow:0 8px 21px rgba(0,0,0,.35) }
+  .menu span { display:block; padding:4px 9px; border-radius:5px } .menu .hl { background:var(--ios); color:#fff }
+  .menu hr { border:0; border-top:1px solid #48484a; margin:4px 6px }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="/static/icon-512.png" alt="">
+  <a class="get" id="get" href="/my-shortcut">Add Recall Shortcut</a>
+
+  <!-- iPhone (Safari with the address bar at the bottom) -->
+  <section id="phone">
+    <div class="step"><div class="n">1</div><div>
+      <p>Tap Download</p>
+      <div class="screen phone"><div class="notch"></div>
+        <div style="text-align:center">Do you want to download "Save to Recall.shortcut"?</div>
+        <div class="sheet" style="margin-top:13px"><div class="it">View</div><div class="it tap" style="font-weight:600">Download</div></div>
+      </div>
+    </div></div>
+    <div class="step"><div class="n">2</div><div>
+      <p>Tap <img class="glyph" src="/static/onboard/iphone-download-icon.jpg" alt="⬇"> in the address bar</p>
+      <div class="shot"><img src="/static/onboard/iphone-address-bar.jpg" alt=""><span class="ring" style="left:21.5%;top:22%;width:9%;height:56%"></span></div>
+    </div></div>
+    <div class="step"><div class="n">3</div><div>
+      <p>Tap Downloads</p>
+      <div class="shot"><img src="/static/onboard/iphone-downloads-menu.jpg" alt=""><span class="ring" style="left:5%;top:29.5%;width:90%;height:18.5%"></span></div>
+    </div></div>
+    <div class="step"><div class="n">4</div><div>
+      <p>Tap the file</p>
+      <div class="screen phone"><div class="notch"></div>
+        <div class="muted" style="text-align:center;margin-bottom:8px">Downloads</div>
+        <div class="file tap"><div class="icon">✦</div><b>Save to Recall.shortcut</b><span class="muted">24 KB</span></div>
+      </div>
+    </div></div>
+    <div class="step"><div class="n">5</div><div>
+      <p>Tap Add Shortcut</p>
+      <div class="shot"><img src="/static/onboard/iphone-add-shortcut.jpg" alt=""><span class="ring" style="left:4.5%;top:19%;width:91%;height:66%"></span></div>
+    </div></div>
+    <div class="step"><div class="n">6</div><div>
+      <p>When you reach the shortcut page, just swipe out of it. Don't touch anything.</p>
+      <div class="shot" style="max-width:260px"><img src="/static/onboard/iphone-shortcut-page.jpg" alt="" style="opacity:.55"><span class="swipe"></span></div>
+    </div></div>
+    <div class="step"><div class="n">7</div><div>
+      <p>Swipe from Shortcuts back into Safari.</p>
+      <div class="shot" style="padding-bottom:34px"><img src="/static/onboard/iphone-address-bar.jpg" alt=""><span class="swipe-side"></span></div>
+    </div></div>
+    <div class="step"><div class="n">8</div><div>
+      <p>Swipe down from the top-right corner</p>
+      <div class="screen phone cc"><div class="notch"></div><div class="ccpull">↙</div><div class="ccgrid"><span class="cct">Wi-Fi</span><span class="cct">Bluetooth</span><span class="cct">Flashlight</span><span class="cct">Camera</span></div></div>
+    </div></div>
+    <div class="step"><div class="n">9</div><div>
+      <p>Tap + at the top left</p>
+      <div class="screen phone cc"><div class="notch"></div><div class="row" style="justify-content:space-between"><span class="ccplus tap">+</span><span class="muted">⏻</span></div><div class="ccgrid" style="margin-top:13px"><span class="cct">Wi-Fi</span><span class="cct">Bluetooth</span><span class="cct">Flashlight</span><span class="cct">Camera</span></div></div>
+    </div></div>
+    <div class="step"><div class="n">10</div><div>
+      <p>Tap Add a Control</p>
+      <div class="screen phone cc"><div class="notch"></div><div class="ccgrid"><span class="cct">Wi-Fi</span><span class="cct">Bluetooth</span><span class="cct">Flashlight</span><span class="cct">Camera</span></div><div class="sheet" style="margin-top:21px"><div class="it tap">Add a Control</div></div></div>
+    </div></div>
+    <div class="step"><div class="n">11</div><div>
+      <p>Type Shortcut, then tap Shortcut</p>
+      <div class="screen phone cc"><div class="notch"></div><div class="bar" style="padding:8px 12px;border-radius:10px;background:#2c2c2e;color:#d1d1d6">🔍 Shortcut</div><div class="muted" style="margin:13px 0 6px">SHORTCUTS</div><div class="row" style="gap:10px"><span class="cct tap">Shortcut</span><span class="cct">Scan Document</span></div></div>
+    </div></div>
+    <div class="step"><div class="n">12</div><div>
+      <p>Tap Choose, then tap Save to Recall</p>
+      <div class="screen phone cc"><div class="notch"></div><div class="sheet"><div class="it" style="color:#f2f2f7;text-align:left">Shortcut <span class="tap" style="float:right;color:var(--ios);padding:0 6px">Choose</span></div></div><div class="file tap" style="margin-top:21px"><div class="icon">✦</div><b>Save to Recall</b></div></div>
+    </div></div>
+    <div class="step"><div class="n">13</div><div>
+      <p>Tap an empty space. Recall is now in Control Center. Tap it to take a photo or video and say what it is.</p>
+      <div class="screen phone cc"><div class="notch"></div><div class="ccgrid"><span class="cct">Wi-Fi</span><span class="cct">Bluetooth</span><span class="cct">Flashlight</span><span class="cct">Camera</span><span class="cct tap">✦ Recall</span></div></div>
+    </div></div>
+  </section>
+
+  <!-- Mac -->
+  <section id="mac" hidden>
+    <div class="step"><div class="n">1</div><div>
+      <p>Open the download</p>
+      <div class="shot"><img src="/static/onboard/mac-chrome-download.jpg" alt=""><span class="ring" style="left:4%;top:40%;width:93%;height:50%;border-radius:10px"></span></div>
+    </div></div>
+    <div class="step"><div class="n">2</div><div>
+      <p>Click Add Shortcut</p>
+      <div class="shot"><img src="/static/onboard/mac-add-shortcut.jpg" alt=""><span class="ring" style="left:44%;top:61%;width:25%;height:19%;border-radius:10px"></span></div>
+    </div></div>
+    <div class="step"><div class="n">3</div><div>
+      <p>Come back to this page and click Open in Shortcuts</p>
+      <a class="openin" href="shortcuts://open-shortcut?name=Save%20to%20Recall">Open in Shortcuts</a>
+    </div></div>
+    <div class="step"><div class="n">4</div><div>
+      <p>Click Open Shortcuts</p>
+      <div class="screen win" style="max-width:340px"><div class="body" style="padding:16px">
+        <b>Open Shortcuts?</b><div class="muted" style="margin:5px 0 13px">{{HOST}} wants to open this application.</div>
+        <div class="row" style="justify-content:flex-end;gap:8px"><span style="padding:6px 13px;border-radius:8px;border:1px solid #48484a">Cancel</span><span class="tap" style="padding:6px 13px;border-radius:8px;background:var(--ios);color:#fff;font-weight:600">Open Shortcuts</span></div>
+      </div></div>
+    </div></div>
+    <div class="step"><div class="n">5</div><div>
+      <p>Click ⓘ, then Add Keyboard Shortcut</p>
+      <div class="shot" style="max-width:280px"><img src="/static/onboard/mac-details.jpg" alt=""><span class="ring" style="left:49%;top:2.5%;width:15%;height:11%"></span><span class="ring" style="left:4%;top:87.5%;width:60%;height:10%;border-radius:8px"></span></div>
+    </div></div>
+    <div class="step"><div class="n">6</div><div>
+      <p>Press ⌃⌥S</p>
+      <div class="screen win"><div class="bar"><i></i><i></i><i></i><span>Keyboard</span></div>
+        <div class="body row tap" style="justify-content:center;gap:8px;padding:21px 13px"><span class="key">⌃</span><span class="key">⌥</span><span class="key">S</span></div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- After the Mac steps: the two ways to save. -->
+  <section class="howto" id="howto">
+    <h2>How to save</h2>
+    <div>
+      <p>Right-click any file → Quick Actions → Save to Recall</p>
+      <div class="screen row" style="background:none;align-items:flex-start;gap:4px;padding:8px 0 13px">
+        <div class="menu"><span>Open</span><span>Get Info</span><hr><span class="hl">Quick Actions&nbsp;&nbsp;›</span></div>
+        <div class="menu" style="margin-top:52px"><span class="tap">Save to Recall</span></div>
+      </div>
+    </div>
+    <div>
+      <p>Copy an image or link, or select files in Finder → press ⌃⌥S</p>
+      <div class="screen win"><div class="body row" style="justify-content:center;gap:8px;padding:21px 13px"><span class="key">⌘</span><span class="key">C</span><span class="muted" style="margin:0 8px">→</span><span class="tap row" style="gap:8px"><span class="key">⌃</span><span class="key">⌥</span><span class="key">S</span></span></div></div>
+    </div>
+    <div>
+      <p>Save from Chrome: <a href="/extension" target="_blank" style="color:inherit">add Recall for Chrome</a></p>
+    </div>
+  </section>
+
+  <div class="nav" id="nav" hidden><button id="prev" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><div class="dots" id="dots"></div><button id="next" aria-label="Next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>
+  <a class="done" id="done" href="/" hidden>Done</a>
+</main>
+<script>
+  // A Mac gets the Mac version (it saves whatever you copied, from a keyboard shortcut).
+  const $ = (s) => document.querySelector(s);
+  const mac = /Macintosh/.test(navigator.userAgent) && !('ontouchend' in document);
+  if (mac) { $('#get').href = '/my-shortcut?for=mac'; $('#phone').hidden = true; $('#mac').hidden = false; } else $('#howto').hidden = true;
+  // One step at a time. Getting the shortcut shows step 1; each step moves on by itself when the person
+  // comes back from what it asked (the download sheet, the Shortcuts app), or with the arrows.
+  const steps = [...document.querySelectorAll(mac ? '#mac .step' : '#phone .step')];
+  let at = -1;
+  function go(i) {
+    at = Math.max(0, Math.min(steps.length - 1, i));
+    steps.forEach((s, j) => s.classList.toggle('now', j === at));
+    $('#nav').hidden = false; $('#done').hidden = mac || at < steps.length - 1;
+    $('#prev').disabled = at === 0; $('#next').disabled = !mac && at === steps.length - 1;
+    $('#dots').innerHTML = steps.map((_, j) => `<i class="${j === at ? 'on' : ''}"></i>`).join('');
+  }
+  // Finishing marks this device's onboarding done (the next sign-in here goes straight in).
+  const finished = () => fetch('/api/welcomed', { method: 'POST' }).catch(() => {});
+  $('#done').addEventListener('click', (e) => { e.preventDefault(); finished().finally(() => { location.href = '/'; }); });
+  $('#get').addEventListener('click', () => { if (at < 0) { document.querySelector('main').classList.add('going'); go(0); } });
+  // The first picture fetches the shortcut again, in case the download prompt was dismissed.
+  steps[0].querySelector('.screen, .shot').onclick = (e) => { if (at === 0) { e.stopPropagation(); location.href = $('#get').href; } };
+  $('#prev').onclick = () => go(at - 1);
+  // Mac: after the last step, how to save, then Done.
+  $('#next').onclick = () => { if (mac && at === steps.length - 1) { document.querySelector('main').classList.add('finished'); $('#done').hidden = false; } else go(at + 1); };
+  steps.forEach((st, j) => st.addEventListener('click', () => { if (at >= 0 && j !== at) go(j); }));
+  // iPhone only: each time Safari's own sheet or menu closes, the next step; back from the Shortcuts app, the end.
+  // (On a Mac the steps happen in the Shortcuts app beside the browser, so the arrows lead.)
+  if (mac) {
+    let away = false;
+    window.addEventListener('blur', () => { if (at >= 0 && at <= 1) away = true; });
+    window.addEventListener('focus', () => { if (away) { away = false; go(2); } });
+    // Chrome adds "(1)", "(2)"… to a repeat download, and Shortcuts names the shortcut after the file. Try the newest
+    // name first; when one isn't there, Shortcuts moves on to the next without leaving the app.
+    const names = [...[9,8,7,6,5,4,3,2,1].map((n) => `Save to Recall (${n})`), ...[9,8,7,6,5,4,3,2].map((n) => `Save to Recall ${n}`), 'Save to Recall'];
+    document.querySelector('.openin').href = names.reduceRight((next, n) => `shortcuts://x-callback-url/open-shortcut?name=${encodeURIComponent(n)}` + (next ? `&x-error=${encodeURIComponent(next)}` : ''), '');
+    // Opening the shortcut moves on to Chrome's "Open Shortcuts?" step.
+    document.querySelector('.openin').addEventListener('click', () => setTimeout(() => go(3), 300));
+  }
+  if (!mac) {
+    let away = false;
+    let left = false;
+    const leave = () => { if (at >= 0) away = true; };
+    // Back from the Shortcuts app: it's added, so on to Control Center (step 8). Control Center itself doesn't
+    // leave the page, so those steps move on with the arrows, and Done shows on the last one.
+    const CC = steps.findIndex((el) => el.querySelector('.cc'));
+    const back = () => { if (!away) return; away = false; if (left && at < CC) go(CC); else if (!left && at < CC) go(at + 1); left = false; };
+    window.addEventListener('blur', () => { if (at < CC) leave(); }); window.addEventListener('focus', back);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { left = true; leave(); } else back(); });
+  }
+</script>
+</body>
+</html>
