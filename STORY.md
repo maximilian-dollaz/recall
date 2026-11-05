@@ -163,7 +163,7 @@ The first test was a real one. The CEO, months later, with an interior designer:
 - **Useful, not fancy.** Raw utility over being impressive.
 - **Human first.** Adapt the software to how the mind already works.
 - **If it can't be recalled, it doesn't matter.**
-- **The tree.** Roots in life, one trunk, branches, leaves.
+- **Nature as the model.** A tree for shape, streams for saving, a watershed for sorting, a reservoir for keeping, a delta for long documents, cells for topics ([docs/nature.md](docs/nature.md)).
 - **Sorting happens behind the scenes.** People say what it's for; the system does the rest.
 - **Private by default.** Sharing is a choice, per item.
 - **Ship first, refine live.**

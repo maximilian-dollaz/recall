@@ -26,6 +26,8 @@ Recall was built for a small team creating two physical spaces, a wellness loung
 
 Everything runs on one Mac. A Bun web app takes each save, keeps the original, and hands it to a small local model (Gemma 3 4B through Ollama) that reads it, describes pictures, and decides the project from what you said. Each save becomes a markdown page in [GBrain](https://github.com/garrytan/gbrain), which indexes it for search with local embeddings. Phones and other computers reach the Mac through a private Tailscale network or a Cloudflare tunnel, and people sign in with Google. Full picture: [ARCHITECTURE.md](ARCHITECTURE.md).
 
+The design copies nature, one system per job: a tree for shape, streams for saving, a watershed for sorting, a reservoir for keeping, a delta for long documents, cells for topics. How each one works: [docs/nature.md](docs/nature.md).
+
 ## Privacy
 
 What you save stays on the Mac that runs Recall. Each person has their own library; nobody else sees it unless they share a project to a board. The only things that leave the Mac are the ones you turn on: Google sign-in, Chrome's speech service in the Chrome extension, Deepgram for voice (if you add a key), and Higgsfield or OpenAI for Creator mode (if you add a key). Libraries, keys and settings are never committed to this repository.

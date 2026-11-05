@@ -69,6 +69,7 @@ Nothing, unless it is switched on: Google sign-in; Chrome's speech service in th
 
 ## Design notes
 
+- [docs/nature.md](docs/nature.md): the natural systems Recall copies (streams, watershed, reservoir, delta, cells, seed bank and more), and how.
 - [docs/categories.md](docs/categories.md): the tree, and how categories form.
 - [docs/resurface.md](docs/resurface.md): bringing ideas back.
 - [docs/end-state.md](docs/end-state.md): the end state the overnight build worked from.
