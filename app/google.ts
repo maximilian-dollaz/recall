@@ -97,7 +97,7 @@ export async function verifyIdToken(jwt: string, aud: string, jwks?: any[]): Pro
 }
 
 /** GET /privacy: public, no sign-in. Wording approved by Max on 31 Oct 2026, voice line 2 Nov, profile picture, Visualize and Deepgram lines 3 Nov 2026, first line 4 Nov 2026 (his words: friends use Recall too); change it only with his OK. */
-export const privacyPage = () => page("Recall privacy", `Recall is a visual database for inspiration and creation, run by ${OPERATOR}.</p>
+export const privacyPage = () => page("Recall privacy", `Recall is a visual database for inspired creation, run by ${OPERATOR}.</p>
 <p>When you sign in with Google, Recall receives your name, email address and profile picture. It uses them only to open your own library and to show your picture beside your saves on dream boards you belong to.</p>
 <p>What you save stays on ${OWNER_NAME}'s computer. It is not sold or shared. When you speak a note in the Chrome extension, your voice is turned into text by Chrome's own speech service from Google. Nothing else you save is sent to any AI service outside that computer.</p>
 ${existsSync(join(Bun.env.HOME ?? "", ".gbrain/serve/deepgram.key")) ? "<p>When you speak a note, your voice is sent to Deepgram to turn it into words. Nothing else you save is sent.</p>" : ""}

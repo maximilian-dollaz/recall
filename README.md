@@ -1,6 +1,8 @@
+<p align="center"><img src="docs/logo/recall-logo-1024.png" alt="Recall" width="180"></p>
+
 # Recall
 
-Recall is a visual database for inspiration and creation.
+Recall is a visual database for inspired creation.
 
 Save anything from your phone or computer: a photo, a link, a document, a voice note. Say in one sentence what it is and what it's for. A librarian on your own computer sorts it into the right project. Months later, describe it in your own words and it comes back. Share a project with your team on a board, and turn what's on the board into a new picture together.
 
@@ -13,6 +15,7 @@ Recall was built for a small team creating two physical spaces, a wellness loung
 
 ## What it's for
 
+- **Capture in one step.** On iPhone, share anything to the Save to Recall shortcut. On a Mac, press ⌃⌥S anywhere. Say what it is and what it's for, and Recall tags and files it for you.
 - **Keep inspiration in one place.** Photos from your camera roll, pins, web pages, Google Docs, PDFs, voice notes and videos.
 - **Never sort by hand.** You say what it's for; Recall files it. When it can't tell, it asks one question (Clarify).
 - **Find it by describing it.** "The pillow with the Middle Eastern pattern, around October."
