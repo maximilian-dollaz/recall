@@ -14,6 +14,7 @@
 // The key is read on each call and never logged, returned or put in an error.
 
 import { join, extname } from "node:path";
+import { jpegArgs } from "./img.ts";
 import { homedir } from "node:os";
 import { existsSync, mkdirSync, readFileSync, statSync, rmSync } from "node:fs";
 import * as store from "./store.ts";
@@ -312,7 +313,7 @@ export async function resolveFromLibrary(person: Person, itemId: string): Promis
 // ── Pictures: local conversions with sips ────────────────────────────────────
 async function sipsJpeg(src: string, out: string, px: number, q = 75): Promise<boolean> {
   mkdirSync(join(out, ".."), { recursive: true });
-  const r = Bun.spawn(["sips", "-s", "format", "jpeg", "-s", "formatOptions", String(q), "-Z", String(px), src, "--out", out], { stdout: "ignore", stderr: "ignore" });
+  const r = Bun.spawn(jpegArgs(src, out, px, q), { stdout: "ignore", stderr: "ignore" });
   return (await r.exited) === 0 && existsSync(out);
 }
 const xml = (s: string) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]!));

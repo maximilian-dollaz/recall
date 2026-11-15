@@ -25,6 +25,8 @@ export async function soulProxy(req: Request, u: URL, ip: string, local: boolean
   const override = local ? (req.headers.get("tailscale-user-login") || req.headers.get("x-tailscale-login") || req.headers.get("x-person")) : null;
   const person = await whoIs(local ? "127.0.0.1" : ip, override);
   if (!person) return plain(`Your phone is on the network but isn't set up in the library yet. Ask ${OWNER_NAME} to add you.`, 401);
+  // The Soul Map opens the owner's profile for any id it can't read, so never send it one.
+  if (!/^[a-z0-9][a-z0-9_-]{0,39}$/.test(person.id)) return plain(`This account can't open the Soul Map yet. Ask ${OWNER_NAME}.`, 403);
 
   const headers = new Headers(req.headers);
   headers.delete("x-person"); headers.delete("x-tailscale-login"); headers.delete("tailscale-user-login");

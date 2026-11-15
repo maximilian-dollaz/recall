@@ -7,6 +7,9 @@
 // (vision, OCR, transcription, filing) works through a queue in the background.
 
 import { join, dirname, basename } from "node:path";
+import { jpegArgs, MAC } from "./img.ts";
+import * as shortcutPool from "./shortcut-pool.ts";
+import * as granola from "./granola.ts";
 import { lookup } from "node:dns/promises";
 import { mkdirSync, existsSync, readdirSync, readFileSync, unlinkSync, renameSync, statfsSync, statSync, rmSync, copyFileSync } from "node:fs";
 import * as gb from "./gbrain.ts";
@@ -20,7 +23,7 @@ import * as projects from "./projects.ts";
 import { isSoulPath, soulProxy } from "./soul.ts";
 import * as topics from "./topics.ts";
 import * as cues from "./cues.ts";
-import { join_ as joinDoor, joinPage, sessionEmail } from "./door.ts";
+import { join_ as joinDoor, joinPage, sessionEmail, page as doorPage } from "./door.ts";
 import { teamEntry, googleSignIn, signInPage, privacyPage } from "./google.ts";
 import * as boards from "./board.ts";
 import { boardRoutes, boardDoor } from "./boards-routes.ts";
@@ -345,6 +348,16 @@ async function drain() {
     }
   } finally { working = false; }
 }
+// Granola: each connected person's new meetings, every half hour (granola.ts).
+async function syncMeetings() {
+  const people = await listPeople();
+  for (const email of Object.keys(people.people)) {
+    const p = await whoIs("127.0.0.1", email); if (!p || !granola.status(p.id).connected) continue;
+    const n = await granola.syncPerson(p, (_who, input) => queueSave(p, input));
+    if (n) console.log(`[granola] ${p.id}: ${n} meeting${n === 1 ? "" : "s"} saved`);
+  }
+}
+setInterval(() => syncMeetings().catch((e) => console.error(`[granola] sync: ${String(e).slice(0, 200)}`)), 30 * 60_000);
 let kickTimer: ReturnType<typeof setTimeout> | null = null;
 function kick() { if (kickTimer) clearTimeout(kickTimer); kickTimer = setTimeout(() => drain().catch(() => {}), 300); }
 setInterval(() => drain().catch(() => {}), 60_000);
@@ -675,6 +688,13 @@ async function shareShortcut(req: Request, person: Person) {
   // /my-shortcut?camera=recall: "Recall" for Control Center (opens the Save page).
   const camera = mac ? "" : ["open", "save", "recall"].includes(q.get("camera") ?? "") ? q.get("camera")! : "";
   const name = camera === "open" ? "Recall Camera" : camera === "save" ? "Recall Camera Save" : camera === "recall" ? "Recall" : "Save to Recall";
+  const file = (bytes: ArrayBuffer) => new Response(bytes, { headers: { "content-type": "application/octet-stream", "content-disposition": `attachment; filename="${name}.shortcut"`, "cache-control": "no-store" } });
+  if (!MAC) {
+    // A server can't sign shortcuts: hand out one a Mac signed ahead of time (shortcut-pool.ts).
+    const bytes = await shortcutPool.take(camera ? `camera-${camera}` as shortcutPool.Kind : mac ? "mac" : "iphone", person.email);
+    if (bytes) { console.log(`[shortcut] gave ${name} (${mac ? "Mac" : "iPhone"}) from the pool to ${person.id}`); return file(bytes); }
+    return json({ error: "The shortcut couldn't be made just now. Try again in a minute." }, 503);
+  }
   const work = join(ROOT, ".board-cache", `shortcut-${person.id}-${Date.now()}`); mkdirSync(work, { recursive: true });
   const raw = join(work, "unsigned.shortcut"), signed = join(work, `${name}.shortcut`);
   try {
@@ -749,13 +769,28 @@ const server = Bun.serve({
     // with the person's login attached; pass it through as the identity.
     if (local && req.headers.get("tailscale-user-login")) headers.set("x-tailscale-login", req.headers.get("tailscale-user-login")!);
     else if (local && u.hostname === HTTPS_HOST) return denied("This device isn't signed in to the private network as a person.");
-    const inner = new Request(`http://127.0.0.1:${PORTS.inner}${u.pathname}${u.search}`, { method: req.method, headers, body: req.body, duplex: "half" } as any);
+    // redirect "manual": a redirect (Granola's sign-in, say) goes back to the browser instead of being followed here.
+    const inner = new Request(`http://127.0.0.1:${PORTS.inner}${u.pathname}${u.search}`, { method: req.method, headers, body: req.body, duplex: "half", redirect: "manual" } as any);
     return fetch(inner);
   },
 });
 
+async function granolaReturn(req: Request, u: URL): Promise<Response> {
+  const q = u.searchParams, state = q.get("state") ?? "";
+  const signedIn = !!(await sessionEmail(req));
+  const done = (title: string, body: string) => signedIn ? Response.redirect(`${PUBLIC_URL}/?granola=${title === "Granola connected" ? "connected" : "cancelled"}`, 302) : doorPage(title, body);
+  if (q.get("error")) return done("Granola not connected", "Nothing changed. Open Recall and tap Connect Granola to try again.");
+  const people = await listPeople();
+  const email = Object.entries(people.people).find(([, r]) => r.id === state.split(".")[0])?.[0];
+  const p = email ? await whoIs("127.0.0.1", email) : null;
+  try { if (!p) throw new Error("unknown sign-in"); await granola.finishConnect(p, state, q.get("code") ?? ""); }
+  catch (e) { console.error(`[granola] return: ${String(e).slice(0, 200)}`); return doorPage("Granola not connected", "This sign-in link is old. Open Recall and tap Connect Granola again."); }
+  granola.syncPerson(p, (_who, input) => queueSave(p, input)).catch(() => {}); // the first meetings start arriving right away
+  return done("Granola connected", "Your meetings are coming in to Recall. You can close this page.");
+}
+
 // The public door (RECALL_PUBLIC_URL → tunnel → here). Only an invite cookie gets in;
-// nothing here is ever treated as this Mac. The Soul Map stays private-network only.
+// nothing here is ever treated as this Mac. The Soul Map opens here too, as the signed-in person.
 const door = Bun.serve({
   port: PORTS.door, hostname: "127.0.0.1",
   maxRequestBodySize: 1024 ** 3,
@@ -775,7 +810,6 @@ const door = Bun.serve({
     if (u.pathname === "/privacy") return privacyPage();
     if (u.pathname === "/guide") return guidePage(req); // public: a teammate reads it before signing in
     if (/^\/static\/(icon-(32|180|192|512)\.png|manifest\.webmanifest|find-landscape\.svg|(?:delta|river)-[0-9]+\.(?:jpg|webp)|ui\/[a-z0-9-]+\.(?:js|css)|onboard\/[a-z0-9-]+\.jpg)$/.test(u.pathname)) return fetch(new Request(`http://127.0.0.1:${PORTS.inner}${u.pathname}`));
-    if (isSoulPath(u.pathname)) return new Response("not found", { status: 404 });
     // A person's own shortcut: its key can save, nothing else.
     const k = u.pathname.match(/^\/k\/([A-Za-z0-9_-]{20,64})\/api\/save$/);
     if (k) {
@@ -787,14 +821,30 @@ const door = Bun.serve({
       headers.set("x-client-ip", "127.0.0.1"); headers.set("x-tailscale-login", owner);
       return fetch(new Request(`http://127.0.0.1:${PORTS.inner}/api/save`, { method: "POST", headers, body: req.body, duplex: "half" } as any));
     }
+    // Back from Granola's sign-in. On an iPhone this can open in a browser that isn't signed in to Recall
+    // (a home-screen app keeps its own sign-in), so the one-time state from the sign-in names the person.
+    if (u.pathname === "/connect/granola/callback" && req.method === "GET") return granolaReturn(req, u);
     const email = await sessionEmail(req);
     if (!email) return signInPage(req, "", 401);
     if (u.pathname === deepgram.LISTEN_PATH) return deepgram.upgrade(req, srv, (await listPeople()).owner === email);
+    if (isSoulPath(u.pathname)) {
+      // The sign-in decides who this is; nothing the browser sends can name someone else.
+      const sh = new Headers(req.headers);
+      for (const h of [...IDENTITY_HEADERS, "x-person", "tailscale-user-login"]) sh.delete(h);
+      sh.set("x-person", email);
+      // Links the Soul Map builds point at the public https address, not the tunnel's plain http.
+      const pub = new URL(u.pathname + u.search, CONFIG_URL);
+      const r = await soulProxy(new Request(req.url, { method: req.method, headers: sh, body: req.body, duplex: "half" } as any), pub, "127.0.0.1", true);
+      // fetch has already unpacked a gzipped page but keeps the header, which the browser then fails to decode.
+      if (!r.headers.get("content-encoding")) return r;
+      const rh = new Headers(r.headers); rh.delete("content-encoding"); rh.delete("content-length");
+      return new Response(r.body, { status: r.status, statusText: r.statusText, headers: rh });
+    }
     const headers = new Headers(req.headers);
     for (const h of IDENTITY_HEADERS) headers.delete(h);
     headers.set("x-client-ip", "127.0.0.1");
     headers.set("x-tailscale-login", email);
-    return fetch(new Request(`http://127.0.0.1:${PORTS.inner}${u.pathname}${u.search}`, { method: req.method, headers, body: req.body, duplex: "half" } as any));
+    return fetch(new Request(`http://127.0.0.1:${PORTS.inner}${u.pathname}${u.search}`, { method: req.method, headers, body: req.body, duplex: "half", redirect: "manual" } as any)); // redirects go to the browser
   },
 });
 
@@ -870,6 +920,22 @@ const routed = Bun.serve({
     "/board": (req: Request) => page(req, "board.html"),
     ...boardRoutes(withPerson), // team boards: members only (boards-routes.ts)
     "/my-shortcut": withPerson(shareShortcut),
+    // Granola: connect once, then every meeting lands in this person's library (granola.ts).
+    "/connect/granola": withPerson(async (_req, p) => {
+      try { return Response.redirect((await granola.startConnect(p, `${PUBLIC_URL}/connect/granola/callback`)).toString(), 302); }
+      catch (e) { console.error(`[granola] connect ${p.id}: ${String(e).slice(0, 200)}`); return new Response("Granola's sign-in didn't open. Try again in a minute.", { status: 502 }); }
+    }),
+    "/connect/granola/callback": withPerson(async (req, p) => {
+      const q = new URL(req.url).searchParams;
+      if (q.get("error")) return Response.redirect(`${PUBLIC_URL}/?granola=cancelled`, 302);
+      try { await granola.finishConnect(p, q.get("state") ?? "", q.get("code") ?? ""); }
+      catch (e) { console.error(`[granola] callback ${p.id}: ${String(e).slice(0, 200)}`); return new Response(String((e as Error).message ?? e), { status: 400 }); }
+      granola.syncPerson(p, (who, input) => queueSave(p, input)).catch(() => {}); // the first meetings start arriving right away
+      return Response.redirect(`${PUBLIC_URL}/?granola=connected`, 302);
+    }),
+    "/api/connectors": withPerson(async (_req, p) => json({ granola: granola.status(p.id) }, 200)),
+    "/api/connectors/granola/sync": { POST: withPerson(async (_req, p) => json({ ok: true, saved: await granola.syncPerson(p, (who, input) => queueSave(p, input)) }, 200)) },
+    "/api/connectors/granola/disconnect": { POST: withPerson(async (_req, p) => { granola.disconnect(p.id); return json({ ok: true }, 200); }) },
     "/api/me": withPerson(async (_req, p) => json({ id: p.id, name: p.name, source: p.source }, 200)),
     "/api/health": async () => json({ ok: true, library: await gb.callTool("whoami").catch((e) => ({ error: String(e) })) }, 200),
   },
@@ -896,7 +962,7 @@ const routed = Bun.serve({
           for (const at of ["1", "0"]) { if (existsSync(out)) break; await Bun.spawn(["ffmpeg", "-v", "error", "-y", "-ss", at, "-i", abs, "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "5", out]).exited; }
           if (!existsSync(out)) return new Response("no frame", { status: 404 });
         } else {
-          const r = Bun.spawn(["sips", "-s", "format", "jpeg", "-s", "formatOptions", "70", "-Z", "360", abs, "--out", out], { stdout: "pipe", stderr: "pipe" });
+          const r = Bun.spawn(jpegArgs(abs, out, 360, 70), { stdout: "pipe", stderr: "pipe" });
           if ((await r.exited) !== 0 || !existsSync(out)) return new Response(Bun.file(abs));
         }
       }

@@ -14,6 +14,7 @@
 // the first load turns that into the board "True Nature Media" and leaves the old file as it was.
 
 import { join, extname } from "node:path";
+import { jpegArgs } from "./img.ts";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { DATA as ROOT } from "./paths.ts";
@@ -374,7 +375,7 @@ export async function warm(rel: string) {
   mkdirSync(CACHE, { recursive: true });
   for (const [size, px, q] of [["small", "360", "70"], ["thumb", "720", "75"], ["full", "2400", "88"]]) {
     const out = cached(rel, size); if (existsSync(out)) continue;
-    await Bun.spawn(["sips", "-s", "format", "jpeg", "-s", "formatOptions", q, "-Z", px, abs, "--out", out], { stdout: "ignore", stderr: "ignore" }).exited;
+    await Bun.spawn(jpegArgs(abs, out, px, q), { stdout: "ignore", stderr: "ignore" }).exited;
   }
 }
 /** The small size only (what the folders and grids show), made ahead of time when the app starts. */
@@ -382,7 +383,7 @@ export async function warmSmall(rel: string) {
   const abs = join(ROOT, rel); if (!VISUAL.test(abs) || !existsSync(abs)) return;
   const out = cached(rel, "small"); if (existsSync(out)) return;
   mkdirSync(CACHE, { recursive: true });
-  await Bun.spawn(["sips", "-s", "format", "jpeg", "-s", "formatOptions", PX.small[1], "-Z", PX.small[0], abs, "--out", out], { stdout: "ignore", stderr: "ignore" }).exited;
+  await Bun.spawn(jpegArgs(abs, out, PX.small[0], PX.small[1]), { stdout: "ignore", stderr: "ignore" }).exited;
 }
 /** A file on a board this person can see, as a JPEG any browser (and Figma) can show: "small" (360px, for the
  *  grids and folders), "thumb" (720px) or "full" (2400px). A saved file never changes, so each is cached a year. */
@@ -399,7 +400,7 @@ async function imageOf(rel: string, size: Size): Promise<Response> {
       if (size === "full") return new Response(Bun.file(abs));
       for (const at of ["1", "0"]) { if (existsSync(out)) break; await Bun.spawn(["ffmpeg", "-v", "error", "-y", "-ss", at, "-i", abs, "-frames:v", "1", "-vf", `scale=${PX[size][0]}:-2`, "-q:v", "4", out]).exited; }
     } else if (VISUAL.test(abs)) {
-      await Bun.spawn(["sips", "-s", "format", "jpeg", "-s", "formatOptions", PX[size][1], "-Z", PX[size][0], abs, "--out", out], { stdout: "ignore", stderr: "ignore" }).exited;
+      await Bun.spawn(jpegArgs(abs, out, PX[size][0], PX[size][1]), { stdout: "ignore", stderr: "ignore" }).exited;
     } else return new Response(Bun.file(abs), { headers: { "content-disposition": `inline; filename="${abs.split("/").pop()}"` } });
     if (!existsSync(out)) return new Response(Bun.file(abs));
   }

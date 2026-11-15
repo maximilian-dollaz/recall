@@ -2,8 +2,11 @@
   "name": "context-library",
   "private": true,
   "type": "module",
-  "scripts": { "app": "bun run app/server.ts" },
+  "scripts": {
+    "app": "bun run app/server.ts"
+  },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@mozilla/readability": "^0.6.0",
     "jsdom": "^26.0.0",
     "mammoth": "^1.9.0",

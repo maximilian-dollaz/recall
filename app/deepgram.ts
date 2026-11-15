@@ -51,9 +51,9 @@ export function upgrade(req: Request, srv: import("bun").Server, isOwner: boolea
 }
 
 /** A recorded note (any audio file) → text. Throws when Deepgram can't, so the caller can fall back. */
-export async function transcribe(path: string): Promise<string> {
+export async function transcribe(path: string, ms = 20_000): Promise<string> {
   const f = Bun.file(path);
-  const r = await fetch(`${API}/listen?${PARAMS}`, { method: "POST", headers: { Authorization: `Token ${key()}`, "content-type": f.type || "audio/mp4" }, body: f, signal: AbortSignal.timeout(20_000) });
+  const r = await fetch(`${API}/listen?${PARAMS}`, { method: "POST", headers: { Authorization: `Token ${key()}`, "content-type": f.type || "audio/mp4" }, body: f, signal: AbortSignal.timeout(ms) });
   if (!r.ok) throw new Error(`Deepgram ${r.status}: ${(await r.text()).slice(0, 200)}`);
   const d: any = await r.json();
   return String(d?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "").replace(/\s+/g, " ").trim();

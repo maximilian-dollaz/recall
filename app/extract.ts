@@ -2,6 +2,7 @@
 // Images and video frames go through the librarian's vision model.
 
 import { extname, basename } from "node:path";
+import { jpegArgs, takenArgs, MAC } from "./img.ts";
 import { tmpdir } from "node:os";
 import { unlinkSync } from "node:fs";
 import { join } from "node:path";
@@ -31,8 +32,14 @@ function spawn(cmd: string[], ms: number, opts: { stdin?: Blob } = {}) {
   return p;
 }
 
-/** Voice notes: transcribed on this Mac with mlx-whisper (Apple-silicon Whisper; nothing leaves the machine). */
+/** Voice notes: transcribed on this Mac with mlx-whisper (Apple-silicon Whisper; nothing leaves the machine).
+ *  On a Linux server, which has no mlx-whisper, Deepgram does it. */
 export async function transcribe(path: string): Promise<string> {
+  if (!MAC) {
+    const dg = await import("./deepgram.ts");
+    if (!dg.hasKey()) throw new Error("no transcriber on this server: add a Deepgram key (cl deepgram-key)");
+    return dg.transcribe(path, LONG_MS);
+  }
   const ROOT = join(import.meta.dir, "..");
   const bin = join(ROOT, "tools/.venv/bin/mlx_whisper");
   const model = process.env.WHISPER_MODEL ?? "mlx-community/whisper-base.en-mlx";
@@ -64,7 +71,7 @@ async function run(cmd: string[], stdin?: Uint8Array, ms = TOOL_MS): Promise<{ o
 async function sips(path: string): Promise<string> {
   // Downscale for the vision model and convert HEIC → JPEG. macOS ships `sips`.
   const outPath = join(tmpdir(), `cl-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`);
-  await run(["sips", "-s", "format", "jpeg", "-Z", "1280", path, "--out", outPath]);
+  await run(jpegArgs(path, outPath, 1280, 85));
   const b64 = Buffer.from(await Bun.file(outPath).arrayBuffer()).toString("base64");
   try { unlinkSync(outPath); } catch {}
   return b64;
@@ -72,11 +79,13 @@ async function sips(path: string): Promise<string> {
 
 /** The date a photo was taken (EXIF), which can be weeks before the day it was saved. */
 export async function photoDate(path: string): Promise<string | undefined> {
-  const r = await run(["mdls", "-name", "kMDItemContentCreationDate", "-raw", path]);
-  const m = r.out.match(/(\d{4}-\d{2}-\d{2})/);
-  if (m) return m[1];
-  const s = await run(["sips", "-g", "creation", path]);
-  const m2 = s.out.match(/creation: (\d{4}):(\d{2}):(\d{2})/);
+  if (MAC) {
+    const r = await run(["mdls", "-name", "kMDItemContentCreationDate", "-raw", path]);
+    const m = r.out.match(/(\d{4}-\d{2}-\d{2})/);
+    if (m) return m[1];
+  }
+  const s = await run(takenArgs(path)).catch(() => ({ out: "", code: 1 }));
+  const m2 = s.out.match(/(\d{4}):(\d{2}):(\d{2})/);
   return m2 ? `${m2[1]}-${m2[2]}-${m2[3]}` : undefined;
 }
 

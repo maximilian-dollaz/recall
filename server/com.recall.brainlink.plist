@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  After Recall moves to a server: this Mac reaches the server's library engine (GBrain) on the same
+  local address as before, 127.0.0.1:3131, through ssh. Claude Code and `cl` need no changes.
+  __HOME__ and __SERVER__ (an ssh host from ~/.ssh/config) are filled in when it is installed.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.recall.brainlink</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/ssh</string>
+    <string>-N</string>
+    <string>-o</string><string>BatchMode=yes</string>
+    <string>-o</string><string>ExitOnForwardFailure=yes</string>
+    <string>-o</string><string>ServerAliveInterval=30</string>
+    <string>-o</string><string>ServerAliveCountMax=3</string>
+    <string>-L</string><string>127.0.0.1:3131:127.0.0.1:3131</string>
+    <string>__SERVER__</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>10</integer>
+  <key>StandardErrorPath</key><string>__HOME__/.gbrain/serve/brainlink.err</string>
+</dict>
+</plist>

@@ -1,12 +1,18 @@
-// The librarian: a local model that files a saved item onto a shelf, tags it,
+// The librarian: a model that files a saved item onto a shelf, tags it,
 // writes a one-line summary, and describes images. It never edits content.
+// Claude when this install has an ANTHROPIC_API_KEY (no model has to run on the server),
+// else the local model through Ollama. LIBRARIAN_ENGINE=local|claude overrides.
 
 import { join } from "node:path";
 
 import { DATA as ROOT } from "./paths.ts";
 import * as store from "./store.ts";
+import "./config.ts"; // loads .env, where ANTHROPIC_API_KEY lives
 const OLLAMA = (process.env.OLLAMA_BASE_URL ?? "http://localhost:11434/v1").replace(/\/v1\/?$/, "");
 const MODEL = process.env.LIBRARIAN_MODEL ?? "gemma3:4b";
+const CLAUDE_KEY = process.env.ANTHROPIC_API_KEY ?? "";
+const CLAUDE_MODEL = process.env.LIBRARIAN_CLAUDE_MODEL ?? "claude-haiku-5-5";
+export const ENGINE: "claude" | "local" = process.env.LIBRARIAN_ENGINE === "local" || !CLAUDE_KEY ? "local" : "claude";
 
 export type Shelf = { id: string; name: string; type: string; description: string };
 export type Catalog = { version: number; shelves: Shelf[]; proposed: Proposal[]; corrections: Correction[]; projects?: { id: string; name: string; aliases?: string[] }[] };
@@ -37,7 +43,35 @@ export async function updateCatalog<R = void>(fn: (c: Catalog) => R | Promise<R>
  *  so prefer updateCatalog for anything that reads, changes and saves. */
 export async function saveCatalog(c: Catalog) { await store.update<Catalog | null>(CATALOG, null, () => c).catch(loud); }
 
+// Ollama-style messages ({ role, content, images: [base64] }) as Claude content blocks.
+const mediaType = (b64: string) => b64.startsWith("/9j/") ? "image/jpeg" : b64.startsWith("iVBOR") ? "image/png" : b64.startsWith("R0lGOD") ? "image/gif" : b64.startsWith("UklGR") ? "image/webp" : "image/jpeg";
+const toClaude = (m: any) => ({
+  role: m.role === "assistant" ? "assistant" : "user",
+  content: [...(m.images ?? []).map((data: string) => ({ type: "image", source: { type: "base64", media_type: mediaType(data), data } })), { type: "text", text: String(m.content ?? "") }],
+});
+// The first {...} in a reply, so a stray sentence or code fence around the JSON doesn't lose the filing.
+const jsonOnly = (s: string) => { const a = s.indexOf("{"), b = s.lastIndexOf("}"); return a >= 0 && b > a ? s.slice(a, b + 1) : s; };
+
+async function claudeChat(messages: any[], opts: { json?: boolean }): Promise<string> {
+  const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
+  const body: any = { model: CLAUDE_MODEL, max_tokens: 2048, messages: messages.filter((m) => m.role !== "system").map(toClaude) };
+  if (system || opts.json) body.system = [system, opts.json ? "Reply with one JSON object only, no other text." : ""].filter(Boolean).join("\n\n");
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST", signal: AbortSignal.timeout(120_000),
+      headers: { "content-type": "application/json", "x-api-key": CLAUDE_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify(body),
+    });
+    // Busy or rate-limited: wait and try again a few times before the save is retried later.
+    if ((res.status === 429 || res.status >= 500) && attempt < 3) { await Bun.sleep(2000 * (attempt + 1)); continue; }
+    if (!res.ok) throw new Error(`librarian model error ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    const text = ((await res.json()).content ?? []).filter((c: any) => c.type === "text").map((c: any) => c.text).join("");
+    return opts.json ? jsonOnly(text) : text;
+  }
+}
+
 export async function chat(messages: any[], opts: { json?: boolean; images?: string[] } = {}): Promise<string> {
+  if (ENGINE === "claude") return claudeChat(messages, opts);
   const res = await fetch(`${OLLAMA}/api/chat`, {
     method: "POST", signal: AbortSignal.timeout(180_000), // a hung model must not stop all filing
     body: JSON.stringify({

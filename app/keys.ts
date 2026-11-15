@@ -31,3 +31,8 @@ export async function emailForKey(key: string): Promise<string | null> {
   if (row.used?.slice(0, 10) !== today) await store.update<Record<string, Key>>(FILE, {}, (all) => { if (all[h]) all[h].used = new Date().toISOString(); }).catch(() => {});
   return row.email;
 }
+
+/** A key made ahead of time, baked into a signed shortcut from the pool (shortcut-pool.ts), now given to a person. */
+export async function claimKey(key: string, email: string): Promise<void> {
+  await store.update<Record<string, Key>>(FILE, {}, (all) => { all[hash(key)] = { email, created: new Date().toISOString() }; }).catch(loud);
+}

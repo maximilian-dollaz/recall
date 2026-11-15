@@ -19,6 +19,8 @@
   nav button[aria-current="page"] { background:var(--accent); color:var(--on-accent); border-color:var(--accent) }
   .actions .primary { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600 }
   .card { background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:18px; }
+  .connect { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px; text-decoration:none; color:inherit }
+  .connect strong { background:var(--fg); color:var(--paper); padding:8px 14px; border-radius:10px; font-weight:600 }
   .capture { display:grid; gap:10px; margin-bottom:13px } .capture .big { width:100%; min-height:56px; font-size:1.05rem }
   .chip img, .chip video { width:44px; height:44px; object-fit:cover; border-radius:8px; vertical-align:middle; margin-right:6px }
   .drop { border:2px dashed var(--line); border-radius:14px; padding:26px 16px; text-align:center; color:var(--muted); cursor:pointer; transition:border-color .15s, background .15s }
@@ -216,6 +218,9 @@
     .bd-top { flex-wrap:wrap } .bd-actions { width:100%; justify-content:flex-start } .bd-title h2 { font-size:1.3rem }
     .bd-body { overflow-y:auto } .bd-grid { display:flex; flex-direction:column; flex:none } .bucket { flex:none } .bk { overflow:visible }
     .bucket.pictures .bk { grid-template-columns:repeat(3, minmax(0, 1fr)); gap:13px; padding:8px 13px 13px }
+    /* People and topics: one line each that scrolls sideways, so the pictures start higher on a phone */
+    .pboard .bd-people, .pboard .bd-topics { flex:none; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; padding-bottom:2px } .bd-people::-webkit-scrollbar, .bd-topics::-webkit-scrollbar { display:none }
+    .pboard .bd-people > *, .pboard .bd-topics > * { flex:none; white-space:nowrap }
   }
   @media (prefers-reduced-motion: reduce) { .pboard, .bd-top, .bd-body, .bd-preview { transition:none } .bd-sheet { animation:none } }
 
@@ -310,6 +315,7 @@
       <button id="tab-improve">Improve</button>
     </nav>
   </header>
+  <a id="granola" class="card connect" href="/connect/granola" hidden><strong>Connect Granola</strong><span>Your Granola meetings save to Recall on their own.</span></a>
 
   <section id="save" class="card">
     <form id="form">
@@ -378,7 +384,7 @@ function show(which) {
   document.body.classList.toggle('wide', which === 'find');
   for (const k of Object.keys(tabs)) { $('#' + k).hidden = which !== k; if (which === k) tabs[k].setAttribute('aria-current', 'page'); else tabs[k].removeAttribute('aria-current'); }
   if (which === 'cues') loadCues();
-  if (which === 'find') { if ($('#q').value.trim()) { loadIndex(); instant(); doSearch(); } else { loadShelves(); loadIndex(); } setTimeout(() => { $('#q').focus(); grow(); }, 50); }
+  if (which === 'find') { if ($('#q').value.trim()) { loadIndex(); instant(); doSearch(); } else { loadShelves(); loadIndex(); } setTimeout(() => { if (matchMedia('(hover: hover)').matches) $('#q').focus(); grow(); }, 50); } // on a phone, focusing would open the keyboard and push the projects down
   try { localStorage.setItem('cl-tab', which); } catch {}
 }
 for (const k of Object.keys(tabs)) tabs[k].onclick = () => show(k);
@@ -769,7 +775,7 @@ function wire(root) { root.querySelectorAll('.item').forEach(b => b.onclick = ()
 // and never while something is being carried, a panel is under the pointer, or a board is open.
 async function loadShelves(quiet = false) {
   const my = ++openSeq; view = 'home';
-  const b = $('#browse'); b.hidden = false; if (!quiet && !b.querySelector('#projstage')) b.innerHTML = `<div class="stage" aria-busy="true"><div class="stage-label">Your projects</div><div class="dock skel">${'<div class="panel empty"></div>'.repeat(Math.min(6, Math.max(3, projectRows.length || 4)))}</div></div>`;
+  const b = $('#browse'); b.hidden = false; if (!quiet && !b.querySelector('#projstage')) { b.innerHTML = `<div class="stage" aria-busy="true"><div class="stage-label">Your projects</div><div class="dock skel">${'<div class="panel empty"></div>'.repeat(Math.min(6, Math.max(3, projectRows.length || 4)))}</div></div>`; homeSig = ''; }
   const d = await (await fetch('/api/browse')).json(); if (my !== openSeq) return;
   clearTimeout(pendingPoll); if (d.pending) pendingPoll = setTimeout(() => { if (!$('#find').hidden && !qbox.value.trim()) { loadShelves(true); loadIndex(); } }, 5000);
   try { projectRows = (await (await fetch('/api/projects')).json()).projects || projectRows; } catch {} if (my !== openSeq) return;
@@ -780,7 +786,8 @@ async function loadShelves(quiet = false) {
   const cards = [...(teamRows.length ? [teamCard(teamRows)] : []), ...projectRows.map(p => ({ id: p.id, name: p.name, thumbs: p.thumbs || (p.cover ? [p.cover] : []), meta: `${p.count} item${p.count===1?'':'s'}`, counts: p.counts || {} }))];
   const projHtml = cards.length ? `<div class="stage" id="projstage"><div class="stage-label">Your projects</div>${dockHtml(cards)}</div>` : '';
   const html = projHtml + due + d.proposed.map(p => `<div class="proposal"><b>Librarian suggests a new shelf: ${esc(p.name)}</b> <span class="muted">(${p.items.length} items)</span><div class="actions"><button data-p="${esc(p.name)}" data-a="approve">Create shelf</button><button data-p="${esc(p.name)}" data-a="dismiss">Dismiss</button></div></div>`).join('');
-  if (quiet && (html === homeSig || busyHome())) return;
+  // Skip a quiet redraw only when the projects are already on screen; the loading boxes always get replaced.
+  if (quiet && b.querySelector('#projstage') && (html === homeSig || busyHome())) return;
   homeSig = html; backTo = null;
   const y = scrollY; b.innerHTML = html; if (quiet) scrollTo(0, y);
   wire(b); wireHome();
@@ -1121,13 +1128,16 @@ function boardItem(it, team, full, thumb) {
   const pics = (it.files || []).filter(f => VISUAL.test(f)), docs = (it.files || []).filter(f => !VISUAL.test(f));
   const sh = document.createElement('div'); sh.className = 'bd-sheet';
   sh.innerHTML = `<div class="sh" role="dialog" aria-label="${esc(it.title)}"><div class="sh-top"><div><h2>${esc(it.title)}</h2><span>${[it.by, it.saved].filter(Boolean).map(esc).join(' · ')}</span></div><button class="bd-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    ${pics.map(f => VIDEO.test(f) ? `<video src="${full(f)}" poster="${thumb(f)}" controls playsinline preload="metadata"></video>` : `<a href="${full(f)}" target="_blank"><img src="${team ? thumb(f) : full(f)}" alt=""></a>`).join('')}
+    ${pics.map(f => VIDEO.test(f) ? `<video src="${full(f)}" poster="${thumb(f)}" controls playsinline preload="metadata"></video>` : `<a href="${full(f)}" target="_blank"><img src="${thumb(f)}" data-full="${team ? '' : full(f)}" alt=""></a>`).join('')}
     ${it.notes ? `<p class="said">${esc(it.notes)}</p>` : ''}
     ${it.project ? `<p class="cap">In ${esc(projectRows.find(p => p.id === it.project)?.name || teamRows.find(p => p.id === it.project)?.name || it.project)}</p>` : ''}
     ${it.summary ? `<p class="cap">${esc(it.summary.replace(/^(The )?owner('s)?\s+/i, ''))}</p>` : ''}
     <div class="sh-links">${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(host(it.url))} ↗</a>` : ''}${docs.map(f => `<a href="${full(f)}" target="_blank">${esc(f.split('/').pop())}</a>`).join('')}${window.Visualize?.isOpen() ? '<button id="shviz">Add to Creator mode</button>' : ''}${team ? '' : '<button id="shmore">Details</button><button id="shdel">Delete</button>'}</div></div>`;
   if (!team) sh.querySelector('.sh').insertAdjacentHTML('beforeend', moveRow(it.project));
   boardEl.append(sh);
+  // The small picture shows at once (it's already loaded for the grid); the original replaces it once it arrives,
+  // so a phone on a slow connection never stares at an empty sheet, and a format the browser can't show keeps the small one.
+  sh.querySelectorAll('img[data-full]').forEach(img => { if (!img.dataset.full) return; const big = new Image(); big.onload = () => { img.src = big.src; }; big.src = img.dataset.full; });
   const shut = () => sh.remove();
   wireMove(sh, [it.id], (r) => { shut(); boardDirty = true; backTo && backTo(); });
   sh.onclick = (e) => { if (e.target === sh) shut(); };
@@ -1259,6 +1269,14 @@ show(initial);
 if (params.get('q')) { $('#q').value = params.get('q'); grow(); instant(); doSearch(); }
 
 // Whose library this is, so nobody wonders.
+// Granola: until it's connected, one card at the top. Back from Granola's sign-in, say so once.
+fetch('/api/connectors').then(r => r.ok ? r.json() : null).then(c => {
+  const g = c?.granola; if (!g) return;
+  const card = document.getElementById('granola');
+  if (!g.connected || /expired/i.test(g.error || '')) { if (g.connected) card.querySelector('strong').textContent = 'Reconnect Granola'; card.hidden = false; }
+}).catch(() => {});
+{ const q = new URLSearchParams(location.search).get('granola');
+  if (q) { if (q === 'connected') toast('Granola connected. Your meetings from the last 30 days are coming in.', null, 8000); history.replaceState(null, '', location.pathname); } }
 fetch('/api/me').then(r => r.ok ? r.json() : null).then(m => { if (m?.name) { me = m; const w = document.getElementById('who'); w.textContent = ' · ' + m.name; } }).catch(() => {});
 
 // ── Cues ──

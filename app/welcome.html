@@ -17,6 +17,9 @@
   body { margin:0; background:var(--bg); color:var(--fg); font:400 17px/1.5 var(--font-ui) }
   main { max-width:460px; margin:0 auto; padding:34px 16px 55px; min-height:100vh; display:flex; flex-direction:column; justify-content:center }
   main.going .get, main.going .logo, main.finished .logo { display:none }
+  main.granola > :not(.logo):not(#granola) { display:none !important }
+  .granola p { text-align:center; margin:13px 0 0; color:var(--fg-2); text-shadow:var(--shade) }
+  .granola .skip { display:block; text-align:center; margin-top:34px; color:var(--fg-2); text-decoration:none; text-shadow:var(--shade) }
   .logo { display:block; width:144px; height:144px; border-radius:34px; margin:0 auto 34px; box-shadow:0 0 0 .5px rgba(255,246,220,.55), 0 0 21px rgba(244,227,181,.30), 0 0 55px rgba(244,227,181,.16), 0 13px 34px rgba(5,10,14,.34) }
   main.finished .step, main.finished .nav { display:none !important }
   main.finished .done { position:static; display:block; text-align:center; padding:16px; border-radius:21px; background:var(--primary-fill); color:var(--primary-fg); box-shadow:var(--primary-glow); font-weight:600; font-size:1.1rem }
@@ -223,6 +226,12 @@
 
   <div class="nav" id="nav" hidden><button id="prev" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><div class="dots" id="dots"></div><button id="next" aria-label="Next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>
   <a class="done" id="done" href="/" hidden>Done</a>
+  <!-- Last: Granola, so every meeting lands in this person's library on its own. -->
+  <section class="granola" id="granola" hidden>
+    <a class="get" href="/connect/granola">Connect Granola</a>
+    <p>Your Granola meetings save to Recall on their own.</p>
+    <a class="skip" href="/">Skip</a>
+  </section>
 </main>
 <script>
   // A Mac gets the Mac version (it saves whatever you copied, from a keyboard shortcut).
@@ -242,7 +251,13 @@
   }
   // Finishing marks this device's onboarding done (the next sign-in here goes straight in).
   const finished = () => fetch('/api/welcomed', { method: 'POST' }).catch(() => {});
-  $('#done').addEventListener('click', (e) => { e.preventDefault(); finished().finally(() => { location.href = '/'; }); });
+  // Done: then Granola, unless it's already connected.
+  let granolaOn = false;
+  fetch('/api/connectors').then((r) => (r.ok ? r.json() : null)).then((c) => { granolaOn = !!c?.granola?.connected; }).catch(() => {});
+  $('#done').addEventListener('click', (e) => { e.preventDefault(); finished().finally(() => {
+    if (granolaOn) { location.href = '/'; return; }
+    document.querySelector('main').className = 'granola'; $('#granola').hidden = false; window.scrollTo(0, 0);
+  }); });
   $('#get').addEventListener('click', () => { if (at < 0) { document.querySelector('main').classList.add('going'); go(0); } });
   // The first picture fetches the shortcut again, in case the download prompt was dismissed.
   steps[0].querySelector('.screen, .shot').onclick = (e) => { if (at === 0) { e.stopPropagation(); location.href = $('#get').href; } };
