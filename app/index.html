@@ -142,6 +142,20 @@
   .panel.empty { justify-content:flex-end }
   .panel.empty .ptext { padding:21px } .panel.empty .pname { font-size:1.25rem; white-space:normal }
   @media (max-width:720px) { .mosaic { grid-auto-columns:minmax(72px,1fr) } }
+  /* Home: every project a square, in a grid that fills the screen and scrolls down (Max, 22 Nov). Each square shows
+     what's inside: its pictures, then an icon for each note, document, voice note, link or video, then "+N". */
+  .dock.homegrid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:16px; height:auto } /* 3 across (Max, 22 Nov) */
+  .dock.homegrid .panel, .dock.homegrid .panel.on { aspect-ratio:1 / 1; height:auto; flex:none; flex-direction:column; min-width:0 }
+  .dock.homegrid .mosaic { flex:1; display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); grid-template-rows:repeat(2, minmax(0,1fr)); grid-auto-rows:0; grid-auto-flow:row; grid-auto-columns:auto; gap:5px; padding:6px; overflow:hidden; min-height:0 }
+  .dock.homegrid .mosaic i, .dock.homegrid .mosaic.odd i:first-child { grid-row:auto; grid-column:auto; border-radius:9px; min-height:0 }
+  .dock.homegrid .mosaic .pic { background-size:contain; background-repeat:no-repeat; background-color:rgba(0,0,0,.32) } /* whole pictures, never cropped */
+  .dock.homegrid .mosaic .kic { display:grid; place-items:center; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); font-style:normal; font-size:1.1rem; color:#e9e2d6 }
+  .dock.homegrid .mosaic .more { display:grid; place-items:center; font-style:normal; font-size:.86rem; font-weight:700; color:#c9c1b6; background:rgba(255,255,255,.04) }
+  .dock.homegrid .panel { justify-content:space-between } /* a 2×2 of what's inside, then the name below it */
+  .dock.homegrid .panel.empty { justify-content:flex-end }
+  .dock.homegrid .faces { position:absolute; top:8px; right:8px; z-index:1 }
+  .dock.homegrid .pkinds, .dock.homegrid .pkicker { display:none } /* the faces already show a board is shared */
+  @media (max-width:720px) { .dock.homegrid { gap:8px } .dock.homegrid .ptext { padding:5px 8px 7px } .dock.homegrid .pmeta { font-size:.7rem } .dock.homegrid .mosaic { gap:3px; padding:4px } .dock.homegrid .mosaic .kic { font-size:.85rem } .dock.homegrid .panel, .dock.homegrid .panel.on { height:auto } .dock.homegrid .pname { font-size:.92rem } }
 
   /* ── The project board: grows out of its panel to fill the screen; glass buckets over the same landscape. ── */
   body.boarded { overflow:hidden }
@@ -202,7 +216,7 @@
   @media (prefers-reduced-motion: reduce) { .creatorbtn.on { animation:none } }
   .viz-on .bd-pic, .viz-on .bd-card { cursor:copy } .bd-pic.added, .bd-card.added { outline:2px solid var(--gold-light, #F4E3B5); outline-offset:2px }
   .bd-pic { all:unset; box-sizing:border-box; position:relative; display:block; break-inside:avoid; margin:0; border-radius:12px; overflow:hidden; cursor:pointer; background:rgba(0,0,0,.2) }
-  .bd-pic img { display:block; width:100%; aspect-ratio:1; object-fit:cover } .bd-pic em { position:absolute; top:8px; left:8px; font-style:normal; font-size:.8rem; padding:2px 8px; border-radius:99px; background:rgba(0,0,0,.55) }
+  .bd-pic img { display:block; width:100%; aspect-ratio:1; object-fit:contain; background:rgba(0,0,0,.32) } /* the whole picture, never cropped (Max, 22 Nov) */ .bd-pic em { position:absolute; top:8px; left:8px; font-style:normal; font-size:.8rem; padding:2px 8px; border-radius:99px; background:rgba(0,0,0,.55) }
   .bd-pic span { position:absolute; inset:auto 0 0 0; padding:21px 10px 8px; font-size:.8rem; background:linear-gradient(transparent, rgba(0,0,0,.7)); opacity:0; transition:opacity .2s }
   .bd-pic:hover span, .bd-pic:focus-visible span { opacity:1 } .bd-pic:focus-visible, .bd-card:focus-visible { outline:2px solid #e8a95c; outline-offset:2px }
   .bd-card { all:unset; box-sizing:border-box; display:block; padding:12px 14px; border-radius:12px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); cursor:pointer; transition:border-color .2s }
@@ -312,7 +326,18 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/ui/visualize.css">
-<link rel="stylesheet" href="/static/ui/theme.css"><!-- the look: palette, glass, backlight (overrides the base styles above) -->
+<link rel="stylesheet" href="/static/ui/theme.css">
+<style>
+  /* Remind tab (static/ui/remind.js) */
+  #remind-body { display:grid; gap:12px }
+  .rm-on { display:grid; gap:10px } .rm-on p, .rm-home { margin:0 }
+  .rm-h { font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:10px 0 0 }
+  .rm-list { display:grid; gap:8px }
+  .rm-item { display:block; text-decoration:none; color:var(--fg); background:var(--glass-soft, rgba(127,127,127,.06)); border:1px solid var(--line); border-radius:12px; padding:11px 14px }
+  .rm-item b { display:block; font-weight:600 } .rm-item small { color:var(--muted) }
+  .rm-send { justify-self:start; background:none; border:0; color:var(--muted); text-decoration:underline; font:inherit; padding:6px 0; cursor:pointer }
+</style>
+<script src="/static/ui/remind.js"></script><!-- the look: palette, glass, backlight (overrides the base styles above) -->
 </head>
 <body>
 <div class="wrap">
@@ -323,10 +348,10 @@
       <button id="tab-save" aria-current="page">Save</button>
       <button id="tab-find">Find</button>
       <button id="tab-cues">Clarify<span id="cue-count" class="badge" hidden></span></button>
+      <button id="tab-remind">Remind</button>
       <button id="tab-improve">Improve</button>
     </nav>
   </header>
-  <div id="remindcard" class="card connect" hidden><a href="/remind">Turn on Remind</a><span>Your own words come back to your phone until you live them.</span></div>
   <div id="meetings" class="card connect" hidden><a href="/connect/granola" data-v="granola">Connect Granola</a><a href="/connect/otter" data-v="otter">Connect Otter</a><span>Your meetings save to Recall on their own.</span><button type="button" class="x" aria-label="Hide">×</button></div>
 
   <section id="save" class="card">
@@ -370,6 +395,8 @@
     <div id="cue-list"></div>
   </section>
 
+  <section id="reminders" class="card" hidden><div id="remind-body"></div></section>
+
   <section id="improve" class="card" hidden>
     <form id="wish">
       <label class="small" for="wish-text">What do you wish this did?</label>
@@ -391,11 +418,12 @@ const $ = (s) => document.querySelector(s);
 const fadeIn = (e) => { if (e.target.tagName === 'IMG') e.target.classList.add('in'); };
 document.addEventListener('load', fadeIn, true); document.addEventListener('error', fadeIn, true); // (an element's load never reaches window)
 new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) for (const i of (n.tagName === 'IMG' ? [n] : n.querySelectorAll('img'))) if (i.complete) i.classList.add('in'); }).observe(document.documentElement, { childList: true, subtree: true });
-const tabs = { save: $('#tab-save'), find: $('#tab-find'), cues: $('#tab-cues'), improve: $('#tab-improve') };
+const tabs = { save: $('#tab-save'), find: $('#tab-find'), cues: $('#tab-cues'), reminders: $('#tab-remind'), improve: $('#tab-improve') };
 function show(which) {
   document.body.classList.toggle('wide', which === 'find');
   for (const k of Object.keys(tabs)) { $('#' + k).hidden = which !== k; if (which === k) tabs[k].setAttribute('aria-current', 'page'); else tabs[k].removeAttribute('aria-current'); }
   if (which === 'cues') loadCues();
+  if (which === 'reminders' && window.loadRemind) window.loadRemind($('#remind-body'));
   if (which === 'find') { if ($('#q').value.trim()) { loadIndex(); instant(); doSearch(); } else { loadShelves(); loadIndex(); } setTimeout(() => { if (matchMedia('(hover: hover)').matches) $('#q').focus(); grow(); }, 50); } // on a phone, focusing would open the keyboard and push the projects down
   try { localStorage.setItem('cl-tab', which); } catch {}
 }
@@ -708,10 +736,10 @@ function projectMatches(q) {
   return projectRows.filter(p => { const name = p.name.toLowerCase(); return n === name || n.includes(name) || (name.includes(n) && n.length >= 3); });
 }
 function projectHitHtml(p) {
-  return `<button class="proj-hit" data-proj="${esc(p.id)}">${p.cover ? `<img src="/thumb/${encodeURIComponent(p.cover)}" alt="">` : ''}<div><b>${esc(p.name)}</b><span>Project · ${p.count} item${p.count===1?'':'s'} · open to see everything</span></div></button>`;
+  return `<button class="proj-hit" data-proj="${esc(p.id)}">${p.cover ? `<img src="${myThumb(p.cover)}" alt="">` : ''}<div><b>${esc(p.name)}</b><span>Project · ${p.count} item${p.count===1?'':'s'} · open to see everything</span></div></button>`;
 }
 function projectTileHtml(p) {
-  return `<button class="proj" data-proj="${esc(p.id)}">${p.cover ? `<img class="cover" src="/thumb/${encodeURIComponent(p.cover)}" alt="" loading="lazy">` : '<div class="nocover"></div>'}<b>${esc(p.name)}</b><span>${p.count} item${p.count===1?'':'s'}</span></button>`;
+  return `<button class="proj" data-proj="${esc(p.id)}">${p.cover ? `<img class="cover" src="${myThumb(p.cover)}" alt="" loading="lazy">` : '<div class="nocover"></div>'}<b>${esc(p.name)}</b><span>${p.count} item${p.count===1?'':'s'}</span></button>`;
 }
 function words(q) { return q.toLowerCase().replace(/[’']s\b/g, '').split(/[^a-z0-9]+/).filter(w => w.length > 1); }
 function localMatches(q) {
@@ -776,8 +804,8 @@ async function doSearch() {
 function caption(s) { s = String(s || '').replace(/[#*_`>|\\]+/g, ' ').replace(/^(The )?owner('s)?\s+(saved|documented|intends to|wants to|detailed notes( on)?|notes)\s*/i, '').replace(/^\w/, c => c.toUpperCase()).replace(/\s+/g, ' ').trim(); if (s.length > 90) s = s.slice(0, 88).replace(/\s+\S*$/, '') + '…'; return s; }
 function itemHtml(it) {
   const cap = caption(it.snippet ?? it.summary);
-  if (it.pending) return `<button class="item tile pending" data-id="${esc(it.id)}">${it.thumb ? `<img class="hero" src="/thumb/${encodeURIComponent(it.thumb)}" alt="" loading="lazy">` : ''}<div class="tile-text"><b>${esc(it.title)}</b><span>${esc(it.snippet)}</span></div></button>`;
-  if (it.thumb) return `<button class="item tile" data-id="${esc(it.id)}"><img class="hero" src="/thumb/${encodeURIComponent(it.thumb)}" alt="" loading="lazy"><div class="tile-text"><b>${esc(it.title)}</b>${cap ? `<span>${esc(cap)}</span>` : ''}</div></button>`;
+  if (it.pending) return `<button class="item tile pending" data-id="${esc(it.id)}">${it.thumb ? `<img class="hero" src="${myThumb(it.thumb)}" alt="" loading="lazy">` : ''}<div class="tile-text"><b>${esc(it.title)}</b><span>${esc(it.snippet)}</span></div></button>`;
+  if (it.thumb) return `<button class="item tile" data-id="${esc(it.id)}"><img class="hero" src="${myThumb(it.thumb)}" alt="" loading="lazy"><div class="tile-text"><b>${esc(it.title)}</b>${cap ? `<span>${esc(cap)}</span>` : ''}</div></button>`;
   return `<button class="item" data-id="${esc(it.id)}"><div><b>${it.local ? '🔒 ' : ''}${esc(it.title)}</b>${cap ? `<span>${esc(cap)}</span>` : ''}</div></button>`;
 }
 function wire(root) { root.querySelectorAll('.item').forEach(b => b.onclick = () => openItem(b.dataset.id)); root.querySelectorAll('[data-proj]').forEach(b => b.onclick = () => openProject(b.dataset.proj)); }
@@ -794,25 +822,23 @@ async function loadShelves(quiet = false) {
   try { const t = await (await fetch('/api/team')).json(); teamRows = t.projects || []; if (t.board) teamBoard = t.board; if ('member' in t) teamMember = !!t.member; } catch {} if (my !== openSeq) return;
   teamSig = JSON.stringify(teamRows);
   refreshRecent();
-  const due = (d.due || []).length ? `<div class="due"><b>Brought back for you</b>${d.due.map(x => `<button class="item" data-id="${esc(x.id)}"><b>${x.local?'🔒 ':''}${esc(x.title)}</b><span>${x.when ? 'for: ' + esc(x.when) : 'saved ' + esc(x.saved)}${x.summary ? ' · ' + esc(x.summary) : ''}</span></button>`).join('')}</div>` : '';
   const cards = [...(teamRows.length ? [teamCard(teamRows)] : []), ...projectRows.map(p => ({ id: p.id, name: p.name, thumbs: p.thumbs || (p.cover ? [p.cover] : []), meta: `${p.count} item${p.count===1?'':'s'}`, counts: p.counts || {} }))];
-  const projHtml = cards.length ? `<div class="stage" id="projstage"><div class="stage-label">Your projects</div>${dockHtml(cards)}</div>` : '';
-  const html = projHtml + due + d.proposed.map(p => `<div class="proposal"><b>Librarian suggests a new shelf: ${esc(p.name)}</b> <span class="muted">(${p.items.length} items)</span><div class="actions"><button data-p="${esc(p.name)}" data-a="approve">Create shelf</button><button data-p="${esc(p.name)}" data-a="dismiss">Dismiss</button></div></div>`).join('');
+  const projHtml = cards.length ? `<div class="stage" id="projstage"><div class="stage-label">Your projects</div>${dockHtml(cards, myThumb, true)}</div>` : '';
+  // Only the projects on the home screen (Max, 22 Nov): brought-back items now reach you through Remind.
+  const html = projHtml;
   // Skip a quiet redraw only when the projects are already on screen; the loading boxes always get replaced.
   if (quiet && b.querySelector('#projstage') && (html === homeSig || busyHome())) return;
   homeSig = html; backTo = null;
   const y = scrollY; b.innerHTML = html; if (quiet) scrollTo(0, y);
   wire(b); wireHome();
-  b.querySelectorAll('.due .item').forEach(carry);
-  b.querySelectorAll('[data-p]').forEach(x => x.onclick = async () => { await fetch('/api/proposal', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ name: x.dataset.p, action: x.dataset.a }) }); shelvesCache = null; loadShelves(); });
 }
 function busyHome() { return !!boardEl || document.body.classList.contains('carrying') || !!document.querySelector('.dock.hovering') || !$('#recentbar').hidden; }
 // The recent-saves strip under the search box: opens when you click into the empty box; tiles drag onto projects.
 function drawRecent() {
   const r = $('#recentbar');
   r.innerHTML = recentRows.length ? `<div class="rb-label">Recently saved</div><div class="rb-strip">${recentRows.map(it => it.pending
-      ? `<div class="rtile filing">${it.thumb ? `<img src="/thumb/${encodeURIComponent(it.thumb)}" alt="" loading="lazy">` : '<i>…</i>'}<span>${esc(it.title)}</span></div>`
-      : `<div class="tile-wrap${it.status === 'unsorted' || it.status === 'waiting' ? ' asks' : ''}"><button class="rtile item" data-id="${esc(it.id)}">${it.thumb ? `<img src="/thumb/${encodeURIComponent(it.thumb)}" alt="" loading="lazy">` : `<i>${KIND_ICON.note}</i>`}<span>${esc(it.title)}</span></button><button class="tile-x" data-x="${esc(it.id)}" aria-label="Delete ${esc(it.title)}" title="Delete"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')}</div>`
+      ? `<div class="rtile filing">${it.thumb ? `<img src="${myThumb(it.thumb)}" alt="" loading="lazy">` : '<i>…</i>'}<span>${esc(it.title)}</span></div>`
+      : `<div class="tile-wrap${it.status === 'unsorted' || it.status === 'waiting' ? ' asks' : ''}"><button class="rtile item" data-id="${esc(it.id)}">${it.thumb ? `<img src="${myThumb(it.thumb)}" alt="" loading="lazy">` : `<i>${KIND_ICON.note}</i>`}<span>${esc(it.title)}</span></button><button class="tile-x" data-x="${esc(it.id)}" aria-label="Delete ${esc(it.title)}" title="Delete"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')}</div>`
     : '<div class="rb-label">Nothing saved yet</div>';
   r.querySelectorAll('.rtile.item').forEach(x => { x.onclick = () => { hideRecent(); openItem(x.dataset.id); }; carry(x); });
   r.querySelectorAll('[data-x]').forEach(x => x.onclick = (e) => { e.stopPropagation(); const w = x.closest('.tile-wrap'); w.classList.add('gone'); deleteItems([x.dataset.x], () => { recentRows = recentRows.filter(it => it.id !== x.dataset.x); setTimeout(() => w.remove(), 382); }, refreshRecent); });
@@ -833,16 +859,24 @@ const KIND = { image: 'Photos', voice: 'Voice notes', video: 'Videos', note: 'No
 // The living dock: panels share the row; the one under the cursor grows to φ². Positions never change.
 const KIND_ICON = { image: '▣', document: '▤', voice: '◉', note: '✎', link: '↗', video: '▶' };
 // Pictures: your own files, or (on the team board) files someone shared.
-const myThumb = (f) => '/thumb/' + encodeURIComponent(f), teamThumb = (f) => '/board/img/' + encodeURIComponent(f) + '?size=small', teamFull = (f) => '/board/img/' + encodeURIComponent(f) + '?size=full';
+const myThumb = (f) => '/thumb/' + encodeURIComponent(f) + '?s=720', /* ?s=720: browsers kept the old 360px copies forever */ teamThumb = (f) => '/board/img/' + encodeURIComponent(f) + '?size=thumb', teamFull = (f) => '/board/img/' + encodeURIComponent(f) + '?size=full';
 const face = (p) => `<span class="who" title="${esc(p.name)}">${p.avatar ? `<img src="${esc(p.avatar)}" alt="">` : esc((p.name || '?').trim()[0].toUpperCase())}</span>`;
-function panelHtml(c, on, thumb = myThumb) {
+function panelHtml(c, on, thumb = myThumb, grid = false) {
   const th = (c.thumbs || []).slice(0, 12), pic = c.thumb || thumb;
-  const tiles = th.map(f => `<i style="background-image:url('${pic(f)}')"></i>`).join('');
-  const mosaic = th.length ? `<div class="mosaic${th.length <= 2 ? ' one' : th.length % 2 ? ' odd' : ''}">${tiles}</div>` : '';
+  let tiles = th.map(f => `<i style="background-image:url('${pic(f)}')"></i>`).join(''), cells = th.length;
+  if (grid) { // four cells (2×2): pictures, then one icon per other item (notes, documents, voice notes, links), then "+N"
+    const kinds = Object.entries(c.counts || {}).filter(([k, n]) => n && k !== 'image').flatMap(([k, n]) => Array(n).fill(k));
+    const total = Object.values(c.counts || {}).reduce((a, n) => a + n, 0) || th.length;
+    const pics = th.slice(0, 4), room = 4 - pics.length, icons = kinds.slice(0, room), shown = pics.length + icons.length, rest = total - shown;
+    const list = [...pics.map(f => `<i class="pic" style="background-image:url('${pic(f)}')"></i>`), ...icons.map(k => `<i class="kic" title="${esc(KIND[k] || k)}">${KIND_ICON[k] || '·'}</i>`)];
+    if (rest > 0 && list.length) list[list.length - 1] = `<i class="more">+${rest + 1}</i>`;
+    tiles = list.join(''); cells = list.length;
+  }
+  const mosaic = cells ? `<div class="mosaic${!grid && th.length <= 2 ? ' one' : !grid && th.length % 2 ? ' odd' : ''}">${tiles}</div>` : '';
   const chips = Object.entries(c.counts || {}).filter(([, n]) => n).map(([k, n]) => `<span class="pchip">${KIND_ICON[k] || '·'} ${n} ${esc(((KIND[k] || k).toLowerCase()).replace(n === 1 ? /s$/ : /$^/, ''))}</span>`).join('');
-  return `<button class="panel${on ? ' on' : ''}${th.length ? '' : ' empty'}${c.team ? ' teampanel' : ''}" data-dock="${esc(c.id)}" aria-label="${esc(c.name)}">${mosaic}${(c.faces || []).length ? `<span class="faces">${c.faces.slice(0, 4).map(face).join('')}</span>` : ''}<div class="ptext">${c.team ? '<span class="pkicker">Shared</span>' : ''}<span class="pname">${esc(c.name)}</span><span class="pmeta">${esc(c.meta || '')}</span><div class="pkinds">${chips}</div></div></button>`;
+  return `<button class="panel${on ? ' on' : ''}${cells ? '' : ' empty'}${c.team ? ' teampanel' : ''}" data-dock="${esc(c.id)}" aria-label="${esc(c.name)}">${mosaic}${(c.faces || []).length ? `<span class="faces">${c.faces.slice(0, 4).map(face).join('')}</span>` : ''}<div class="ptext">${c.team ? '<span class="pkicker">Shared</span>' : ''}<span class="pname">${esc(c.name)}</span><span class="pmeta">${esc(c.meta || '')}</span><div class="pkinds">${chips}</div></div></button>`;
 }
-function dockHtml(cards, thumb = myThumb) { return `<div class="dock">${cards.map((c, i) => panelHtml(c, i === (c.on ?? 0), thumb)).join('')}</div>`; }
+function dockHtml(cards, thumb = myThumb, grid = false) { return `<div class="dock${grid ? ' homegrid' : ''}">${cards.map((c, i) => panelHtml(c, !grid && i === (c.on ?? 0), thumb, grid)).join('')}</div>`; }
 // The team board, kept current: whatever anyone adds or shares shows up within a few seconds, without a reload.
 const TEAM = '__team';
 // The team board is one panel: a few pictures from each shared project, interleaved, and who's in it.
@@ -1280,12 +1314,6 @@ if (params.get('q')) { initial = 'find'; }
 show(initial);
 if (params.get('q')) { $('#q').value = params.get('q'); grow(); instant(); doSearch(); }
 if (params.get('item')) { openItem(params.get('item')); history.replaceState(null, '', location.pathname); } // from a Remind card
-// Remind: offered once there is something to remind, until this phone has it on (remind.html).
-fetch('/api/remind/status').then(r => r.ok ? r.json() : null).then(async st => {
-  if (!st?.sparks?.length || !('serviceWorker' in navigator)) return;
-  let on = false; try { const reg = await navigator.serviceWorker.getRegistration('/'); on = !!(reg && await reg.pushManager.getSubscription()); } catch {}
-  document.getElementById('remindcard').hidden = on;
-}).catch(() => {});
 
 // Whose library this is, so nobody wonders.
 // Meeting recorders: a card with a button for each one not connected yet, until one is connected or it's hidden.
@@ -1314,7 +1342,7 @@ async function loadCues() {
   if (!cueRows.length) { list.innerHTML = '<div class="status">Nothing waiting on you. New questions show up here as things are saved.</div>'; return; }
   // One item: the picture and the title open it. A group: the title shows its items, each of which opens.
   list.innerHTML = cueRows.map(c => { const one = (c.open || []).length === 1 ? c.open[0] : '', many = (c.itemTitles || []).length > 1 ? c.itemTitles : [];
-    const pic = c.thumb ? `<img class="cthumb" src="/thumb/${encodeURIComponent(c.thumb)}" alt="">` : `<div class="cthumb blank">${CUE_ICON[c.kind] || '•'}</div>`;
+    const pic = c.thumb ? `<img class="cthumb" src="${myThumb(c.thumb)}" alt="">` : `<div class="cthumb blank">${CUE_ICON[c.kind] || '•'}</div>`;
     return `<div class="cue" data-cue="${esc(c.id)}">${one ? `<button class="copen" data-open="${esc(one)}" aria-label="Open ${esc(c.title)}">${pic}</button>` : pic}<div>${one ? `<b class="copen" role="button" tabindex="0" data-open="${esc(one)}">${esc(c.title)}</b>` : `<b>${esc(c.title)}</b>`}<div class="csnip">${esc(caption(c.snippet))}</div>${many.length ? `<details class="citems"><summary>Show the ${many.length} meetings</summary><ul>${many.map((t, i) => `<li><button data-open="${esc(c.open[i])}">${esc(t)}</button></li>`).join('')}</ul></details>` : ''}<p class="cq">${esc(c.question)}</p><div class="copts">${c.options.map((o, i) => `<button data-opt="${esc(o.id)}"><kbd>${i + 1}</kbd>${esc(o.label)}</button>`).join('')}</div>${c.kind === 'project' ? '<form class="cname"><input name="p" placeholder="Or type a project name" autocomplete="off" aria-label="Project name"><button type="submit">Use</button></form>' : ''}<div class="cfoot"><button class="cdel" data-del>${many.length > 1 ? `Delete all ${many.length}` : 'Delete'}</button></div></div></div>`; }).join('');
   list.querySelectorAll('.cue').forEach(card => card.querySelectorAll('[data-opt]').forEach(btn => btn.onclick = () => answerCue(card, btn.dataset.opt)));
   list.querySelectorAll('.cue [data-open]').forEach(x => { const go = () => openFromClarify(x.dataset.open); x.onclick = go; x.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }; });

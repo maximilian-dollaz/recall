@@ -500,7 +500,7 @@ section.card:not([hidden]) { animation:viewin var(--t-state) var(--ease) }
 /* Save: the microphone's line takes room only when it has something to say; the save line keeps its room so Save never jumps. */
 #mic-status:empty { min-height:0; margin:0 }
 .savebar { margin-top:var(--s3); padding-top:var(--s3) }
-@media (max-width:520px) { :is(#tab-save, #tab-find, #tab-cues, #tab-improve) { padding:0 var(--s2) } nav { gap:var(--s2) } }
+@media (max-width:520px) { :is(#tab-save, #tab-find, #tab-cues, #tab-remind, #tab-improve) { padding:0 var(--s2) } nav { gap:var(--s2) } }
 /* A board's actions on a phone: tighter pills so Send, Creator mode and Copy for Claude share one row. */
 @media (max-width:520px) { .pboard .bd-actions :is(button) { padding:0 11px; font-size:.8125rem } .pboard .bd-actions .creatorbtn.on { padding:0 10px } .bd-actions { gap:var(--s3) } }
 .toast { background:rgba(16,28,36,.86) }

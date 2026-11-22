@@ -40,7 +40,7 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><a href="/" id="home">‹ Recall</a><a href="/remind" id="all" hidden>All reminders</a></div>
+  <div class="top"><a href="/" id="home">‹ Recall</a><a href="/?tab=reminders" id="all" hidden>All reminders</a></div>
 
   <!-- One spark: /remind/<id> -->
   <section id="one" hidden style="visibility:hidden">
@@ -148,7 +148,8 @@ async function many() {
   };
 }
 
-id ? one() : many();
+// The list lives in Recall's Remind tab now.
+id ? one() : location.replace('/?tab=reminders');
 </script>
 </body>
 </html>
