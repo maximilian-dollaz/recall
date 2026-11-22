@@ -58,7 +58,7 @@ export async function sessionEmail(req: Request): Promise<string | null> {
 }
 
 export const page = (title: string, body: string, status = 200) => new Response(
-  `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recall</title><link rel="icon" href="/static/icon-32.png"><link rel="apple-touch-icon" href="/static/icon-180.png">
+  `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recall</title><link rel="icon" href="/static/icon-32.png"><link rel="manifest" href="/static/manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Recall"><link rel="apple-touch-icon" href="/static/icon-180.png">
 <style>body{font:17px/1.5 -apple-system,system-ui,sans-serif;background:#f3f4f1;color:#1d2420;display:grid;place-items:center;min-height:100vh;margin:0;padding:0 16px}
 @media(prefers-color-scheme:dark){body{background:#141917;color:#e6ebe7}}main{max-width:420px}h1{font-size:1.6rem;margin:0 0 8px}
 .logo{display:block;width:112px;height:112px;border-radius:26px;margin:0 0 21px;box-shadow:0 0 34px rgba(255,150,30,.35),0 8px 21px rgba(0,0,0,.25)}</style>

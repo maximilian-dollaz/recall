@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Recall</title>
 <link rel="manifest" href="/static/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/static/icon-180.png">
+<link rel="apple-touch-icon" href="/static/icon-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Recall">
 <link rel="icon" href="/static/icon-32.png">
 <style>
   :root { --bg:#f3f1ec; --paper:#fffdf9; --fg:#1f1d19; --muted:#6c665b; --line:#dcd6cb; --accent:#2d5a46; --accent-soft:#e3ede7; --lock:#8a5a1b; --lock-soft:#f5e9d6; --danger:#9b2d2d; --on-accent:#fff; }
@@ -299,6 +299,14 @@
   .cue .copts button:first-child { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600 }
   .cue .copts kbd { font:inherit; font-size:.72rem; opacity:.6; margin-right:5px }
   @media (max-width:520px) { .cue { grid-template-columns:55px minmax(0,1fr) } .cue .cthumb { width:55px; height:55px } }
+  /* Open what a card is about (the picture, the title, or each meeting in a group); Delete sits apart from the answers. */
+  .cue .copen { all:unset; cursor:pointer; display:block; border-radius:8px } .cue .copen:focus-visible { outline:2px solid var(--accent); outline-offset:2px }
+  .cue b.copen { font-weight:700 } @media (hover:hover) { .cue b.copen:hover { text-decoration:underline } }
+  .cue .citems { margin:0 0 8px; font-size:.88rem } .cue .citems summary { cursor:pointer; color:var(--accent); font-weight:600 }
+  .cue .citems ul { list-style:none; margin:5px 0 0; padding:0; display:grid; gap:3px } .cue .citems button { all:unset; cursor:pointer; color:var(--fg) } @media (hover:hover) { .cue .citems button:hover { text-decoration:underline } }
+  .cue .cfoot { display:flex; justify-content:flex-end; margin-top:8px }
+  .cue .cdel { font:inherit; font-size:.88rem; padding:5px 13px; border-radius:10px; border:1px solid var(--line); background:none; color:var(--muted); cursor:pointer }
+  @media (hover:hover) { .cue .cdel:hover { color:var(--fg); border-color:var(--muted) } }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1304,9 +1312,23 @@ async function loadCues() {
   await refreshCueCount();
   const list = $('#cue-list');
   if (!cueRows.length) { list.innerHTML = '<div class="status">Nothing waiting on you. New questions show up here as things are saved.</div>'; return; }
-  list.innerHTML = cueRows.map(c => `<div class="cue" data-cue="${esc(c.id)}">${c.thumb ? `<img class="cthumb" src="/thumb/${encodeURIComponent(c.thumb)}" alt="">` : `<div class="cthumb blank">${CUE_ICON[c.kind] || '•'}</div>`}<div><b>${esc(c.title)}</b><div class="csnip">${esc(caption(c.snippet))}</div><p class="cq">${esc(c.question)}</p><div class="copts">${c.options.map((o, i) => `<button data-opt="${esc(o.id)}"><kbd>${i + 1}</kbd>${esc(o.label)}</button>`).join('')}</div>${c.kind === 'project' ? '<form class="cname"><input name="p" placeholder="Or type a project name" autocomplete="off" aria-label="Project name"><button type="submit">Use</button></form>' : ''}</div></div>`).join('');
+  // One item: the picture and the title open it. A group: the title shows its items, each of which opens.
+  list.innerHTML = cueRows.map(c => { const one = (c.open || []).length === 1 ? c.open[0] : '', many = c.itemTitles || [];
+    const pic = c.thumb ? `<img class="cthumb" src="/thumb/${encodeURIComponent(c.thumb)}" alt="">` : `<div class="cthumb blank">${CUE_ICON[c.kind] || '•'}</div>`;
+    return `<div class="cue" data-cue="${esc(c.id)}">${one ? `<button class="copen" data-open="${esc(one)}" aria-label="Open ${esc(c.title)}">${pic}</button>` : pic}<div>${one ? `<b class="copen" role="button" tabindex="0" data-open="${esc(one)}">${esc(c.title)}</b>` : `<b>${esc(c.title)}</b>`}<div class="csnip">${esc(caption(c.snippet))}</div>${many.length ? `<details class="citems"><summary>Show the ${many.length} meetings</summary><ul>${many.map((t, i) => `<li><button data-open="${esc(c.open[i])}">${esc(t)}</button></li>`).join('')}</ul></details>` : ''}<p class="cq">${esc(c.question)}</p><div class="copts">${c.options.map((o, i) => `<button data-opt="${esc(o.id)}"><kbd>${i + 1}</kbd>${esc(o.label)}</button>`).join('')}</div>${c.kind === 'project' ? '<form class="cname"><input name="p" placeholder="Or type a project name" autocomplete="off" aria-label="Project name"><button type="submit">Use</button></form>' : ''}<div class="cfoot"><button class="cdel" data-del>${many.length > 1 ? `Delete all ${many.length}` : 'Delete'}</button></div></div></div>`; }).join('');
   list.querySelectorAll('.cue').forEach(card => card.querySelectorAll('[data-opt]').forEach(btn => btn.onclick = () => answerCue(card, btn.dataset.opt)));
+  list.querySelectorAll('.cue [data-open]').forEach(x => { const go = () => openItem(x.dataset.open); x.onclick = go; x.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }; });
+  list.querySelectorAll('.cue [data-del]').forEach(btn => btn.onclick = () => deleteCue(btn.closest('.cue')));
   list.querySelectorAll('.cue .cname').forEach(f => f.onsubmit = (e) => { e.preventDefault(); const v = f.p.value.trim(); if (v) answerCue(f.closest('.cue'), 'name:' + v); });
+}
+// Delete from Clarify: what the card is about goes to Trash and never enters the library. Undo brings it back.
+async function deleteCue(card) {
+  card.querySelectorAll('button').forEach(b => b.disabled = true);
+  const r = await fetch('/api/cues/resolve', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: card.dataset.cue, option: 'delete' }) }).then(r => r.json()).catch(() => ({}));
+  if (!r.ok) { card.querySelectorAll('button').forEach(b => b.disabled = false); toast(r.error || "Couldn't delete it. Try again."); return; }
+  boardDirty = true; indexRows = null;
+  card.classList.add('gone'); setTimeout(() => { card.remove(); refreshCueCount().then(() => { if (!$('#cue-list').children.length) loadCues(); }); }, 382);
+  toast(`Deleted${r.deleted.length > 1 ? ' ' + r.deleted.length : ''}`, r.undo ? async () => { const u = await fetch('/api/undelete', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ undo: r.undo }) }).then(r => r.json()).catch(() => ({})); if (u.ok) { boardDirty = true; indexRows = null; loadCues(); } } : null);
 }
 async function answerCue(card, option) {
   card.querySelectorAll('button').forEach(b => b.disabled = true);
