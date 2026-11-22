@@ -1313,13 +1313,20 @@ async function loadCues() {
   const list = $('#cue-list');
   if (!cueRows.length) { list.innerHTML = '<div class="status">Nothing waiting on you. New questions show up here as things are saved.</div>'; return; }
   // One item: the picture and the title open it. A group: the title shows its items, each of which opens.
-  list.innerHTML = cueRows.map(c => { const one = (c.open || []).length === 1 ? c.open[0] : '', many = c.itemTitles || [];
+  list.innerHTML = cueRows.map(c => { const one = (c.open || []).length === 1 ? c.open[0] : '', many = (c.itemTitles || []).length > 1 ? c.itemTitles : [];
     const pic = c.thumb ? `<img class="cthumb" src="/thumb/${encodeURIComponent(c.thumb)}" alt="">` : `<div class="cthumb blank">${CUE_ICON[c.kind] || '•'}</div>`;
     return `<div class="cue" data-cue="${esc(c.id)}">${one ? `<button class="copen" data-open="${esc(one)}" aria-label="Open ${esc(c.title)}">${pic}</button>` : pic}<div>${one ? `<b class="copen" role="button" tabindex="0" data-open="${esc(one)}">${esc(c.title)}</b>` : `<b>${esc(c.title)}</b>`}<div class="csnip">${esc(caption(c.snippet))}</div>${many.length ? `<details class="citems"><summary>Show the ${many.length} meetings</summary><ul>${many.map((t, i) => `<li><button data-open="${esc(c.open[i])}">${esc(t)}</button></li>`).join('')}</ul></details>` : ''}<p class="cq">${esc(c.question)}</p><div class="copts">${c.options.map((o, i) => `<button data-opt="${esc(o.id)}"><kbd>${i + 1}</kbd>${esc(o.label)}</button>`).join('')}</div>${c.kind === 'project' ? '<form class="cname"><input name="p" placeholder="Or type a project name" autocomplete="off" aria-label="Project name"><button type="submit">Use</button></form>' : ''}<div class="cfoot"><button class="cdel" data-del>${many.length > 1 ? `Delete all ${many.length}` : 'Delete'}</button></div></div></div>`; }).join('');
   list.querySelectorAll('.cue').forEach(card => card.querySelectorAll('[data-opt]').forEach(btn => btn.onclick = () => answerCue(card, btn.dataset.opt)));
-  list.querySelectorAll('.cue [data-open]').forEach(x => { const go = () => openItem(x.dataset.open); x.onclick = go; x.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }; });
+  list.querySelectorAll('.cue [data-open]').forEach(x => { const go = () => openFromClarify(x.dataset.open); x.onclick = go; x.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }; });
   list.querySelectorAll('.cue [data-del]').forEach(btn => btn.onclick = () => deleteCue(btn.closest('.cue')));
   list.querySelectorAll('.cue .cname').forEach(f => f.onsubmit = (e) => { e.preventDefault(); const v = f.p.value.trim(); if (v) answerCue(f.closest('.cue'), 'name:' + v); });
+}
+// Open a card's item in the item view (on the Find tab, without loading Find's home); Back returns to Clarify.
+function openFromClarify(id) {
+  document.body.classList.add('wide');
+  for (const k of Object.keys(tabs)) { $('#' + k).hidden = k !== 'find'; if (k === 'find') tabs[k].setAttribute('aria-current', 'page'); else tabs[k].removeAttribute('aria-current'); }
+  backTo = () => { backTo = null; $('#browse').innerHTML = ''; show('cues'); };
+  openItem(id); window.scrollTo(0, 0);
 }
 // Delete from Clarify: what the card is about goes to Trash and never enters the library. Undo brings it back.
 async function deleteCue(card) {

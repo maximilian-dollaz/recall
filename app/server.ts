@@ -552,12 +552,13 @@ async function item(person: Person, id: string): Promise<any> {
     if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]{1,8}$/.test(jobId)) return null;
     const done = filedAs.get(`${person.id}:${jobId}`) ?? (vaultFor(person.dir).get(jobId) ? `vault:${jobId}` : undefined);
     if (done) return item(person, done);
-    for (const [folder, failed] of [["inbox", false], ["inbox-failed", true]] as const) {
+    for (const [folder, failed] of [["inbox", false], ["inbox-failed", true], ["held", false]] as const) {
       const path = join(person.dir, folder, `${jobId}.json`);
       if (!existsSync(path)) continue;
       const job: Job = JSON.parse(readFileSync(path, "utf8"));
-      return { id, pending: !failed, failed, title: job.notes.slice(0, 80) || job.url || "New item", shelf: "", tags: [], local: job.keepLocal, state: "idea",
-        summary: failed ? `The librarian couldn't file this one. It's kept safe; ask ${OWNER_NAME} to look at it.` : "Being filed by the librarian…",
+      const held = folder === "held"; // waiting for Private or Shareable in Clarify
+      return { id, pending: !failed && !held, failed, title: job.title || job.notes.slice(0, 80) || job.url || "New item", shelf: "", tags: [], local: job.keepLocal, state: "idea",
+        summary: failed ? `The librarian couldn't file this one. It's kept safe; ask ${OWNER_NAME} to look at it.` : held ? "Waiting for your answer in Clarify: Private or Shareable." : "Being filed by the librarian…",
         markdown: job.notes ? `## Why I saved this\n\n${job.notes}` : "", files: job.files.map((f) => f.replace(ROOT + "/", "")), url: job.url || undefined };
     }
     return null;
@@ -618,7 +619,19 @@ async function move(person: Person, id: string, to: string) {
 }
 
 /** One click on a cue card. */
+/** What a Clarify card is about, as ids the item view and the trash understand (a held save is "pending:<job>"). */
+const cueItems = (c: cues.Cue) => c.kind === "privacy" ? [`pending:${c.item}`] : c.items ?? [c.item];
+
 async function resolveCue(person: Person, id: string, option: string) {
+  // Delete: what the card is about never enters the library (it goes to Trash, with Undo), and the card goes.
+  if (option === "delete") {
+    const c = (await cues.list(person.dir)).find((x) => x.id === id); if (!c) return json({ error: "That question was already answered." }, 404);
+    const r = await trash.deleteItems(person, cueItems(c), findDeps);
+    if (!r.deleted.length) return json({ error: r.refused[0]?.why ?? "Couldn't delete it. Try again in a moment." }, 409);
+    await cues.take(person.dir, id); if (c.items) await organize.drop(person.dir, c.items);
+    indexCache.delete(person.id); projects.invalidate(person.dir); boards.invalidate();
+    return json({ ok: true, undo: r.undo, deleted: r.deleted }, 200);
+  }
   const c = await cues.take(person.dir, id); if (!c) return json({ error: "That question was already answered." }, 404);
   if (c.kind === "privacy") {
     const path = join(cues.heldDir(person.dir), `${c.item}.json`);
@@ -983,7 +996,9 @@ const routed = Bun.serve({
     "/api/projects": withPerson(async (_req, p) => json({ projects: projects.projectsFor(p.dir, await loadCatalog()).map((r) => ({ ...r, shared: boards.isShared(r.id, p.id) })) }, 200)),
     "/api/project": withPerson(async (req, p) => { const id = new URL(req.url).searchParams.get("id") ?? ""; const catalog = await loadCatalog(); return json({ ...(await projects.projectView(p.dir, catalog, id)), shared: boards.isShared(id, p.id, catalog), alwaysShared: boards.alwaysShared(catalog, id) }, 200); }),
     "/api/topic/rename": { POST: withPerson(async (req, p) => { const b = await req.json(); return json({ ok: await topics.rename(p.dir, String(b.project), String(b.topic), String(b.name ?? "")) }, 200); }) },
-    "/api/cues": withPerson(async (_req, p) => json({ cues: await cues.list(p.dir) }, 200)),
+    // Each card carries what it's about (open), and a group card the titles of its items.
+    "/api/cues": withPerson(async (_req, p) => { const titles = new Map(projects.scanPages(p.dir).map((x) => [x.id, x.title]));
+      return json({ cues: (await cues.list(p.dir)).map((c) => ({ ...c, open: cueItems(c), ...(c.items ? { itemTitles: c.items.map((i) => titles.get(i) ?? i) } : {}) })) }, 200); }),
     "/api/cues/resolve": { POST: withPerson(async (req, p) => { const b = await req.json(); return resolveCue(p, String(b.id), String(b.option)); }) },
     "/api/topic/move": { POST: withPerson(async (req, p) => { const b = await req.json(); return json({ ok: await topics.move(p.dir, String(b.project), String(b.item), String(b.topic)) }, 200); }) },
     "/guide": (req: Request) => guidePage(req),
