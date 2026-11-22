@@ -44,7 +44,7 @@ function bytesToBase64(buf) {
 function base64ToBytes(b64) { const s = atob(b64); const b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; }
 
 // ── Google Drive and Docs ───────────────────────────────────────────────────
-// Max is signed in to several Google accounts: /u/1/ or authuser=1 says which one this page belongs to.
+// A person can be signed in to several Google accounts: /u/1/ or authuser=1 says which one this page belongs to.
 function authuserOf(raw) {
   let u; try { u = new URL(raw); } catch { return ""; }
   return u.searchParams.get("authuser") || (u.pathname.match(/\/u\/(\d+)(?:\/|$)/) || [])[1] || "";

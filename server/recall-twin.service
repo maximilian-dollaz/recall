@@ -1,0 +1,24 @@
+# The twin on the server: the code under test (copied by `cl twin start`, never the live code) against a
+# scratch library on ports 4344-4346. Its own GBrain sources (twin, twin-*), its own data folder, and a memory
+# cap so a test can't starve the live app. Not started at boot: `cl twin start` installs and starts it.
+# The Mac reaches it through ssh (http://localhost:4344); the firewall keeps these ports closed to the web.
+# __USER__, __HOME__ are filled in by tools/twin.sh.
+[Unit]
+Description=Recall twin (testing copy, ports 4344-4346)
+After=network-online.target gbrain-serve.service
+[Service]
+User=__USER__
+Environment=PATH=__HOME__/.bun/bin:__HOME__/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=HOME=__HOME__
+Environment=OLLAMA_BASE_URL=http://127.0.0.1:11434/v1
+Environment=RECALL_DATA=__HOME__/.gbrain/serve/twin
+Environment=RECALL_PORT_GATE=4344
+Environment=RECALL_PORT_INNER=4345
+Environment=RECALL_PORT_DOOR=4346
+WorkingDirectory=__HOME__/.gbrain/serve/twin-code
+ExecStart=__HOME__/.bun/bin/bun run app/server.ts
+StandardOutput=append:__HOME__/.gbrain/serve/twin/twin.log
+StandardError=append:__HOME__/.gbrain/serve/twin/twin.log
+MemoryMax=1G
+Restart=on-failure
+RestartSec=5

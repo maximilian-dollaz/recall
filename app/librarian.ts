@@ -4,6 +4,7 @@
 // else the local model through Ollama. LIBRARIAN_ENGINE=local|claude overrides.
 
 import { join } from "node:path";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 import { DATA as ROOT } from "./paths.ts";
 import * as store from "./store.ts";
@@ -70,9 +71,28 @@ async function claudeChat(messages: any[], opts: { json?: boolean }): Promise<st
   }
 }
 
+// Which model reads an item is chosen per save (Max, 18 Nov): a phone save goes to Claude; a computer save, and
+// meetings, go to the local model on that person's own computer, reached over its link to the server. The person's
+// computer address is in library/local-models.json ({ "<person id>": "http://127.0.0.1:<port>" }); a person
+// without one uses Claude for everything. withEngine() sets the model for everything a job does (filing, describing
+// pictures, pieces), so no caller passes it along.
+export type Engine = { kind: "claude" } | { kind: "local"; url: string };
+const engineNow = new AsyncLocalStorage<Engine>();
+export const withEngine = <T>(e: Engine, fn: () => Promise<T>) => engineNow.run(e, fn);
+const LOCAL_FILE = join(ROOT, "library/local-models.json");
+export function localUrl(personId: string): string | undefined { try { return store.read<Record<string, string>>(LOCAL_FILE, {})[personId] || undefined; } catch { return undefined; } }
+/** The model for one save: local when it came from a computer (or is a meeting) and this person has a local model. */
+export function engineFor(personId: string, from: { device?: string; source?: string }): Engine {
+  const url = localUrl(personId);
+  const computer = from.device === "computer" || !!from.source?.startsWith("meeting:");
+  return url && computer ? { kind: "local", url } : ENGINE === "local" ? { kind: "local", url: OLLAMA } : { kind: "claude" };
+}
+export const laneOf = (e: Engine) => (e.kind === "claude" ? "claude" : e.url);
+
 export async function chat(messages: any[], opts: { json?: boolean; images?: string[] } = {}): Promise<string> {
-  if (ENGINE === "claude") return claudeChat(messages, opts);
-  const res = await fetch(`${OLLAMA}/api/chat`, {
+  const e = engineNow.getStore() ?? (ENGINE === "claude" ? { kind: "claude" as const } : { kind: "local" as const, url: OLLAMA });
+  if (e.kind === "claude") return claudeChat(messages, opts);
+  const res = await fetch(`${e.url}/api/chat`, {
     method: "POST", signal: AbortSignal.timeout(180_000), // a hung model must not stop all filing
     body: JSON.stringify({
       model: MODEL, stream: false, messages,

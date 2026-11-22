@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Remind · Recall</title>
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icon-180.png">
+<link rel="icon" href="/static/icon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0E1519; --fg:#F2ECE1; --fg-2:#E3D5BE; --muted:#C7AE88; --accent:#E2C487; --on-accent:#14202A; --glass:rgba(242,236,225,.06); --rim:rgba(242,236,225,.13); --link:#8FB3C7;
+    --font-ui:"Inter", -apple-system, system-ui, sans-serif; --font-display:"Cormorant Garamond", Georgia, serif; color-scheme:dark }
+  * { box-sizing:border-box } html,body { margin:0; min-height:100% }
+  body { background:var(--bg); color:var(--fg); font:16px/1.5 var(--font-ui); }
+  .wrap { max-width:620px; margin:0 auto; padding:calc(18px + env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom)) }
+  a { color:var(--link) } .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; font-size:.95rem }
+  .top a { text-decoration:none; color:var(--muted) } h1 { font:500 1.6rem/1.2 var(--font-display); margin:0 0 6px; letter-spacing:.01em }
+  .words { font:500 1.85rem/1.32 var(--font-display); margin:8px 0 14px; color:var(--fg) }
+  .words::before { content:"“" } .words::after { content:"”" }
+  .question { font:italic 500 1.85rem/1.3 var(--font-display); margin:8px 0 22px }
+  .from { color:var(--muted); font-size:.92rem; margin-bottom:26px } .from a { color:var(--muted) }
+  .then { background:var(--glass); border:1px solid var(--rim); border-radius:14px; padding:14px 16px; color:var(--fg-2); margin-bottom:26px }
+  .ladder { display:flex; gap:6px; margin:0 0 28px; font-size:.78rem; color:var(--muted); flex-wrap:wrap }
+  .ladder span { padding:4px 10px; border-radius:999px; border:1px solid var(--rim) } .ladder span.here { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600 }
+  .ladder span.past { color:var(--fg-2); border-color:rgba(226,196,135,.45) }
+  button { font:inherit; cursor:pointer } .btns { display:grid; gap:10px }
+  .primary { padding:15px 20px; border-radius:14px; border:0; background:var(--accent); color:var(--on-accent); font-weight:600; font-size:1.05rem }
+  .second { padding:13px 20px; border-radius:14px; border:1px solid var(--rim); background:var(--glass); color:var(--fg) }
+  .quiet { background:none; border:0; color:var(--muted); padding:10px; text-decoration:underline }
+  .done { color:var(--accent); text-align:center; padding:12px 0; font-weight:500 }
+  .card { background:var(--glass); border:1px solid var(--rim); border-radius:16px; padding:18px; margin-bottom:22px }
+  .card p { margin:0 0 12px; color:var(--fg-2) }
+  .list { display:grid; gap:10px; margin-bottom:26px } .list a { display:block; text-decoration:none; color:var(--fg); background:var(--glass); border:1px solid var(--rim); border-radius:14px; padding:13px 15px }
+  .list a b { display:block; font-weight:600; margin-bottom:2px } .list a small { color:var(--muted) }
+  h2 { font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:26px 0 10px }
+  [hidden] { display:none !important }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="/" id="home">‹ Recall</a><a href="/remind" id="all" hidden>All reminders</a></div>
+
+  <!-- One spark: /remind/<id> -->
+  <section id="one" hidden style="visibility:hidden">
+    <div id="ask" hidden>
+      <div class="question" id="q"></div>
+      <div class="btns"><button class="primary" id="reveal">Show what I said</button></div>
+    </div>
+    <div id="said">
+      <div class="words" id="w"></div>
+      <div class="from" id="f"></div>
+      <div class="then" id="t" hidden></div>
+      <div class="ladder" id="l"></div>
+      <div class="btns" id="b">
+        <button class="primary" data-a="lived">Lived it today</button>
+        <button class="second" data-a="landing">Still landing</button>
+        <button class="quiet" data-a="let-go">Let go</button>
+      </div>
+      <div class="done" id="d" hidden></div>
+    </div>
+  </section>
+
+  <!-- All of them: /remind -->
+  <section id="many" hidden>
+    <h1>Remind</h1>
+    <div class="card" id="turnon" hidden>
+      <p id="turnon-text">Your words come back to this phone, up to three times a day, until you live them.</p>
+      <button class="primary" id="enable">Turn on Remind</button>
+    </div>
+    <div class="card" id="homescreen" hidden><p>Open Recall from your home screen, then come back here to turn on Remind.</p></div>
+    <div id="lists"></div>
+    <button class="quiet" id="sendnow" hidden>Send one now</button>
+  </section>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const STAGES = ['knowing', 'understanding', 'thinking', 'doing', 'being'];
+const day = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const id = location.pathname.split('/')[2];
+
+// The service worker shows the notifications. Never wait on it forever: a browser without one still shows the page.
+const swReady = 'serviceWorker' in navigator ? navigator.serviceWorker.register('/sw.js').then(() => Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(() => no(new Error('no service worker')), 4000))])) : Promise.reject(new Error('no service worker'));
+swReady.catch(() => {});
+
+async function one() {
+  $('#one').hidden = false; $('#all').hidden = false;
+  const r = await fetch('/api/remind/spark?id=' + encodeURIComponent(id)); if (!r.ok) { $('#one').style.visibility = ''; $('#w').textContent = 'This reminder is gone.'; $('#b').hidden = true; return; }
+  const s = await r.json(); $('#one').style.visibility = '';
+  $('#w').textContent = s.words;
+  $('#f').innerHTML = 'You, ' + day(s.from.date) + (s.from.slug ? ' · <a href="/?item=' + encodeURIComponent(s.from.slug) + '">' + esc(s.from.title) + '</a>' : ' · ' + esc(s.from.title));
+  if (s.when_then) { $('#t').textContent = s.when_then; $('#t').hidden = false; }
+  const at = STAGES.indexOf(s.stage);
+  $('#l').innerHTML = STAGES.map((x, i) => '<span class="' + (i === at ? 'here' : i < at ? 'past' : '') + '">' + x + '</span>').join('');
+  if (new URLSearchParams(location.search).get('ask') && s.question) {
+    $('#q').textContent = s.question; $('#ask').hidden = false; $('#said').hidden = true;
+    $('#reveal').onclick = () => { $('#ask').hidden = true; $('#said').hidden = false; };
+  }
+  if (s.state === 'let-go') { $('#b').innerHTML = '<button class="second" data-a="back">Bring it back</button>'; }
+  $('#b').onclick = async (e) => {
+    const a = e.target.closest('button')?.dataset.a; if (!a) return;
+    const res = await fetch('/api/remind/answer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, answer: a }) });
+    if (!res.ok) return;
+    const after = await res.json();
+    $('#b').hidden = true; $('#d').hidden = false;
+    $('#d').textContent = { lived: after.stage === 'being' ? 'This is who you are now. It moves to Being.' : 'Counted. It keeps coming back.', landing: 'It comes back tomorrow.', 'let-go': 'It won’t come back.', back: 'It comes back tomorrow.' }[a];
+  };
+}
+
+async function many() {
+  $('#many').hidden = false;
+  const st = await (await fetch('/api/remind/status')).json();
+  $('#sendnow').onclick = async () => { const r = await (await fetch('/api/remind/now', { method: 'POST' })).json(); $('#sendnow').textContent = r.sent ? 'Sent' : 'Nothing to send'; };
+  const groups = [['Coming back', (s) => s.state === 'on'], ['Being', (s) => s.state === 'being'], ['Let go', (s) => s.state === 'let-go']];
+  $('#lists').innerHTML = groups.map(([name, f]) => {
+    const rows = st.sparks.filter(f); if (!rows.length) return '';
+    return '<h2>' + name + ' · ' + rows.length + '</h2><div class="list">' + rows.map((s) => '<a href="/remind/' + s.id + '"><b>' + esc(s.title) + '</b><small>' + esc(s.stage) + ' · ' + day(s.from.date) + '</small></a>').join('') + '</div>';
+  }).join('') || '<p style="color:var(--muted)">Nothing yet. Say “remind me” in a voice note or a Granola note and it lands here.</p>';
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const isIOS = /iPhone|iPad/.test(navigator.userAgent);
+  let subscribed = false; // checked after the list shows: a phone without a service worker never blocks it
+  try { const reg = await swReady; subscribed = !!(await reg.pushManager.getSubscription()); } catch {}
+  if (!subscribed) { if (isIOS && !standalone) $('#homescreen').hidden = false; else if ('PushManager' in window) $('#turnon').hidden = false; }
+  $('#sendnow').hidden = !st.on;
+  $('#enable').onclick = async () => {
+    const perm = await Notification.requestPermission(); if (perm !== 'granted') { $('#turnon-text').textContent = 'Notifications are off for Recall. Turn them on in Settings, Notifications, Recall.'; return; }
+    const reg = await swReady;
+    const key = (await (await fetch('/api/remind/key')).json()).key;
+    const raw = Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((key.length + 3) % 4)), (c) => c.charCodeAt(0));
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw });
+    const r = await fetch('/api/remind/subscribe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(sub) });
+    if (r.ok) { $('#turnon').innerHTML = '<p>Remind is on for this phone. The first one is on its way.</p>'; fetch('/api/remind/now', { method: 'POST' }); $('#sendnow').hidden = false; }
+  };
+}
+
+id ? one() : many();
+</script>
+</body>
+</html>

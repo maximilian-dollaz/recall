@@ -9,17 +9,20 @@ import { DATA as ROOT } from "./paths.ts";
 import * as store from "./store.ts";
 
 const FILE = join(ROOT, "library/keys.json");
-type Key = { email: string; created: string; used?: string };
+type Key = { email: string; created: string; used?: string; device?: "phone" | "computer" };
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 // A keys.json that can't be read is left exactly as it is and said out loud; it is never replaced by an empty one.
 const say = (e: any) => console.error(`[keys] ${FILE} left untouched: ${e?.message ?? e}`);
 const loud = (e: any): never => { say(e); throw e; };
 
-export async function mintKey(email: string): Promise<string> {
+export async function mintKey(email: string, device?: Key["device"]): Promise<string> {
   const key = randomBytes(24).toString("base64url");
-  await store.update<Record<string, Key>>(FILE, {}, (all) => { all[hash(key)] = { email, created: new Date().toISOString() }; }).catch(loud);
+  await store.update<Record<string, Key>>(FILE, {}, (all) => { all[hash(key)] = { email, created: new Date().toISOString(), ...(device ? { device } : {}) }; }).catch(loud);
   return key;
 }
+
+/** Which kind of device a shortcut key was made for (the Mac shortcut is "computer"), if known. */
+export function deviceForKey(key: string): Key["device"] | undefined { try { return store.read<Record<string, Key>>(FILE, {})[hash(key)]?.device; } catch { return undefined; } }
 
 export async function emailForKey(key: string): Promise<string | null> {
   const h = hash(key);
@@ -33,6 +36,6 @@ export async function emailForKey(key: string): Promise<string | null> {
 }
 
 /** A key made ahead of time, baked into a signed shortcut from the pool (shortcut-pool.ts), now given to a person. */
-export async function claimKey(key: string, email: string): Promise<void> {
-  await store.update<Record<string, Key>>(FILE, {}, (all) => { all[hash(key)] = { email, created: new Date().toISOString() }; }).catch(loud);
+export async function claimKey(key: string, email: string, device?: Key["device"]): Promise<void> {
+  await store.update<Record<string, Key>>(FILE, {}, (all) => { all[hash(key)] = { email, created: new Date().toISOString(), ...(device ? { device } : {}) }; }).catch(loud);
 }

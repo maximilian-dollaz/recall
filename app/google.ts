@@ -62,7 +62,9 @@ export async function signInPage(req: Request, note = "", status = 200): Promise
 window.onload = () => {
   google.accounts.id.initialize({ client_id: ${JSON.stringify(id)}, ux_mode: "popup", callback: async (r) => {
     const res = await fetch("/auth/google", { method: "POST", headers: { "content-type": "application/json", "x-recall": "1" }, body: JSON.stringify({ credential: r.credential }) });
-    if (res.ok) location.href = (await res.json().catch(() => ({}))).next || "/"; else document.getElementById("err").textContent = (await res.json().catch(() => ({}))).error || "Sign-in didn't work. Try again.";
+    // Signed in from a link (a shortcut, a project): go back to that link, unless onboarding or a board invite comes first.
+    const here = location.pathname === "/signin" ? "/" : location.pathname + location.search;
+    if (res.ok) { const next = (await res.json().catch(() => ({}))).next || "/"; location.href = next === "/" ? here : next; } else document.getElementById("err").textContent = (await res.json().catch(() => ({}))).error || "Sign-in didn't work. Try again.";
   } });
   google.accounts.id.renderButton(document.getElementById("g"), { theme: "outline", size: "large", text: "signin_with", width: 320 });
 };

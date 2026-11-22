@@ -2,14 +2,14 @@
 // the person stops. Or type, then Save to Recall. Uses the person's Recall sign-in in this Chrome.
 // Several files selected in Google Drive are saved one by one with the same words, as one batch.
 //
-// Voice, for Max's test: Chrome's own speech recognition (instant words; the audio goes to Google).
-// If it isn't available, it falls back to transcription on Max's Mac (private, slower).
+// Voice: Chrome's own speech recognition (instant words; the audio goes to Google).
+// If it isn't available, it falls back to transcription on the Recall server (slower).
 const RECALL = "https://recall.nextmissionsi.com";
 const $ = (s) => document.querySelector(s);
 const status = (t, cls = "") => { $("#status").textContent = t; $("#status").className = cls; };
 let item = {}, words = "", typing = false, done = false, stream = null;
 let speech = null, finalText = "", ended = null;      // Chrome speech
-let rec = null, chunks = [], timer = null, busy = false; // fallback: the Mac transcribes
+let rec = null, chunks = [], timer = null, busy = false; // fallback: the Recall server transcribes
 let entries = [], gathered = Promise.resolve([]), sent = new Set(), batch = "", googleOk = false;
 chrome.runtime.connect({ name: "popup" }); // the background knows this pop-up is open while this lasts
 

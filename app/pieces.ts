@@ -10,7 +10,7 @@
 import { join } from "node:path";
 import { mkdirSync, readdirSync, readFileSync, unlinkSync, existsSync } from "node:fs";
 import * as gb from "./gbrain.ts";
-import { chat, loadCatalog } from "./librarian.ts";
+import { chat, loadCatalog, withEngine, type Engine } from "./librarian.ts";
 import * as projects from "./projects.ts";
 import type { Person } from "./identity.ts";
 
@@ -22,7 +22,7 @@ type Kind = typeof KINDS[number];
 
 export type Window = { start: number; end: number; section?: string };
 export type Piece = { kind: Kind; title: string; quote: string; tags: string[]; at: number; section?: string };
-type Job = { id: string; slug: string; title: string; notes: string; project?: string; who?: string; body: string; windows: Window[]; next: number; made: { slug: string; title: string; kind: Kind; q?: string }[]; created: string; fails?: number };
+type Job = { id: string; slug: string; title: string; notes: string; project?: string; who?: string; body: string; windows: Window[]; next: number; made: { slug: string; title: string; kind: Kind; q?: string }[]; created: string; fails?: number; engine?: Engine };
 
 /** Windows of about WINDOW characters along paragraph breaks, each knowing the heading it sits under. */
 export function split(body: string, size = WINDOW): Window[] {
@@ -110,7 +110,7 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 const dirOf = (p: Person) => { const d = join(p.dir, "pieces"); mkdirSync(d, { recursive: true }); return d; };
 
 /** After a long item is filed: queue its pieces. Returns false when it's too short to need them. */
-export async function queue(person: Person, it: { id: string; slug: string; title: string; notes: string; project?: string; who?: string; body: string }): Promise<boolean> {
+export async function queue(person: Person, it: { id: string; slug: string; title: string; notes: string; project?: string; who?: string; body: string; engine?: Engine }): Promise<boolean> {
   if (it.body.length < LONG) return false;
   const job: Job = { ...it, windows: split(it.body), next: 0, made: [], created: new Date().toISOString() };
   await Bun.write(join(dirOf(person), `${it.id}.json`), JSON.stringify(job));
@@ -192,10 +192,12 @@ export function start(hooks: { busy: () => boolean; people: () => Promise<Person
         const d = join(person.dir, "pieces"); if (!existsSync(d)) continue;
         const next = readdirSync(d).filter((n) => n.endsWith(".json")).sort()[0]; if (!next) continue;
         const path = join(d, next);
-        try { await step(person, path, hooks.onDone); }
+        // The same model as the item itself (a computer save's pieces stay on that computer's model).
+        let engine: Engine | undefined; try { engine = (JSON.parse(readFileSync(path, "utf8")) as Job).engine; } catch {}
+        try { await (engine ? withEngine(engine, () => step(person, path, hooks.onDone)) : step(person, path, hooks.onDone)); }
         catch (e) {
           // A service that is down or busy is not the window's fault: try again later. Anything else three times, then skip that window.
-          if (/ECONNREFUSED|fetch failed|Unable to connect|pglite_busy|timed? ?out|aborted/i.test(String(e))) { console.error(`[pieces waiting] ${person.id}/${next}: ${String(e).slice(0, 160)}`); return; }
+          if (/ECONNREFUSED|fetch failed|Unable to connect|pglite_busy|timed? ?out|aborted/i.test(String(e))) { console.error(`[pieces waiting] ${person.id}/${next}: ${String(e).slice(0, 160)}`); continue; } // the next person's pieces go on (one person's computer may be asleep)
           try { const job: Job = JSON.parse(readFileSync(path, "utf8")); job.fails = (job.fails ?? 0) + 1; if (job.fails >= 3) { job.next++; job.fails = 0; } await Bun.write(path, JSON.stringify(job)); }
           catch { unlinkSync(path); }
           console.error(`[pieces failed] ${person.id}/${next}: ${String(e).slice(0, 200)}`);

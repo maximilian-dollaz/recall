@@ -12,7 +12,8 @@ import { mkdirSync, existsSync, renameSync } from "node:fs";
 import * as store from "./store.ts";
 
 export type CueKind = "privacy" | "when" | "project" | "duplicate";
-export type Cue = { id: string; kind: CueKind; item: string; title: string; snippet: string; thumb?: string; question: string; options: { id: string; label: string }[]; created: string };
+// A cue about many items at once (`items`) answers for all of them: "7 meetings look like one project".
+export type Cue = { id: string; kind: CueKind; item: string; title: string; snippet: string; thumb?: string; question: string; options: { id: string; label: string }[]; created: string; items?: string[] };
 
 const file = (dir: string) => join(dir, "cues.json");
 // An unreadable cues.json is left as it is and said out loud: no questions show and answering one fails,
@@ -38,6 +39,19 @@ export async function add(dir: string, cue: Omit<Cue, "id" | "created">) {
     return kept;
   });
 }
+
+/** One question for a growing group of items, keyed by `key`: each new item joins it and the wording follows the count. */
+export async function group(dir: string, key: string, item: string, make: (n: number) => Omit<Cue, "id" | "created" | "item" | "items" | "kind">) {
+  await change(dir, (cues) => {
+    const at = cues.find((c) => c.kind === "project" && c.item === key);
+    const items = [...new Set([...(at?.items ?? []), item])];
+    const cue: Cue = { ...make(items.length), kind: "project", item: key, items, id: at?.id ?? Math.random().toString(36).slice(2, 10), created: at?.created ?? new Date().toISOString() };
+    return [...cues.filter((c) => c !== at), cue];
+  });
+}
+
+/** Whether a group question with this key is still waiting. */
+export const hasGroup = (dir: string, key: string) => load(dir).some((c) => c.kind === "project" && c.item === key);
 
 /** Take a cue off the list. Inside the lock, so two taps on the same card answer it once. */
 export async function take(dir: string, id: string): Promise<Cue | undefined> {

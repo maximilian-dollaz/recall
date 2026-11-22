@@ -56,7 +56,10 @@ export async function transcribe(path: string, ms = 20_000): Promise<string> {
   const r = await fetch(`${API}/listen?${PARAMS}`, { method: "POST", headers: { Authorization: `Token ${key()}`, "content-type": f.type || "audio/mp4" }, body: f, signal: AbortSignal.timeout(ms) });
   if (!r.ok) throw new Error(`Deepgram ${r.status}: ${(await r.text()).slice(0, 200)}`);
   const d: any = await r.json();
-  return String(d?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "").replace(/\s+/g, " ").trim();
+  const t = String(d?.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? "").replace(/\s+/g, " ").trim();
+  // No words: say how long Deepgram found the recording to be, to tell a silent recording from an unreadable one.
+  if (!t) console.error(`[deepgram] no words in ${f.size} bytes (${f.type || "no type"}), ${d?.metadata?.duration ?? "?"} s long`);
+  return t;
 }
 
 /** Deepgram first, this Mac's own transcriber if Deepgram is off or fails. */

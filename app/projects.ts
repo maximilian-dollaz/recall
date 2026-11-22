@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { reconcile } from "./topics.ts";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { updateCatalog, type Catalog } from "./librarian.ts";
+import * as store from "./store.ts";
 
 export type Project = { id: string; name: string; aliases?: string[]; team?: boolean };
 export type ProjectItem = { id: string; title: string; kind: string; thumb?: string; summary: string; saved: string; project?: string; url?: string; files: string[]; notes?: string; by?: string; tags: string[]; batch?: string; placed?: string; saved_at?: string };
@@ -145,6 +146,20 @@ export function scanPages(dir: string): ProjectItem[] {
   return items;
 }
 
+// ── Starting projects ────────────────────────────────────────────────────────
+// At onboarding a person names their main projects (up to three). They show on their home page from the start,
+// empty, and the librarian sorts into them like any other project (<person>/my-projects.json holds the ids).
+const startersFile = (dir: string) => join(dir, "my-projects.json");
+export function starters(dir: string): string[] { try { return store.read<string[]>(startersFile(dir), []); } catch { return []; } }
+export async function setStarters(dir: string, catalog: Catalog, names: string[]): Promise<Project[]> {
+  const made: Project[] = [];
+  for (const n of names.map((x) => String(x ?? "").trim().replace(/\s+/g, " ")).filter((x) => x.length >= 2).slice(0, 3)) {
+    const p = await resolveProject(catalog, n); if (p && !made.some((m) => m.id === p.id)) made.push(p);
+  }
+  await store.update<string[]>(startersFile(dir), [], (l) => { for (const p of made) if (!l.includes(p.id)) l.push(p.id); return l; });
+  return made;
+}
+
 // ── Views ────────────────────────────────────────────────────────────────────
 export function projectsFor(dir: string, catalog: Catalog) {
   type Row = { id: string; name: string; count: number; cover?: string; latest: string; first: string; thumbs: string[]; counts: Record<string, number> };
@@ -162,7 +177,10 @@ export function projectsFor(dir: string, catalog: Catalog) {
   }
   // The project most recently added to comes first; ones untouched for a while drift to the end (Max, 3 Nov,
   // replacing the 31 Oct "positions never change").
-  return [...byId.values()].sort((a, b) => b.latest.localeCompare(a.latest) || a.name.localeCompare(b.name));
+  const rows = [...byId.values()].sort((a, b) => b.latest.localeCompare(a.latest) || a.name.localeCompare(b.name));
+  // Starting projects with nothing in them yet still show, after the ones that have items.
+  for (const id of starters(dir)) if (!byId.has(id) && known.has(id)) rows.push({ id, name: known.get(id)!.name, count: 0, latest: "", first: "", thumbs: [], counts: {} });
+  return rows;
 }
 
 // Cell division, first version: a project's items group by the topic tags the librarian gave them.

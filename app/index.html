@@ -20,7 +20,10 @@
   .actions .primary { background:var(--accent); color:var(--on-accent); border-color:var(--accent); font-weight:600 }
   .card { background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:18px; }
   .connect { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px; text-decoration:none; color:inherit }
-  .connect strong { background:var(--fg); color:var(--paper); padding:8px 14px; border-radius:10px; font-weight:600 }
+  .connect a { background:var(--fg); color:var(--paper); padding:8px 14px; border-radius:10px; font-weight:600; text-decoration:none }
+  .connect span { flex:1 1 180px } .connect .x { background:none; border:0; color:var(--muted); font-size:1.3rem; cursor:pointer; padding:0 4px }
+  .cue .cname { display:flex; gap:8px; margin-top:8px } .cue .cname input { flex:1; min-width:0; font:inherit; padding:8px 13px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--fg) }
+  .cue .cname button { font:inherit; padding:8px 13px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--fg); cursor:pointer }
   .capture { display:grid; gap:10px; margin-bottom:13px } .capture .big { width:100%; min-height:56px; font-size:1.05rem }
   .chip img, .chip video { width:44px; height:44px; object-fit:cover; border-radius:8px; vertical-align:middle; margin-right:6px }
   .drop { border:2px dashed var(--line); border-radius:14px; padding:26px 16px; text-align:center; color:var(--muted); cursor:pointer; transition:border-color .15s, background .15s }
@@ -315,7 +318,8 @@
       <button id="tab-improve">Improve</button>
     </nav>
   </header>
-  <a id="granola" class="card connect" href="/connect/granola" hidden><strong>Connect Granola</strong><span>Your Granola meetings save to Recall on their own.</span></a>
+  <div id="remindcard" class="card connect" hidden><a href="/remind">Turn on Remind</a><span>Your own words come back to your phone until you live them.</span></div>
+  <div id="meetings" class="card connect" hidden><a href="/connect/granola" data-v="granola">Connect Granola</a><a href="/connect/otter" data-v="otter">Connect Otter</a><span>Your meetings save to Recall on their own.</span><button type="button" class="x" aria-label="Hide">×</button></div>
 
   <section id="save" class="card">
     <form id="form">
@@ -1267,16 +1271,26 @@ if (params.get('tab')) initial = params.get('tab');
 if (params.get('q')) { initial = 'find'; }
 show(initial);
 if (params.get('q')) { $('#q').value = params.get('q'); grow(); instant(); doSearch(); }
+if (params.get('item')) { openItem(params.get('item')); history.replaceState(null, '', location.pathname); } // from a Remind card
+// Remind: offered once there is something to remind, until this phone has it on (remind.html).
+fetch('/api/remind/status').then(r => r.ok ? r.json() : null).then(async st => {
+  if (!st?.sparks?.length || !('serviceWorker' in navigator)) return;
+  let on = false; try { const reg = await navigator.serviceWorker.getRegistration('/'); on = !!(reg && await reg.pushManager.getSubscription()); } catch {}
+  document.getElementById('remindcard').hidden = on;
+}).catch(() => {});
 
 // Whose library this is, so nobody wonders.
-// Granola: until it's connected, one card at the top. Back from Granola's sign-in, say so once.
+// Meeting recorders: a card with a button for each one not connected yet, until one is connected or it's hidden.
 fetch('/api/connectors').then(r => r.ok ? r.json() : null).then(c => {
-  const g = c?.granola; if (!g) return;
-  const card = document.getElementById('granola');
-  if (!g.connected || /expired/i.test(g.error || '')) { if (g.connected) card.querySelector('strong').textContent = 'Reconnect Granola'; card.hidden = false; }
+  if (!c) return; const card = document.getElementById('meetings');
+  let hidden = false; try { hidden = localStorage.getItem('meetings-card') === 'hidden'; } catch {}
+  const open = Object.entries(c).filter(([, s]) => !s.connected || /expired/i.test(s.error || ''));
+  card.querySelectorAll('[data-v]').forEach(a => { const s = c[a.dataset.v]; a.hidden = !!s?.connected && !/expired/i.test(s.error || ''); if (s?.connected && !a.hidden) a.textContent = 'Reconnect ' + a.textContent.replace('Connect ', ''); });
+  card.hidden = !open.length || (hidden && !open.some(([, s]) => /expired/i.test(s.error || '')));
+  card.querySelector('.x').onclick = () => { card.hidden = true; try { localStorage.setItem('meetings-card', 'hidden'); } catch {} };
 }).catch(() => {});
-{ const q = new URLSearchParams(location.search).get('granola');
-  if (q) { if (q === 'connected') toast('Granola connected. Your meetings from the last 30 days are coming in.', null, 8000); history.replaceState(null, '', location.pathname); } }
+{ const q = new URLSearchParams(location.search).get('connected');
+  if (q) { const name = { granola: 'Granola', otter: 'Otter' }[q]; if (name) toast(name + ' connected. Your meetings are coming in.', null, 8000); history.replaceState(null, '', location.pathname); } }
 fetch('/api/me').then(r => r.ok ? r.json() : null).then(m => { if (m?.name) { me = m; const w = document.getElementById('who'); w.textContent = ' · ' + m.name; } }).catch(() => {});
 
 // ── Cues ──
@@ -1290,8 +1304,9 @@ async function loadCues() {
   await refreshCueCount();
   const list = $('#cue-list');
   if (!cueRows.length) { list.innerHTML = '<div class="status">Nothing waiting on you. New questions show up here as things are saved.</div>'; return; }
-  list.innerHTML = cueRows.map(c => `<div class="cue" data-cue="${esc(c.id)}">${c.thumb ? `<img class="cthumb" src="/thumb/${encodeURIComponent(c.thumb)}" alt="">` : `<div class="cthumb blank">${CUE_ICON[c.kind] || '•'}</div>`}<div><b>${esc(c.title)}</b><div class="csnip">${esc(caption(c.snippet))}</div><p class="cq">${esc(c.question)}</p><div class="copts">${c.options.map((o, i) => `<button data-opt="${esc(o.id)}"><kbd>${i + 1}</kbd>${esc(o.label)}</button>`).join('')}</div></div></div>`).join('');
+  list.innerHTML = cueRows.map(c => `<div class="cue" data-cue="${esc(c.id)}">${c.thumb ? `<img class="cthumb" src="/thumb/${encodeURIComponent(c.thumb)}" alt="">` : `<div class="cthumb blank">${CUE_ICON[c.kind] || '•'}</div>`}<div><b>${esc(c.title)}</b><div class="csnip">${esc(caption(c.snippet))}</div><p class="cq">${esc(c.question)}</p><div class="copts">${c.options.map((o, i) => `<button data-opt="${esc(o.id)}"><kbd>${i + 1}</kbd>${esc(o.label)}</button>`).join('')}</div>${c.kind === 'project' ? '<form class="cname"><input name="p" placeholder="Or type a project name" autocomplete="off" aria-label="Project name"><button type="submit">Use</button></form>' : ''}</div></div>`).join('');
   list.querySelectorAll('.cue').forEach(card => card.querySelectorAll('[data-opt]').forEach(btn => btn.onclick = () => answerCue(card, btn.dataset.opt)));
+  list.querySelectorAll('.cue .cname').forEach(f => f.onsubmit = (e) => { e.preventDefault(); const v = f.p.value.trim(); if (v) answerCue(f.closest('.cue'), 'name:' + v); });
 }
 async function answerCue(card, option) {
   card.querySelectorAll('button').forEach(b => b.disabled = true);

@@ -7,15 +7,20 @@ open, so the work is split in two:
         Camera opened any other way saves nothing.
   recall: for the team, in Control Center. Opens Recall's Save page in Safari: its camera button takes a photo
         or a video, and the words show as they're spoken.
+  photo: "Recall Photo", for Control Center (Max, 15 Nov 2026). The camera opens at once; after Use Photo, Apple's
+        dictation banner drops down from the top and types what you say until you tap stop; both go to Recall and
+        "Saved to Recall." shows only when Recall has it. Photo only, by Max's choice.
+  screenshot: "Recall Screenshot", for Back Tap. Takes a screenshot of what's on screen, then the same as photo.
 python3 build_camera.py open <out.unsigned.shortcut>
 python3 build_camera.py recall <out.unsigned.shortcut> <site-url>
 python3 build_camera.py save <out.unsigned.shortcut> <save-url> [deepgram]
+python3 build_camera.py photo|screenshot <out.unsigned.shortcut> <save-url>
 "deepgram": record the words and send the recording (Recall turns it into text with Deepgram), instead of
 Apple's dictation."""
 import plistlib, uuid, sys
 
 PART, OUT = sys.argv[1], sys.argv[2]
-URL = sys.argv[3] if PART in ("save", "recall") else ""
+URL = sys.argv[3] if PART in ("save", "recall", "photo", "screenshot") else ""
 DEEPGRAM = "deepgram" in sys.argv[4:]
 NOTE = "Recall/camera-open.txt"  # in iCloud Drive › Shortcuts
 PROMPT = "What is this? What's it for, and why do you love it?"
@@ -36,6 +41,35 @@ def filefield(key, v): return {"WFItemType": 5, "WFKey": text(key), "WFValue": {
 if PART == "recall":
     actions = [act("openurl", UUID=U(), WFInput=text(URL))]
     icon, kinds = 59511, []
+elif PART in ("photo", "screenshot"):
+    SHOT, SAID, DEV, POST, OK_G = (U() for _ in range(5))
+    if PART == "photo":
+        shoot, shot = act("takephoto", UUID=SHOT, WFCameraCaptureShowPreview=True, WFPhotoCount=1.0), "Photo"  # opens at once; Use Photo goes on
+    else:
+        shoot, shot = act("takescreenshot", UUID=SHOT), "Screenshot"  # Back Tap: whatever is on screen right now
+    actions = [
+        shoot,
+        # The camera keeps the microphone for a moment after Use Photo (a recording right after it was silent,
+        # 15 Nov, -90 dB on Max's iPhone). One second lets it go.
+        *([act("delay", UUID=U(), WFDelayTime=1.0)] if PART == "photo" else []),
+        # Apple's dictation: the small banner at the top, words typed as they're said, tap to stop (Max, 15 Nov 2026:
+        # Record Audio takes the whole screen).
+        act("dictatetext", UUID=SAID, WFDictateTextStopListening="On Tap"),
+        act("getdevicedetails", UUID=DEV),
+        act("downloadurl", UUID=POST, WFURL=URL, WFHTTPMethod="POST", WFHTTPBodyType="Form", WFFormValues={"Value": {"WFDictionaryFieldValueItems": [
+            filefield("files", out(shot, SHOT)), field("notes", token(out("Dictated Text", SAID))),
+            field("who", token(out("Device Name", DEV))), field("remind", text("never"))]},
+            "WFSerializationType": "WFDictionaryFieldValue"}),
+        # Recall answers {"queued":true} once it has the save; only then say so. (A "contains" check on that answer
+        # left a parameter empty on the phone: "Please choose a value for each parameter in this action.")
+        act("getvalueforkey", UUID=(QUEUED := U()), WFDictionaryKey="queued", WFInput=attach(out("Contents of URL", POST))),
+        act("conditional", GroupingIdentifier=OK_G, WFControlFlowMode=0, WFCondition=100, WFInput=var(out("Dictionary Value", QUEUED))),
+        act("notification", UUID=U(), WFNotificationActionBody=text("Saved to Recall."), WFNotificationActionSound=False),
+        act("conditional", GroupingIdentifier=OK_G, WFControlFlowMode=1),
+        act("notification", UUID=U(), WFNotificationActionBody=text("Not saved. Try again.")),
+        act("conditional", UUID=U(), GroupingIdentifier=OK_G, WFControlFlowMode=2),
+    ]
+    icon, kinds = (59446 if PART == "photo" else 59511), []
 elif PART == "open":
     NOW = U()
     actions = [

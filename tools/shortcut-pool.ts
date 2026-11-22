@@ -1,5 +1,5 @@
 // Fill a pool of signed shortcuts for a Recall server (see app/shortcut-pool.ts). Mac only: signing needs `shortcuts sign`.
-//   bun tools/shortcut-pool.ts [--out <dir>] [--n 20]
+//   bun tools/shortcut-pool.ts [--out <dir>] [--n 20] [--only <kind>]
 // Keeps <dir>/<kind> topped up to n copies, each with its own new key, and writes the two shared camera shortcuts.
 // `cl shortcut-pool` runs this, then copies the folder to the server.
 import { join } from "node:path";
@@ -31,14 +31,20 @@ const kinds: Record<string, (key: string) => string[]> = {
   iphone: (k) => ["build_share.py", save(k), "RAW", "iphone"],
   mac: (k) => ["build_share.py", save(k), "RAW", "mac"],
   "camera-save": (k) => ["build_camera.py", "save", "RAW", save(k)],
+  "camera-photo": (k) => ["build_camera.py", "photo", "RAW", save(k)],
+  "camera-screenshot": (k) => ["build_camera.py", "screenshot", "RAW", save(k)],
 };
-for (const [kind, args] of Object.entries(kinds)) {
+// --only <kind>: top up just that one (signing takes a few seconds each).
+const ONLY = arg("--only", "");
+for (const [kind, args] of Object.entries(kinds).filter(([k]) => !ONLY || k === ONLY)) {
   const dir = join(OUT, kind); mkdirSync(dir, { recursive: true });
   const have = readdirSync(dir).filter((n) => n.endsWith(".shortcut")).length;
   for (let i = have; i < N; i++) { const key = randomBytes(24).toString("base64url"); await build(args(key), join(dir, `${key}.shortcut`)); }
   console.log(`${kind}: ${Math.max(have, N)} (${Math.max(0, N - have)} new)`);
 }
-await build(["build_camera.py", "open", "RAW"], join(OUT, "camera-open.shortcut"));
-await build(["build_camera.py", "recall", "RAW", `${PUBLIC_URL}/`], join(OUT, "camera-recall.shortcut"));
+if (!ONLY) {
+  await build(["build_camera.py", "open", "RAW"], join(OUT, "camera-open.shortcut"));
+  await build(["build_camera.py", "recall", "RAW", `${PUBLIC_URL}/`], join(OUT, "camera-recall.shortcut"));
+}
 rmSync(work, { recursive: true, force: true });
 console.log(`pool ready in ${OUT} for ${PUBLIC_URL}`);

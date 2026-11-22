@@ -98,9 +98,9 @@ export function parseWhen(said: string, now = new Date()): string | undefined {
 /** "This is for Structure", "file it under Next Mission": a project the owner named outright wins over the librarian's guess. */
 export function namedProject(said: string): string | undefined {
   // "for the Ojai Retreat project", "this pertains to the Structure project"
-  const p = said.match(/\b(?:for|pertains to|belongs to|goes (?:in|under|with))\s+(?:the\s+)?([A-Za-z0-9][\w' &-]{1,38}?)\s+project\b/i);
+  const p = said.match(/\b(?:for|pertains to|belongs to|goes (?:in|into|under|with)|sort (?:this|it|these|them) (?:in|into|under)|(?:put|move|file|add) (?:this|it|these|them) (?:in|into|to|under))\s+(?:the\s+)?([A-Za-z0-9][\w' &-]{1,38}?)\s+project\b/i);
   if (p && !/^(the|a|an|my|our|this|that|new|next|whole)$/i.test(p[1].trim())) return p[1].trim();
-  const m = said.match(/\b(?:this is for|this one is for|it's for|its for|this is about|file (?:this|it) (?:under|in|to)|put (?:this|it) (?:in|under)|project (?:called|named))\s+(?:the\s+)?([^.,;!?\n]{2,40}?)(?:\s+project)?(?=[.,;!?\n]|$)/i);
+  const m = said.match(/\b(?:this is for|this one is for|it's for|its for|this is about|file (?:this|it) (?:under|in|into|to)|put (?:this|it) (?:in|into|under)|sort (?:this|it|these|them) (?:in|into|under)|move (?:this|it|these|them) (?:to|into)|(?:create|make|start|add) (?:a\s+)?(?:new\s+)?project(?:\s+(?:called|named))?|new project(?:\s+(?:called|named))?|project (?:called|named)):?\s+(?:the\s+)?["“']?([^.,;!?\n"”]{2,40}?)["”']?(?:\s+project)?(?=[.,;!?\n"”]|$)/i);
   if (!m) return undefined;
   const name = m[1].trim().split(/\s+/).slice(0, 4).join(" ");
   return /^(me|you|us|him|her|them|my|our|later|now|today|tomorrow|next (?:week|month|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday))$/i.test(name) ? undefined : name;

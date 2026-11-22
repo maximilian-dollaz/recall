@@ -9,11 +9,11 @@
 import { join, dirname, basename } from "node:path";
 import { jpegArgs, MAC } from "./img.ts";
 import * as shortcutPool from "./shortcut-pool.ts";
-import * as granola from "./granola.ts";
+import * as meetings from "./meetings.ts";
 import { lookup } from "node:dns/promises";
 import { mkdirSync, existsSync, readdirSync, readFileSync, unlinkSync, renameSync, statfsSync, statSync, rmSync, copyFileSync } from "node:fs";
 import * as gb from "./gbrain.ts";
-import { file as fileItem, loadCatalog, updateCatalog, noteProposal, chat } from "./librarian.ts";
+import { file as fileItem, loadCatalog, updateCatalog, noteProposal, chat, withEngine, engineFor, laneOf } from "./librarian.ts";
 import { extractFile, extractUrl, stripSecrets, nameFor } from "./extract.ts";
 import { vaultFor } from "./vault.ts";
 import { addReminder, setState as setReminderState, renameReminder, removeReminder, due as dueReminders, dueDate, describe as describeReminder, parseWhen, namedProject } from "./reminders.ts";
@@ -23,6 +23,7 @@ import * as projects from "./projects.ts";
 import { isSoulPath, soulProxy } from "./soul.ts";
 import * as topics from "./topics.ts";
 import * as cues from "./cues.ts";
+import * as organize from "./organize.ts";
 import { join_ as joinDoor, joinPage, sessionEmail, page as doorPage } from "./door.ts";
 import { teamEntry, googleSignIn, signInPage, privacyPage } from "./google.ts";
 import * as boards from "./board.ts";
@@ -32,8 +33,9 @@ import * as dupes from "./dupes.ts";
 import * as pieces from "./pieces.ts";
 import * as trash from "./trash.ts";
 import { visualizeRoutes } from "./visualize.ts";
-import { mintKey, emailForKey } from "./keys.ts";
+import { mintKey, emailForKey, deviceForKey } from "./keys.ts";
 import * as deepgram from "./deepgram.ts";
+import * as remind from "./remind.ts";
 
 import { CODE, DATA as ROOT, PORTS, TWIN } from "./paths.ts";
 import { PUBLIC_URL as CONFIG_URL, PUBLIC_HOST, OWNER_NAME, TAILNET_HOST } from "./config.ts";
@@ -75,7 +77,7 @@ function pageMarkdown(f: { title: string; type: string; shelf: string; tags: str
 }
 
 // ── Save: instant acknowledge, background filing ───────────────────────────
-type Job = { id: string; person: string; notes: string; url: string; keepLocal: boolean; remind: string; remindWhen: string; who: string; files: string[]; created: string; attempts?: number; privacyDecided?: boolean; project?: string; batch?: string; title?: string };
+type Job = { source?: string; id: string; person: string; notes: string; url: string; keepLocal: boolean; remind: string; remindWhen: string; who: string; files: string[]; created: string; attempts?: number; privacyDecided?: boolean; project?: string; batch?: string; title?: string; device?: "phone" | "computer" };
 // Behind the person's Google sign-in: fetched from here, these are only ever the sign-in page.
 const SIGNED_IN = /^https:\/\/(docs|drive)\.google\.com\//i;
 
@@ -126,14 +128,15 @@ async function previewImage(page: string): Promise<string | null> {
 }
 
 /** A save made by Recall itself (a picture kept from Visualize): queued and filed like any other, into the project picked. */
-async function queueSave(person: Person, input: { notes: string; files: string[]; project?: string }) {
+async function queueSave(person: Person, input: { notes: string; files: string[]; project?: string; source?: string }) {
   const id = `${today()}-${Math.random().toString(36).slice(2, 8)}`;
   const dir = join(person.dir, "files", id); mkdirSync(dir, { recursive: true });
   const files = input.files.map((src) => { const p = join(dir, basename(src)); copyFileSync(src, p); return p; });
   // A project id, or a new project's name (Keep → New project…): made on the spot.
   const cat = await loadCatalog();
   const project = !input.project ? undefined : projects.projectsOf(cat).some((p) => p.id === input.project) ? input.project : (await projects.resolveProject(cat, input.project))?.id;
-  const job: Job = { id, person: person.id, notes: input.notes, url: "", keepLocal: false, remind: "never", remindWhen: "", who: person.name, files, created: new Date().toISOString(), project };
+  // A meeting the person connected their recorder for is theirs to keep in Recall: never held for the privacy question.
+  const job: Job = { id, person: person.id, notes: input.notes, url: "", keepLocal: false, remind: "never", remindWhen: "", who: person.name, files, created: new Date().toISOString(), project, source: input.source, ...(input.source ? { privacyDecided: true } : {}) };
   await Bun.write(join(inboxDir(person), `${id}.json`), JSON.stringify(job));
   boards.invalidate(); kick();
   return { id };
@@ -145,7 +148,12 @@ const canVisualize = (personId: string, boardId: string) => boards.canSee(person
 async function spokenNote(voice: File, person: Person): Promise<string> {
   const tmp = join(person.dir, "inbox", `voice-${Date.now()}.${(voice.name.split(".").pop() || "m4a").replace(/[^a-z0-9]/gi, "")}`);
   mkdirSync(join(person.dir, "inbox"), { recursive: true }); await Bun.write(tmp, voice);
-  try { return await deepgram.transcribeAny(tmp, deepgram.allowed(await isOwner(person))); }
+  try {
+    const said = await deepgram.transcribeAny(tmp, deepgram.allowed(await isOwner(person)));
+    // A recording that gave no words is kept (privately, in this person's folder) so it can be checked.
+    if (!said) { const keep = join(person.dir, "voice-check"); mkdirSync(keep, { recursive: true }); copyFileSync(tmp, join(keep, `${Date.now()}-${voice.name.replace(/[^\w.-]/g, "_") || "voice"}`)); console.error(`[voice] ${person.id}: no words; kept ${voice.name} (${voice.size} bytes, ${voice.type || "no type"})`); }
+    return said;
+  }
   catch (e) { console.error(`[voice] ${person.id}: ${String(e).slice(0, 200)}`); return ""; } // saved anyway; Clarify asks which project
   finally { try { unlinkSync(tmp); } catch {} }
 }
@@ -194,7 +202,10 @@ async function save(req: Request, person: Person) {
     if (url && !saved.length && !SIGNED_IN.test(url)) { const og = await previewImage(url); const p = og ? await fetchImage(og, dir, "preview") : null; if (p) saved.push(p); }
   }
   const named = !project && !keepLocal ? projects.namedIn(await loadCatalog(), notes) : [];
-  const job: Job = { id, person: person.id, notes, url, keepLocal, remind, remindWhen, who, files: saved, created: new Date().toISOString(), project: project ?? (named.length === 1 ? named[0].id : undefined), title: pageTitle || undefined, batch: batch ?? (links.length > 1 ? `${person.id}-${id}` : undefined) };
+  // Phone or computer: decides which model reads it (phone → Claude, computer → this person's own model). The shortcut's
+  // key says so when it was made for a Mac; else the device name the shortcut sends ("Max's iPhone"); else the browser.
+  const device: Job["device"] = (req.headers.get("x-recall-device") as Job["device"]) || (/iPhone|iPad|iPod/i.test(rawWho) ? "phone" : /\b(Mac|MacBook|iMac)\b/i.test(rawWho) ? "computer" : deviceKind(req.headers.get("user-agent") ?? "") as Job["device"]);
+  const job: Job = { id, person: person.id, device, notes, url, keepLocal, remind, remindWhen, who, files: saved, created: new Date().toISOString(), project: project ?? (named.length === 1 ? named[0].id : undefined), title: pageTitle || undefined, batch: batch ?? (links.length > 1 ? `${person.id}-${id}` : undefined) };
   await Bun.write(join(inboxDir(person), `${id}.json`), JSON.stringify(job));
   // Every further link becomes its own save with the same words, shown together on the board.
   for (const extra of links.slice(1)) {
@@ -283,7 +294,9 @@ async function process(job: Job, person: Person) {
     if (project) await gb.addTag(scope, slug, `project:${project.id}`).catch(() => {});
     await gb.addTag(scope, slug, `shelf:${shelf.id}`).catch(() => {});
     // A long doc, meeting or voice note: its pieces are pulled out after this, a part at a time.
-    if (!care && kind !== "image" && kind !== "video") await pieces.queue(person, { id: job.id, slug, title: finalTitle, notes, project: project?.id, who: job.who || undefined, body: whole.slice(0, 1_000_000) });
+    if (!care && kind !== "image" && kind !== "video" && remind.on(person.dir) && (job.source?.startsWith("meeting:") || kind === "audio" || /\bremind\b/i.test(whole)) && whole.length >= 120)
+      sparksFrom(person, slug, finalTitle, whole).catch((e) => console.error(`[remind] ${person.id}: ${String(e).slice(0, 200)}`));
+    if (!care && kind !== "image" && kind !== "video") await pieces.queue(person, { id: job.id, slug, title: finalTitle, notes, project: project?.id, who: job.who || undefined, body: whole.slice(0, 1_000_000), engine: engineFor(person.id, job) });
   }
   const itemId = job.keepLocal ? `vault:${job.id}` : slug;
   if ((bringBack || remindWhen) && !care) await addReminder(person.dir, { id: itemId, title: finalTitle, summary: filing.summary, local: job.keepLocal, saved: today(), due: bringBack, when: remindWhen || undefined });
@@ -295,12 +308,24 @@ async function process(job: Job, person: Person) {
   if ((filing.action || actionWords) && !saidWhen && !care)
     await cues.add(person.dir, { kind: "when", item: itemId, title: finalTitle, snippet: filing.summary, thumb, question: "This sounds like something to do. When should it come back?",
       options: [{ id: "tomorrow", label: "Tomorrow" }, { id: "week", label: "Next week" }, { id: "month", label: "In a month" }, { id: "never", label: "No reminder" }] });
-  if (project && isNew && !spokenProject && !job.keepLocal && !care) {
+  // Meetings arrive by the hundred: one question per new project the librarian made, not one per meeting,
+  // and meetings it couldn't place wait for organize.ts to group them into project questions.
+  const meeting = !!job.source?.startsWith("meeting:");
+  // A later meeting for a project made moments ago joins that project's open question.
+  if (meeting && project && (isNew || cues.hasGroup(person.dir, `new:${project.id}`)) && !job.keepLocal && !care) {
+    const others = projects.projectsFor(person.dir, catalog).filter((x) => x.id !== project.id).slice(0, 2);
+    await cues.group(person.dir, `new:${project.id}`, itemId, (n) => ({ title: project.name, snippet: `${filing.summary}`.slice(0, 200),
+      question: `Recall made a new project, "${project.name}", from ${n} meeting${n === 1 ? "" : "s"}. Keep it?`,
+      options: [{ id: "keep", label: `Keep "${project.name}"` }, ...others.map((o) => ({ id: `to:${o.id}`, label: `Move to ${o.name}` })), { id: "none", label: "Not a project" }] }));
+  } else if (meeting && !project && !job.keepLocal && !care) {
+    await organize.note(person.dir, { id: itemId, title: finalTitle, summary: filing.summary, tags: filing.tags });
+  }
+  if (!meeting && project && isNew && !spokenProject && !job.keepLocal && !care) {
     const others = projects.projectsFor(person.dir, catalog).filter((x) => x.id !== project.id).slice(0, 3);
     await cues.add(person.dir, { kind: "project", item: itemId, title: finalTitle, snippet: filing.summary, thumb, question: `The librarian started a new project for this: "${project.name}". Keep it?`,
       options: [{ id: "keep", label: `Keep "${project.name}"` }, ...others.map((o) => ({ id: `to:${o.id}`, label: `Move to ${o.name}` })), { id: "none", label: "No project" }] });
   }
-  if (!job.keepLocal && !care && !chosen) {
+  if (!meeting && !job.keepLocal && !care && !chosen) {
     const mine = projects.projectsFor(person.dir, catalog);
     const offer = (ids: string[]) => [...new Set(ids)].map((pid) => projects.projectsOf(catalog).find((x) => x.id === pid)).filter(Boolean).slice(0, 4) as projects.Project[];
     if (inNotes.length > 1)
@@ -323,41 +348,81 @@ async function process(job: Job, person: Person) {
 const filedAs = new Map<string, string>();
 
 let working = false;
+// Filing runs in lanes, one per model: Claude, and each person's own computer. A computer that is asleep (its
+// saves wait) or slow (a big import) never holds up anyone else's saves.
+const busyLanes = new Set<string>();
 async function drain() {
-  if (working) return; working = true;
-  try {
-    const { listPeople } = await import("./identity.ts");
-    const people = await listPeople();
-    for (const [email, rec] of Object.entries(people.people)) {
-      const person = await whoIs("127.0.0.1", email); if (!person) continue;
-      const dir = inboxDir(person);
-      for (const f of readdirSync(dir).filter((n) => n.endsWith(".json")).sort()) {
-        const path = join(dir, f);
-        let job: Job;
-        try { job = JSON.parse(await Bun.file(path).text()); }
-        catch { const stuck = join(dir, "..", "inbox-failed"); mkdirSync(stuck, { recursive: true }); renameSync(path, join(stuck, f + ".unreadable")); console.error(`[filing] unreadable job ${f} moved aside`); continue; }
-        try { await process(job, person); unlinkSync(path); }
-        catch (e) {
-          // A service that is down or busy (Ollama restarting, GBrain busy) is not the item's fault: try again later without counting it.
-          if (/ECONNREFUSED|fetch failed|Unable to connect|pglite_busy|timed? ?out|aborted/i.test(String(e))) { console.error(`[filing waiting] ${job.id}: ${String(e).slice(0, 160)}`); continue; }
-          job.attempts = (job.attempts ?? 0) + 1; console.error(`[filing failed] ${job.id} (attempt ${job.attempts}): ${String(e).slice(0, 200)}`);
-          if (job.attempts >= 3) { const stuck = join(dir, "..", "inbox-failed"); mkdirSync(stuck, { recursive: true }); await Bun.write(join(stuck, f), JSON.stringify(job)); unlinkSync(path); }
-          else await Bun.write(path, JSON.stringify(job));
-        }
-      }
+  const { listPeople } = await import("./identity.ts");
+  const people = await listPeople();
+  const lanes = new Map<string, { job: Job; path: string; f: string; dir: string; person: Person }[]>();
+  for (const email of Object.keys(people.people)) {
+    const person = await whoIs("127.0.0.1", email); if (!person) continue;
+    const dir = inboxDir(person);
+    for (const f of readdirSync(dir).filter((n) => n.endsWith(".json")).sort()) {
+      const path = join(dir, f);
+      let job: Job;
+      try { job = JSON.parse(await Bun.file(path).text()); }
+      catch { const stuck = join(dir, "..", "inbox-failed"); mkdirSync(stuck, { recursive: true }); try { renameSync(path, join(stuck, f + ".unreadable")); } catch {} console.error(`[filing] unreadable job ${f} moved aside`); continue; }
+      const lane = laneOf(engineFor(person.id, job));
+      if (busyLanes.has(lane)) continue;
+      (lanes.get(lane) ?? lanes.set(lane, []).get(lane)!).push({ job, path, f, dir, person });
     }
-  } finally { working = false; }
+  }
+  for (const [lane, list] of lanes) { busyLanes.add(lane); working = true; runLane(list).then((all) => { busyLanes.delete(lane); working = busyLanes.size > 0; if (all) kick(); /* saves that came in meanwhile */ }, () => { busyLanes.delete(lane); working = busyLanes.size > 0; }); }
 }
-// Granola: each connected person's new meetings, every half hour (granola.ts).
+async function runLane(list: { job: Job; path: string; f: string; dir: string; person: Person }[]): Promise<boolean> {
+  for (const { job, path, f, dir, person } of list) {
+    if (!existsSync(path)) continue;
+    const engine = engineFor(person.id, job);
+    try { const t0 = Date.now(); await withEngine(engine, () => process(job, person)); unlinkSync(path); console.log(`[model] ${person.id}: ${job.id} read by ${engine.kind === "claude" ? "Claude" : "their own computer"} (${job.device ?? job.source ?? "?"}, ${Math.round((Date.now() - t0) / 1000)}s)`); }
+    catch (e) {
+      // A service that is down or busy (a computer asleep, GBrain busy) is not the item's fault: try again later without
+      // counting it, and stop this lane for now (the rest of its saves would wait on the same thing).
+      if (/ECONNREFUSED|fetch failed|Unable to connect|pglite_busy|timed? ?out|aborted/i.test(String(e))) { console.error(`[filing waiting] ${job.id}: ${String(e).slice(0, 160)}`); return false; }
+      job.attempts = (job.attempts ?? 0) + 1; console.error(`[filing failed] ${job.id} (attempt ${job.attempts}): ${String(e).slice(0, 200)}`);
+      if (job.attempts >= 3) { const stuck = join(dir, "..", "inbox-failed"); mkdirSync(stuck, { recursive: true }); await Bun.write(join(stuck, f), JSON.stringify(job)); unlinkSync(path); }
+      else await Bun.write(path, JSON.stringify(job));
+    }
+  }
+  return true;
+}
+// Meeting recorders (Granola, Otter): each connected person's new meetings, every half hour (meetings.ts).
+const meetingSaver = (p: Person) => (_who: unknown, input: { notes: string; files: string[]; source: string }) => queueSave(p, input);
 async function syncMeetings() {
   const people = await listPeople();
   for (const email of Object.keys(people.people)) {
-    const p = await whoIs("127.0.0.1", email); if (!p || !granola.status(p.id).connected) continue;
-    const n = await granola.syncPerson(p, (_who, input) => queueSave(p, input));
-    if (n) console.log(`[granola] ${p.id}: ${n} meeting${n === 1 ? "" : "s"} saved`);
+    const p = await whoIs("127.0.0.1", email); if (!p) continue;
+    for (const v of Object.keys(meetings.VENDORS) as meetings.Vendor[]) {
+      if (!meetings.connected(v, p.id)) continue;
+      const n = await meetings.syncPerson(v, p, meetingSaver(p));
+      if (n) console.log(`[meetings] ${p.id}: ${n} ${v} meeting${n === 1 ? "" : "s"} saved`);
+    }
   }
 }
-setInterval(() => syncMeetings().catch((e) => console.error(`[granola] sync: ${String(e).slice(0, 200)}`)), 30 * 60_000);
+// Meetings waiting for a project: grouped into Clarify questions once filing has caught up (organize.ts).
+async function organizeAll() {
+  const people = await listPeople();
+  for (const email of Object.keys(people.people)) {
+    const p = await whoIs("127.0.0.1", email); if (!p || organize.waiting(p.dir) < 3) continue;
+    const catalog = await loadCatalog();
+    await withEngine(engineFor(p.id, { source: "meeting:" }), () => organize.organize(p.dir, catalog)).catch((e) => console.error(`[organize] ${p.id}: ${String(e).slice(0, 200)}`));
+  }
+}
+setInterval(() => organizeAll().catch(() => {}), 5 * 60_000);
+// Remind: the moments worth living come back to the person's phone (remind.ts). Checked every 5 minutes.
+async function sparksFrom(person: Person, slug: string, title: string, text: string) {
+  const date = text.match(/^Date: (\d{4}-\d{2}-\d{2})/m)?.[1] ?? today();
+  const found = await withEngine({ kind: "claude" }, () => remind.find(text, title, chat, pieces.locate));
+  for (const s of found) { const made = await remind.add(person.dir, { ...s, from: { slug, title, date } }); if (made) console.log(`[remind] ${person.id}: new spark "${made.title}" from ${slug}`); }
+}
+setInterval(async () => {
+  for (const email of Object.keys((await listPeople()).people)) {
+    const p = await whoIs("127.0.0.1", email).catch(() => null);
+    if (p) await remind.tick(p.dir, PUBLIC_URL).catch((e) => console.error(`[remind] tick ${p.id}: ${String(e).slice(0, 200)}`));
+  }
+}, 5 * 60_000);
+setInterval(() => syncMeetings().catch((e) => console.error(`[meetings] sync: ${String(e).slice(0, 200)}`)), 30 * 60_000);
+setTimeout(() => syncMeetings().catch(() => {}), 60_000); // after a restart, carry on with any sync it cut short
 let kickTimer: ReturnType<typeof setTimeout> | null = null;
 function kick() { if (kickTimer) clearTimeout(kickTimer); kickTimer = setTimeout(() => drain().catch(() => {}), 300); }
 setInterval(() => drain().catch(() => {}), 60_000);
@@ -567,10 +632,15 @@ async function resolveCue(person: Person, id: string, option: string) {
       await addReminder(person.dir, { id: c.item, title: c.title, summary: c.snippet, local: c.item.startsWith("vault:"), saved: today(), due }); }
   } else if (c.kind === "duplicate") {
     if (option === "one") { const g = dupes.groupOf(person.dir, ROOT, c.item); if (g?.extras.length) { const r = await trash.deleteItems(person, g.extras, findDeps); return json({ ok: true, undo: r.undo, deleted: r.deleted }, 200); } }
-  } else if (c.kind === "project" && option.startsWith("new:")) {
-    const made = await projects.resolveProject(await loadCatalog(), option.slice(4)); await setItemProject(person, c.item, made?.id ?? null);
-  } else if (c.kind === "project" && option !== "keep") {
-    await setItemProject(person, c.item, option === "none" ? null : option.replace(/^to:/, ""));
+  } else if (c.kind === "project") {
+    // A group question answers for every item in it; "name:" is a project typed or spoken on the card, "new:" one offered.
+    const items = c.items ?? [c.item];
+    let target: string | null | undefined;
+    if (option.startsWith("new:") || option.startsWith("name:")) target = (await projects.resolveProject(await loadCatalog(), option.replace(/^(new|name):/, "").trim()))?.id ?? undefined;
+    else if (option.startsWith("to:")) target = option.slice(3);
+    else if (option === "none") target = null;
+    if (target !== undefined) for (const it of items) await setItemProject(person, it, target);
+    if (c.items) await organize.drop(person.dir, items);
   }
   return json({ ok: true }, 200);
 }
@@ -587,6 +657,7 @@ async function setItemProject(person: Person, slug: string, projectId: string | 
   if (old) await gb.removeTag(scope, slug, `project:${old}`).catch(() => {});
   if (projectId) await gb.addTag(scope, slug, `project:${projectId}`).catch(() => {});
   if (projectId) await cues.forgetKind(person.dir, slug, "project"); // a hand placement answers "which project?"
+  if (projectId) await organize.drop(person.dir, [slug]);
   projects.invalidate(person.dir); indexCache.delete(person.id); boards.invalidate(); // a shared project is the same project on the team board
 }
 
@@ -686,8 +757,10 @@ async function shareShortcut(req: Request, person: Person) {
   const q = new URL(req.url).searchParams, mac = q.get("for") === "mac";
   // /my-shortcut?camera=open|save: the two halves of Recall Camera (see shortcuts/build_camera.py).
   // /my-shortcut?camera=recall: "Recall" for Control Center (opens the Save page).
-  const camera = mac ? "" : ["open", "save", "recall"].includes(q.get("camera") ?? "") ? q.get("camera")! : "";
-  const name = camera === "open" ? "Recall Camera" : camera === "save" ? "Recall Camera Save" : camera === "recall" ? "Recall" : "Save to Recall";
+  // /my-shortcut?camera=photo: "Recall Photo" for Control Center (take a photo, then say what it is).
+  // /my-shortcut?camera=screenshot: "Recall Screenshot" for Back Tap (a screenshot, then say what it is).
+  const camera = mac ? "" : ["open", "save", "recall", "photo", "screenshot"].includes(q.get("camera") ?? "") ? q.get("camera")! : "";
+  const name = camera === "open" ? "Recall Camera" : camera === "save" ? "Recall Camera Save" : camera === "recall" ? "Recall" : camera === "photo" ? "Recall Photo" : camera === "screenshot" ? "Recall Screenshot" : "Save to Recall";
   const file = (bytes: ArrayBuffer) => new Response(bytes, { headers: { "content-type": "application/octet-stream", "content-disposition": `attachment; filename="${name}.shortcut"`, "cache-control": "no-store" } });
   if (!MAC) {
     // A server can't sign shortcuts: hand out one a Mac signed ahead of time (shortcut-pool.ts).
@@ -702,8 +775,9 @@ async function shareShortcut(req: Request, person: Person) {
     // build_*.py still take "deepgram" (record, then Recall transcribes) if that's wanted again.
     const voice: string[] = [];
     const args = camera === "open" ? ["build_camera.py", "open", raw] : camera === "recall" ? ["build_camera.py", "recall", raw, `${PUBLIC_URL}/`]
-      : camera === "save" ? ["build_camera.py", "save", raw, `${PUBLIC_URL}/k/${await mintKey(person.email)}/api/save`, ...voice]
-      : ["build_share.py", `${PUBLIC_URL}/k/${await mintKey(person.email)}/api/save`, raw, mac ? "mac" : "iphone", ...voice];
+      : camera === "save" ? ["build_camera.py", "save", raw, `${PUBLIC_URL}/k/${await mintKey(person.email, "phone")}/api/save`, ...voice]
+      : camera === "photo" || camera === "screenshot" ? ["build_camera.py", camera, raw, `${PUBLIC_URL}/k/${await mintKey(person.email, "phone")}/api/save`]
+      : ["build_share.py", `${PUBLIC_URL}/k/${await mintKey(person.email, mac ? "computer" : "phone")}/api/save`, raw, mac ? "mac" : "iphone", ...voice];
     const b = Bun.spawn(["python3", join(CODE, "shortcuts", args[0]), ...args.slice(1)], { stdout: "pipe", stderr: "pipe" });
     if ((await b.exited) !== 0) throw new Error(await new Response(b.stderr).text());
     const sg = Bun.spawn(["shortcuts", "sign", "--mode", "anyone", "-i", raw, "-o", signed], { stdout: "pipe", stderr: "pipe" });
@@ -734,7 +808,7 @@ function clientIp(req: Request, server: { requestIP(r: Request): { address: stri
 }
 function onTailnet(ip: string) { const m = ip.match(/^100\.(\d+)\./); return !!m && +m[1] >= 64 && +m[1] <= 127; }
 // Headers that carry identity between this app's own listeners. A browser or phone must never be able to set them.
-const IDENTITY_HEADERS = ["x-person", "x-tailscale-login", "x-client-ip", "x-public-login"];
+const IDENTITY_HEADERS = ["x-person", "x-tailscale-login", "x-client-ip", "x-public-login", "x-recall-device"];
 const denied = (msg: string) => new Response(msg, { status: 401, headers: { "content-type": "text/plain" } });
 
 const server = Bun.serve({
@@ -775,18 +849,18 @@ const server = Bun.serve({
   },
 });
 
-async function granolaReturn(req: Request, u: URL): Promise<Response> {
-  const q = u.searchParams, state = q.get("state") ?? "";
+async function meetingsReturn(req: Request, u: URL, v: meetings.Vendor): Promise<Response> {
+  const q = u.searchParams, state = q.get("state") ?? "", name = meetings.VENDORS[v].name;
   const signedIn = !!(await sessionEmail(req));
-  const done = (title: string, body: string) => signedIn ? Response.redirect(`${PUBLIC_URL}/?granola=${title === "Granola connected" ? "connected" : "cancelled"}`, 302) : doorPage(title, body);
-  if (q.get("error")) return done("Granola not connected", "Nothing changed. Open Recall and tap Connect Granola to try again.");
+  const done = (ok: boolean, body: string) => signedIn ? Response.redirect(`${PUBLIC_URL}/?connected=${ok ? v : "cancelled"}`, 302) : doorPage(`${name} ${ok ? "connected" : "not connected"}`, body);
+  if (q.get("error")) return done(false, `Nothing changed. Open Recall and tap Connect ${name} to try again.`);
   const people = await listPeople();
-  const email = Object.entries(people.people).find(([, r]) => r.id === state.split(".")[0])?.[0];
+  const email = Object.entries(people.people).find(([, r]) => r.id === meetings.personOfState(state))?.[0];
   const p = email ? await whoIs("127.0.0.1", email) : null;
-  try { if (!p) throw new Error("unknown sign-in"); await granola.finishConnect(p, state, q.get("code") ?? ""); }
-  catch (e) { console.error(`[granola] return: ${String(e).slice(0, 200)}`); return doorPage("Granola not connected", "This sign-in link is old. Open Recall and tap Connect Granola again."); }
-  granola.syncPerson(p, (_who, input) => queueSave(p, input)).catch(() => {}); // the first meetings start arriving right away
-  return done("Granola connected", "Your meetings are coming in to Recall. You can close this page.");
+  try { if (!p) throw new Error("unknown sign-in"); await meetings.finishConnect(v, p, state, q.get("code") ?? ""); }
+  catch (e) { console.error(`[meetings] ${v} return: ${String(e).slice(0, 200)}`); return doorPage(`${name} not connected`, `This sign-in link is old. Open Recall and tap Connect ${name} again.`); }
+  meetings.syncPerson(v, p, meetingSaver(p)).catch(() => {}); // the first meetings start arriving right away
+  return done(true, "Your meetings are coming in to Recall. You can close this page.");
 }
 
 // The public door (RECALL_PUBLIC_URL → tunnel → here). Only an invite cookie gets in;
@@ -808,6 +882,7 @@ const door = Bun.serve({
     if (u.pathname === "/signin") return signInPage(req);
     { const bd = await boardDoor(req); if (bd) return bd; } // board invite links (/b/<token>)
     if (u.pathname === "/privacy") return privacyPage();
+    if (u.pathname === "/sw.js") return fetch(new Request(`http://127.0.0.1:${PORTS.inner}/sw.js`)); // the service worker: no personal data
     if (u.pathname === "/guide") return guidePage(req); // public: a teammate reads it before signing in
     if (/^\/static\/(icon-(32|180|192|512)\.png|manifest\.webmanifest|find-landscape\.svg|(?:delta|river)-[0-9]+\.(?:jpg|webp)|ui\/[a-z0-9-]+\.(?:js|css)|onboard\/[a-z0-9-]+\.jpg)$/.test(u.pathname)) return fetch(new Request(`http://127.0.0.1:${PORTS.inner}${u.pathname}`));
     // A person's own shortcut: its key can save, nothing else.
@@ -819,11 +894,12 @@ const door = Bun.serve({
       const headers = new Headers(req.headers);
       for (const h of IDENTITY_HEADERS) headers.delete(h);
       headers.set("x-client-ip", "127.0.0.1"); headers.set("x-tailscale-login", owner);
+      const device = deviceForKey(k[1]); if (device) headers.set("x-recall-device", device); // the Mac shortcut is a computer save
       return fetch(new Request(`http://127.0.0.1:${PORTS.inner}/api/save`, { method: "POST", headers, body: req.body, duplex: "half" } as any));
     }
     // Back from Granola's sign-in. On an iPhone this can open in a browser that isn't signed in to Recall
     // (a home-screen app keeps its own sign-in), so the one-time state from the sign-in names the person.
-    if (u.pathname === "/connect/granola/callback" && req.method === "GET") return granolaReturn(req, u);
+    { const m = u.pathname.match(/^\/connect\/(granola|otter)\/callback$/); if (m && req.method === "GET") return meetingsReturn(req, u, m[1] as meetings.Vendor); }
     const email = await sessionEmail(req);
     if (!email) return signInPage(req, "", 401);
     if (u.pathname === deepgram.LISTEN_PATH) return deepgram.upgrade(req, srv, (await listPeople()).owner === email);
@@ -915,27 +991,38 @@ const routed = Bun.serve({
     "/api/welcomed": { POST: withPerson(async (req, p) => { await setWelcomed(p.email, true, deviceKind(req.headers.get("user-agent") ?? "")); return json({ ok: true }, 200); }) },
     // Recall for Chrome, added by hand until the Chrome Web Store has it: the steps, and the extension itself.
     "/extension": withPerson(async (req) => page(req, "extension.html")),
-    "/extension/recall-chrome.zip": withPerson(async () => new Response(Bun.file(join(CODE, "dist/recall-chrome-0.3.0.zip")), { headers: { "content-type": "application/zip", "content-disposition": 'attachment; filename="recall-chrome.zip"', "cache-control": "no-cache" } })),
+    "/extension/recall-chrome.zip": withPerson(async () => new Response((await import("./extension-zip.ts")).zipFolder(join(CODE, "extension")), { headers: { "content-type": "application/zip", "content-disposition": 'attachment; filename="recall-chrome.zip"', "cache-control": "no-cache" } })),
     "/welcome": withPerson(async (req) => page(req, "welcome.html")),
     "/board": (req: Request) => page(req, "board.html"),
     ...boardRoutes(withPerson), // team boards: members only (boards-routes.ts)
     "/my-shortcut": withPerson(shareShortcut),
-    // Granola: connect once, then every meeting lands in this person's library (granola.ts).
-    "/connect/granola": withPerson(async (_req, p) => {
-      try { return Response.redirect((await granola.startConnect(p, `${PUBLIC_URL}/connect/granola/callback`)).toString(), 302); }
-      catch (e) { console.error(`[granola] connect ${p.id}: ${String(e).slice(0, 200)}`); return new Response("Granola's sign-in didn't open. Try again in a minute.", { status: 502 }); }
+    // Meeting recorders: connect once, then every meeting lands in this person's library (meetings.ts).
+    "/connect/:vendor": withPerson(async (req, p) => {
+      const v = (req as any).params?.vendor; if (!meetings.isVendor(v)) return new Response("not found", { status: 404 });
+      try { return Response.redirect((await meetings.startConnect(v, p, `${PUBLIC_URL}/connect/${v}/callback`)).toString(), 302); }
+      catch (e) { console.error(`[meetings] connect ${v} ${p.id}: ${String(e).slice(0, 200)}`); return new Response(`${meetings.VENDORS[v].name}'s sign-in didn't open. Try again in a minute.`, { status: 502 }); }
     }),
-    "/connect/granola/callback": withPerson(async (req, p) => {
-      const q = new URL(req.url).searchParams;
-      if (q.get("error")) return Response.redirect(`${PUBLIC_URL}/?granola=cancelled`, 302);
-      try { await granola.finishConnect(p, q.get("state") ?? "", q.get("code") ?? ""); }
-      catch (e) { console.error(`[granola] callback ${p.id}: ${String(e).slice(0, 200)}`); return new Response(String((e as Error).message ?? e), { status: 400 }); }
-      granola.syncPerson(p, (who, input) => queueSave(p, input)).catch(() => {}); // the first meetings start arriving right away
-      return Response.redirect(`${PUBLIC_URL}/?granola=connected`, 302);
-    }),
-    "/api/connectors": withPerson(async (_req, p) => json({ granola: granola.status(p.id) }, 200)),
-    "/api/connectors/granola/sync": { POST: withPerson(async (_req, p) => json({ ok: true, saved: await granola.syncPerson(p, (who, input) => queueSave(p, input)) }, 200)) },
-    "/api/connectors/granola/disconnect": { POST: withPerson(async (_req, p) => { granola.disconnect(p.id); return json({ ok: true }, 200); }) },
+    "/connect/:vendor/callback": async (req: Request) => { const u = new URL(req.url); const v = (req as any).params?.vendor; return meetings.isVendor(v) ? meetingsReturn(req, u, v) : new Response("not found", { status: 404 }); },
+    // Onboarding: the person's starting projects (up to three names).
+    "/api/starter-projects": {
+      GET: withPerson(async (_req, p) => { const known = new Map(projects.projectsOf(await loadCatalog()).map((x) => [x.id, x.name])); return json({ projects: projects.starters(p.dir).filter((id) => known.has(id)).map((id) => ({ id, name: known.get(id) })) }, 200); }),
+      POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})); const names = Array.isArray(b?.names) ? b.names : [];
+        const made = await projects.setStarters(p.dir, await loadCatalog(), names); return json({ projects: made.map((x) => ({ id: x.id, name: x.name })) }, 200); }),
+    },
+    "/api/connectors": withPerson(async (_req, p) => json(Object.fromEntries((Object.keys(meetings.VENDORS) as meetings.Vendor[]).map((v) => [v, meetings.status(v, p.id)])), 200)),
+    "/api/connectors/:vendor/sync": { POST: withPerson(async (req, p) => { const v = (req as any).params?.vendor; if (!meetings.isVendor(v)) return json({ error: "unknown" }, 404); meetings.syncPerson(v, p, meetingSaver(p)).catch(() => {}); return json({ ok: true, started: true }, 200); }) },
+    "/api/connectors/:vendor/disconnect": { POST: withPerson(async (req, p) => { const v = (req as any).params?.vendor; if (!meetings.isVendor(v)) return json({ error: "unknown" }, 404); meetings.disconnect(v, p.id); return json({ ok: true }, 200); }) },
+    // Remind (remind.ts): the card a notification opens, the list, and turning it on for a phone.
+    "/remind": withPerson(async (req) => page(req, "remind.html")),
+    "/remind/:id": withPerson(async (req) => page(req, "remind.html")),
+    "/sw.js": () => new Response(Bun.file(join(import.meta.dir, "static/sw.js")), { headers: { "content-type": "text/javascript", "cache-control": "no-cache", "service-worker-allowed": "/" } }),
+    "/api/remind/key": () => json({ key: remind.publicKey() }, 200),
+    "/api/remind/status": withPerson(async (_req, p) => json({ on: remind.on(p.dir), sparks: remind.ledger(p.dir).sparks.map(remind.view) }, 200)),
+    "/api/remind/spark": withPerson(async (req, p) => { const s = remind.ledger(p.dir).sparks.find((x) => x.id === new URL(req.url).searchParams.get("id")); return s ? json(remind.view(s), 200) : json({ error: "not found" }, 404); }),
+    "/api/remind/answer": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})); if (!["lived", "landing", "let-go", "back"].includes(b.answer)) return json({ error: "unknown answer" });
+      const s = await remind.answer(p.dir, String(b.id), b.answer); return s ? json(remind.view(s), 200) : json({ error: "not found" }, 404); }) },
+    "/api/remind/subscribe": { POST: withPerson(async (req, p) => { try { await remind.subscribe(p.dir, await req.json(), req.headers.get("user-agent") ?? ""); return json({ ok: true }, 200); } catch (e) { return json({ error: String(e) }); } }) },
+    "/api/remind/now": { POST: withPerson(async (_req, p) => json({ sent: await remind.now(p.dir, PUBLIC_URL) }, 200)) },
     "/api/me": withPerson(async (_req, p) => json({ id: p.id, name: p.name, source: p.source }, 200)),
     "/api/health": async () => json({ ok: true, library: await gb.callTool("whoami").catch((e) => ({ error: String(e) })) }, 200),
   },

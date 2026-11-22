@@ -15,7 +15,7 @@
   body { margin:0 }
   main { max-width:460px; margin:0 auto; padding:34px 16px 55px; display:grid; gap:21px }
   .logo { display:block; width:89px; height:89px; border-radius:21px; margin:0 auto; box-shadow:0 0 34px rgba(244,227,181,.25) }
-  .get { display:block; text-align:center; padding:16px; border-radius:13px; font-weight:600; text-decoration:none; font-size:1.1rem }
+  li .get { display:block; text-align:center; padding:16px; border-radius:13px; font-weight:600; text-decoration:none; font-size:1.1rem }
   ol { list-style:none; margin:0; padding:0; display:grid; gap:21px; counter-reset:s }
   li { display:grid; grid-template-columns:30px 1fr; gap:13px; counter-increment:s }
   li::before { content:counter(s); width:30px; height:30px; border-radius:50%; display:grid; place-items:center; font-weight:600; font-size:.9rem; background:rgba(244,227,181,.16); color:#F4E3B5 }
@@ -29,23 +29,29 @@
   .folder { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; background:#2c2c2e }
   .copy { font:inherit; font-size:.9rem; padding:8px 13px; border-radius:999px; border:1px solid rgba(242,236,225,.2); background:rgba(242,236,225,.06); color:inherit; cursor:pointer }
   .muted { color:#98989d }
+  .menu { display:grid; gap:2px; max-width:200px; padding:6px; border-radius:10px; background:#2c2c2e; border:1px solid #48484a } .menu div { padding:6px 9px; border-radius:6px }
 </style>
 </head>
 <body>
 <main>
   <img class="logo" src="/static/icon-512.png" alt="">
-  <a class="get primary" id="get" href="/extension/recall-chrome.zip" download>Download Recall for Chrome</a>
   <ol>
-    <li><div><p>Open the download</p>
-      <div class="screen"><div class="folder tap">📁 <b>recall-chrome</b></div><div class="muted" style="margin-top:8px">It opens as a folder in Downloads.</div></div></div></li>
+    <li><div><p>Click Download</p>
+      <a class="get primary tap" id="get" href="/extension/recall-chrome.zip" download>Download Recall for Chrome</a></div></li>
+    <li><div><p>Double-click recall-chrome.zip in your Downloads folder</p>
+      <div class="screen"><div class="folder tap">🗜️ <b>recall-chrome.zip</b></div><div class="muted" style="margin-top:8px">A folder called recall-chrome appears next to it.</div><div class="muted" style="margin-top:4px">Windows: right-click it, then Extract All.</div></div></div></li>
     <li><div><p>Copy this, paste it in Chrome's address bar, press Return</p>
       <button class="copy" id="copy">chrome://extensions</button></div></li>
     <li><div><p>Turn on Developer mode</p>
       <div class="screen"><div class="row"><b>Extensions</b><span class="row tap" style="padding:3px 6px">Developer mode <span class="toggle"></span></span></div></div></div></li>
-    <li><div><p>Click Load unpacked, then pick the recall-chrome folder</p>
+    <li><div><p>Click Load unpacked</p>
       <div class="screen"><div class="row"><span class="btn tap">Load unpacked</span><span class="btn">Pack extension</span><span class="btn">Update</span></div></div></div></li>
+    <li><div><p>Click the recall-chrome folder, then Select</p>
+      <div class="screen"><div class="folder tap">📁 <b>recall-chrome</b></div><div class="row" style="justify-content:flex-end;margin-top:8px"><span class="btn">Cancel</span><span class="btn tap">Select</span></div></div></div></li>
     <li><div><p>Click Allow for the microphone</p>
-      <div class="screen"><div class="bar">🎤 recall wants to use your microphone</div><div class="row" style="justify-content:flex-end;margin-top:8px"><span class="btn">Block</span><span class="btn tap">Allow</span></div></div></div></li>
+      <div class="screen"><div class="bar">🎤 Use your microphone</div><div class="row" style="justify-content:flex-end;margin-top:8px"><span class="btn">Block</span><span class="btn tap">Allow</span></div></div></div></li>
+    <li><div><p>Right-click anything on a page, click Add to Recall</p>
+      <div class="screen"><div class="menu"><div>Copy image</div><div>Save image as…</div><div class="tap"><b>Add to Recall</b></div></div></div></div></li>
   </ol>
 </main>
 <script>
