@@ -84,6 +84,9 @@ const id = location.pathname.split('/')[2];
 // The service worker shows the notifications. Never wait on it forever: a browser without one still shows the page.
 const swReady = 'serviceWorker' in navigator ? navigator.serviceWorker.register('/sw.js').then(() => Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(() => no(new Error('no service worker')), 4000))])) : Promise.reject(new Error('no service worker'));
 swReady.catch(() => {});
+// Each step of turning Remind on is written to the server log, so a phone that fails can be read from there.
+const report = (step, extra = {}) => fetch('/api/remind/log', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ step, ...extra }) }).catch(() => {});
+const failed = (e) => { $('#turnon-text').textContent = 'That didn\u2019t work: ' + (e?.message || e) + '. Try once more; if it fails again, tell Claude.'; report('error', { error: String(e?.message || e) }); };
 
 async function one() {
   $('#one').hidden = false; $('#all').hidden = false;
@@ -121,17 +124,27 @@ async function many() {
   const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
   const isIOS = /iPhone|iPad/.test(navigator.userAgent);
   let subscribed = false; // checked after the list shows: a phone without a service worker never blocks it
-  try { const reg = await swReady; subscribed = !!(await reg.pushManager.getSubscription()); } catch {}
+  let sw = 'none', reg = null, local = null;
+  try { reg = await swReady; sw = reg.active?.state || 'waiting'; local = await reg.pushManager.getSubscription(); subscribed = !!local; } catch (e) { sw = 'error: ' + (e?.message || e); }
+  // On here but not on the server (a lost sign-up): send it again, nothing to tap.
+  if (local && !st.on) { const r = await fetch('/api/remind/subscribe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(local) }); report('resent', { ok: r.ok }); }
+  report('open', { standalone: !!standalone, ios: isIOS, push: 'PushManager' in window, notif: typeof Notification === 'undefined' ? 'none' : Notification.permission, sw, subscribed, serverOn: st.on, ua: navigator.userAgent });
   if (!subscribed) { if (isIOS && !standalone) $('#homescreen').hidden = false; else if ('PushManager' in window) $('#turnon').hidden = false; }
   $('#sendnow').hidden = !st.on;
   $('#enable').onclick = async () => {
-    const perm = await Notification.requestPermission(); if (perm !== 'granted') { $('#turnon-text').textContent = 'Notifications are off for Recall. Turn them on in Settings, Notifications, Recall.'; return; }
-    const reg = await swReady;
-    const key = (await (await fetch('/api/remind/key')).json()).key;
-    const raw = Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((key.length + 3) % 4)), (c) => c.charCodeAt(0));
-    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw });
-    const r = await fetch('/api/remind/subscribe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(sub) });
-    if (r.ok) { $('#turnon').innerHTML = '<p>Remind is on for this phone. The first one is on its way.</p>'; fetch('/api/remind/now', { method: 'POST' }); $('#sendnow').hidden = false; }
+    try {
+      report('tap');
+      const perm = await Notification.requestPermission(); report('permission', { perm });
+      if (perm !== 'granted') { $('#turnon-text').textContent = 'Notifications are off for Recall. Turn them on in Settings, Notifications, Recall.'; return; }
+      const reg = await swReady;
+      const key = (await (await fetch('/api/remind/key')).json()).key;
+      const raw = Uint8Array.from(atob(key.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((key.length + 3) % 4)), (c) => c.charCodeAt(0));
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: raw }); report('subscribed', { endpoint: sub.endpoint.slice(0, 40) });
+      const r = await fetch('/api/remind/subscribe', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(sub) });
+      if (!r.ok) throw new Error('Recall did not save it (' + r.status + ')');
+      $('#turnon').innerHTML = '<p>Remind is on for this phone. The first one is on its way.</p>'; $('#sendnow').hidden = false;
+      const n = await (await fetch('/api/remind/now', { method: 'POST' })).json(); report('sent', n);
+    } catch (e) { failed(e); }
   };
 }
 

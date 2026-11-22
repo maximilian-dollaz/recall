@@ -1022,6 +1022,7 @@ const routed = Bun.serve({
     "/api/remind/answer": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})); if (!["lived", "landing", "let-go", "back"].includes(b.answer)) return json({ error: "unknown answer" });
       const s = await remind.answer(p.dir, String(b.id), b.answer); return s ? json(remind.view(s), 200) : json({ error: "not found" }, 404); }) },
     "/api/remind/subscribe": { POST: withPerson(async (req, p) => { try { await remind.subscribe(p.dir, await req.json(), req.headers.get("user-agent") ?? ""); return json({ ok: true }, 200); } catch (e) { return json({ error: String(e) }); } }) },
+    "/api/remind/log": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})); console.log(`[remind phone ${p.id}] ${JSON.stringify(b).slice(0, 600)}`); return json({ ok: true }, 200); }) },
     "/api/remind/now": { POST: withPerson(async (_req, p) => json({ sent: await remind.now(p.dir, PUBLIC_URL) }, 200)) },
     "/api/me": withPerson(async (_req, p) => json({ id: p.id, name: p.name, source: p.source }, 200)),
     "/api/health": async () => json({ ok: true, library: await gb.callTool("whoami").catch((e) => ({ error: String(e) })) }, 200),
