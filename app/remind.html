@@ -54,7 +54,7 @@
       <div class="then" id="t" hidden></div>
       <div class="ladder" id="l"></div>
       <div class="btns" id="b">
-        <button class="primary" data-a="lived">Lived it today</button>
+        <button class="primary" data-a="lived">Yes, lived it</button>
         <button class="second" data-a="landing">Still landing</button>
         <button class="quiet" data-a="let-go">Let go</button>
       </div>
@@ -102,13 +102,14 @@ async function one() {
     $('#reveal').onclick = () => { $('#ask').hidden = true; $('#said').hidden = false; };
   }
   if (s.state === 'let-go') { $('#b').innerHTML = '<button class="second" data-a="back">Bring it back</button>'; }
+  if (s.state === 'evidence') { $('#b').hidden = true; $('#d').hidden = false; $('#d').textContent = 'In your evidence jar since ' + new Date(s.evidence).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '.'; }
   $('#b').onclick = async (e) => {
     const a = e.target.closest('button')?.dataset.a; if (!a) return;
     const res = await fetch('/api/remind/answer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, answer: a }) });
     if (!res.ok) return;
     const after = await res.json();
     $('#b').hidden = true; $('#d').hidden = false;
-    $('#d').textContent = { lived: after.stage === 'being' ? 'This is who you are now. It moves to Being.' : 'Counted. It keeps coming back.', landing: 'It comes back tomorrow.', 'let-go': 'It won’t come back.', back: 'It comes back tomorrow.' }[a];
+    $('#d').textContent = { lived: 'In your evidence jar.', landing: 'It comes back tomorrow.', 'let-go': 'It won’t come back.', back: 'It comes back tomorrow.' }[a];
   };
 }
 

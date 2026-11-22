@@ -12,16 +12,54 @@
     ? navigator.serviceWorker.register('/sw.js').then(() => Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(() => no(new Error('no service worker')), 4000))]))
     : Promise.reject(new Error('no service worker')));
 
+  // The deck: one reminder at a time. "Yes, lived it" puts it in the evidence jar, "Still landing" puts it away
+  // until tomorrow; either way the next one comes up, until all are processed.
+  const when = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  function tile(s, i, n) {
+    return `<article class="rm-tile">
+      <div class="rm-count">${i} of ${n}</div>
+      <h3 class="rm-title">${esc(s.title)}</h3>
+      <blockquote class="rm-words">\u201c${esc(s.words)}\u201d</blockquote>
+      <div class="rm-from">You, ${day(s.from.date)}${s.from.slug ? ` · <a href="/?item=${encodeURIComponent(s.from.slug)}">${esc(s.from.title)}</a>` : ''}</div>
+      ${s.when_then ? `<div class="rm-then">${esc(s.when_then)}</div>` : ''}
+      <div class="rm-btns"><button class="primary" type="button" data-a="lived">Yes, lived it</button><button class="rm-second" type="button" data-a="landing">Still landing</button><button class="rm-quiet" type="button" data-a="let-go">Let go</button></div>
+    </article>`;
+  }
+
   async function load(root) {
     const st = await (await fetch('/api/remind/status')).json();
-    const groups = [['Coming back', (s) => s.state === 'on'], ['Being', (s) => s.state === 'being'], ['Let go', (s) => s.state === 'let-go']];
+    const now = Date.now();
+    const queue = st.sparks.filter((s) => s.state === 'on' && !(s.hold && Date.parse(s.hold) > now)).sort((a, b) => a.next.localeCompare(b.next));
+    const total = queue.length;
     root.innerHTML = `
       <div class="rm-on" hidden><p class="rm-text">Your words come back to this phone, up to three times a day, until you live them.</p><button class="primary rm-enable" type="button">Turn on Remind</button></div>
       <p class="rm-home small muted" hidden>Open Recall from your home screen, then come back here to turn on Remind.</p>
-      ${groups.map(([name, f]) => { const rows = st.sparks.filter(f); return rows.length ? `<h3 class="rm-h">${name} · ${rows.length}</h3><div class="rm-list">${rows.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b><small>${esc(s.stage)} · ${day(s.from.date)}</small></a>`).join('')}</div>` : ''; }).join('')
-        || '<p class="small muted">Nothing yet. Say “remind me” in a voice note or a Granola note and it lands here.</p>'}
+      <div class="rm-deck"></div>
+      <div class="rm-jar"></div>
       <button class="rm-send" type="button" hidden>Send one now</button>`;
     const q = (s) => root.querySelector(s);
+    const deck = q('.rm-deck');
+    const jar = () => {
+      const ev = st.sparks.filter((s) => s.state === 'evidence').sort((a, b) => (b.evidence || '').localeCompare(a.evidence || ''));
+      const gone = st.sparks.filter((s) => s.state === 'let-go');
+      q('.rm-jar').innerHTML = (ev.length ? `<h3 class="rm-h">Evidence · ${ev.length}</h3><div class="rm-list">${ev.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b><small>lived ${s.evidence ? when(s.evidence) : ''}</small></a>`).join('')}</div>` : '')
+        + (gone.length ? `<h3 class="rm-h">Let go · ${gone.length}</h3><div class="rm-list">${gone.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b></a>`).join('')}</div>` : '');
+    };
+    const next = () => {
+      if (!queue.length) { deck.innerHTML = `<p class="rm-done">${total ? 'All processed. The ones still landing come back tomorrow.' : st.sparks.length ? 'Nothing waiting. The ones still landing come back tomorrow.' : 'Nothing yet. Say \u201cremind me\u201d in a voice note or a Granola note and it lands here.'}</p>`; return; }
+      deck.innerHTML = tile(queue[0], total - queue.length + 1, total);
+      deck.querySelector('.rm-tile').classList.add('rm-in');
+    };
+    deck.onclick = async (e) => {
+      const btn = e.target.closest('button[data-a]'); if (!btn || btn.disabled) return;
+      const s = queue[0]; if (!s) return;
+      deck.querySelectorAll('button').forEach((b) => b.disabled = true);
+      const r = await post('/api/remind/answer', { id: s.id, answer: btn.dataset.a });
+      if (!r.ok) { deck.querySelectorAll('button').forEach((b) => b.disabled = false); return; }
+      Object.assign(st.sparks.find((x) => x.id === s.id), await r.json());
+      queue.shift(); jar(); next();
+    };
+    next(); jar();
     q('.rm-send').hidden = !st.on;
     q('.rm-send').onclick = async () => { const r = await (await post('/api/remind/now')).json(); q('.rm-send').textContent = r.sent ? 'Sent' : 'Nothing to send'; };
 

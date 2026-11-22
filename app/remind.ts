@@ -11,9 +11,8 @@
 //   Timing       Ways of being in the morning (they set the day), the rest midday and early evening, nothing
 //                after 8pm. At most three a day, at a different minute each day, so the phone never becomes
 //                wallpaper (habituation).
-//   Lived        "Lived it today" climbs the ladder; "Still landing" brings it back sooner. Three lived days
-//                at least two weeks apart and it has become who they are: it leaves the daily rotation and
-//                comes back once a month (the Being list the dashboard will show).
+//   Lived        "Yes, lived it" moves it to the evidence jar: proof of what has been embodied, kept to come
+//                back to, never sent again. "Still landing" puts it away until tomorrow. (Max, 22 Nov 2026)
 // One ledger per person (<dir>/remind.json) and the phones that asked for it (<dir>/push.json).
 
 import { join } from "node:path";
@@ -27,7 +26,9 @@ export type Spark = {
   id: string; words: string; title: string; question?: string; when_then?: string; kind: Kind;
   from: { slug?: string; title: string; date: string };
   step: number; next: string; sent: number; asked: number; lived: string[]; landing: number;
-  state: "on" | "being" | "let-go"; created: string; last?: string;
+  state: "on" | "being" | "evidence" | "let-go"; created: string; last?: string;
+  hold?: string;     // "Still landing": out of sight until this moment (tomorrow)
+  evidence?: string; // when it was lived and went into the evidence jar
 };
 type Sub = { endpoint: string; keys: { p256dh: string; auth: string }; added: string; ua?: string };
 type Ledger = { sparks: Spark[]; sent: Record<string, string[]>; tz?: string };
@@ -88,6 +89,12 @@ function parts(d: Date, tz = TZ) {
   return { day: `${p.year}-${p.month}-${p.day}`, minute: Number(p.hour) * 60 + Number(p.minute) };
 }
 export const localDay = (d = new Date()) => parts(d).day;
+/** The moment it is `minute` minutes past midnight on `day` (YYYY-MM-DD) in the person's time zone. */
+export function localTime(day: string, minute: number, tz = TZ): Date {
+  const [y, m, d] = day.split("-").map(Number); const want = Date.UTC(y, m - 1, d, 0, minute); let t = want;
+  for (let i = 0; i < 2; i++) { const p = parts(new Date(t), tz); const [py, pm, pd] = p.day.split("-").map(Number); t -= Date.UTC(py, pm - 1, pd, 0, p.minute) - want; }
+  return new Date(t);
+}
 /** Today's minute for each window: different every day, the same all day (so a restart doesn't reroll it). */
 function slotMinute(day: string, w: typeof WINDOWS[number]) {
   const h = Number(Bun.hash(`${day}|${w.name}`) % 10_000n) / 10_000;
@@ -113,7 +120,7 @@ export async function add(dir: string, s: Pick<Spark, "words" | "title" | "kind"
 // ── Choosing and sending ──
 /** The spark for this window: one that is due, of a kind that fits the window when there is one, longest-waiting first. */
 export function pick(l: Ledger, w: typeof WINDOWS[number], now = new Date()): Spark | undefined {
-  const due = l.sparks.filter((s) => s.state !== "let-go" && new Date(s.next) <= now);
+  const due = l.sparks.filter((s) => (s.state === "on" || s.state === "being") && new Date(s.next) <= now && !(s.hold && new Date(s.hold) > now));
   const today = localDay(now);
   const fresh = due.filter((s) => !(s.last && localDay(new Date(s.last)) === today)); // never the same one twice a day
   const fit = fresh.filter((s) => (w.kinds as readonly string[]).includes(s.kind));
@@ -161,7 +168,7 @@ export async function tick(dir: string, base: string, now = new Date()) {
 /** "Send one now" (testing, or wanting one): the most overdue spark, or the oldest one if none is due. */
 export async function now(dir: string, base: string) {
   const l = ledger(dir);
-  const s = pick(l, WINDOWS[0], new Date(Date.now() + 365 * DAY)) ?? l.sparks.find((x) => x.state !== "let-go");
+  const s = pick(l, WINDOWS[0], new Date(Date.now() + 365 * DAY)) ?? l.sparks.find((x) => x.state === "on");
   return s ? sendOne(dir, s, base) : 0;
 }
 
@@ -174,11 +181,15 @@ export async function answer(dir: string, id: string, a: Answer) {
     const today = localDay();
     if (a === "lived") {
       if (!s.lived.includes(today)) s.lived.push(today);
-      // Three lived days, the first and last at least two weeks apart: it is who they are now.
-      if (s.state === "on" && s.lived.length >= 3 && (Date.parse(s.lived.at(-1)!) - Date.parse(s.lived[0])) >= 14 * DAY) { s.state = "being"; s.next = new Date(Date.now() + 30 * DAY).toISOString(); }
-    } else if (a === "landing") { s.landing++; s.step = Math.max(0, s.step - 2); s.next = new Date(Date.now() + DAY).toISOString(); }
+      s.state = "evidence"; s.evidence = new Date().toISOString(); delete s.hold;
+    } else if (a === "landing") {
+      // Out of sight until tomorrow morning (local), and back on the phone from then.
+      const start = localTime(localDay(new Date(Date.now() + DAY)), 7 * 60); // 7am tomorrow, local
+      s.landing++; s.step = Math.max(0, s.step - 2); s.hold = start.toISOString();
+      if (new Date(s.next) < start) s.next = start.toISOString();
+    }
     else if (a === "let-go") s.state = "let-go";
-    else if (a === "back") { s.state = "on"; s.next = new Date(Date.now() + DAY).toISOString(); }
+    else if (a === "back") { s.state = "on"; delete s.hold; s.next = new Date(Date.now() + DAY).toISOString(); }
     out = s;
   });
   return out;
@@ -186,7 +197,7 @@ export async function answer(dir: string, id: string, a: Answer) {
 
 /** Where a spark stands on the way from knowing to being. */
 export function stage(s: Spark): "knowing" | "understanding" | "thinking" | "doing" | "being" {
-  if (s.state === "being") return "being";
+  if (s.state === "being" || s.state === "evidence") return "being";
   if (s.lived.length) return "doing";
   if (s.asked) return "thinking";
   if (s.sent) return "understanding";
