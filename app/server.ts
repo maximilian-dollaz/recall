@@ -39,6 +39,9 @@ import * as remind from "./remind.ts";
 import * as share from "./share.ts";
 import * as agents from "./agents.ts";
 import * as create from "./create.ts";
+import { connectorRoutes } from "./connectors.ts";
+import * as social from "./social.ts";
+import * as canva from "./canva.ts";
 import * as sparks from "./sparks.ts";
 import { today as todayView } from "./today.ts";
 
@@ -915,7 +918,8 @@ const door = Bun.serve({
     if (u.pathname === "/auth/google" && req.method === "POST") return googleSignIn(req);
     if (u.pathname === "/signin") return signInPage(req);
     { const bd = await boardDoor(req); if (bd) return bd; } // board invite links (/b/<token>)
-    { const sh = await share.door(req); if (sh) return sh; } // read-only share links (/s/<token>)
+    { const sh = await share.door(req); if (sh) return sh; }
+    { const made = await create.door(req); if (made) return made; } // made files a scheduling tool fetches (/c/<token>/<n>) // read-only share links (/s/<token>)
     if (u.pathname === "/privacy") return privacyPage();
     if (u.pathname === "/sw.js") return fetch(new Request(`http://127.0.0.1:${PORTS.inner}/sw.js`)); // the service worker: no personal data
     if (u.pathname === "/guide") return guidePage(req); // public: a teammate reads it before signing in
@@ -1073,7 +1077,14 @@ const routed = Bun.serve({
     "/api/remind/now": { POST: withPerson(async (_req, p) => json({ sent: await remind.now(p.dir, PUBLIC_URL) }, 200)) },
     "/api/today": withPerson(async (_req, p) => json(await todayView(p, await loadCatalog()), 200)),
     "/api/sparks": { GET: withPerson(async (_req, p) => json(sparks.status(p.dir), 200)), POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})) as any; return json({ on: await sparks.setOn(p.dir, !!b.on) }, 200); }) },
-    ...create.createRoutes(withPerson, { kick: kickCreate, projectName: async (id) => projects.projectsOf(await loadCatalog()).find((x) => x.id === id)?.name ?? null }),
+    ...create.createRoutes(withPerson, { kick: kickCreate, projectName: async (id) => projects.projectsOf(await loadCatalog()).find((x) => x.id === id)?.name ?? null,
+      // A draft in the scheduling tool, with the caption the person wrote. Never published from here (social.ts).
+      canSend: () => social.ready(),
+      send: async (p, job, body) => { const urls = await create.publish(p, job.id, share.base()); const r = await social.queuePost(p, { networks: body.networks.filter((n): n is social.Network => (social.NETWORKS as readonly string[]).includes(n)), text: body.caption, mediaUrls: urls }); return r.ok ? { ok: true, note: r.note } : { error: r.error || r.note }; },
+      canCanva: (p) => canva.ready() && !!canva.status(p.id).connected,
+      toCanva: (p, file, name) => canva.uploadAsset(p, file, name) }),
+    "/connectors": withPerson(async (req) => page(req, "connectors.html")),
+    ...connectorRoutes(withPerson, { save: queueSave, keyBoxes: ["metricool", "canva", "google"] }),
     ...agents.agentRoutes(withPerson, { kick: kickAgents,
       sparkWords: (p, id) => { const s = remind.ledger(p.dir).sparks.find((x) => x.id === id); return s ? { directive: [s.words, s.when_then].filter(Boolean).join("\n"), title: s.title } : null; },
       itemWords: async (p, id) => { const it = await item(p, id).catch(() => null); return it ? { directive: [it.title, it.summary, it.markdown].filter(Boolean).join("\n").slice(0, 3000), title: it.title } : null; } }),

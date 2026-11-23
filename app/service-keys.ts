@@ -16,6 +16,10 @@ const KEYS: Record<string, { label: string; file: string; fields: string[]; join
   deepgram: { label: "Deepgram", file: "deepgram.key", fields: ["API key"], join: (v) => v[0], ok: (k) => k.length >= 20,
     check: async (k) => (await fetch("https://api.deepgram.com/v1/projects", { headers: { Authorization: `Token ${k}` }, signal: AbortSignal.timeout(8000) }).catch(() => null))?.status === 200 },
   // Resend sends the Dream board invites. A sending-only key can't be checked for free, so it's only shape-checked.
+  // Connectors (connectors.html): scheduling drafts, Canva uploads, and Google Drive's sign-in.
+  metricool: { label: "Metricool", file: "metricool.key", fields: ["API token", "User ID", "Brand ID (blogId)"], join: (v) => v.join(":"), ok: (k) => k.split(":").length === 3 && k.length >= 12 },
+  canva: { label: "Canva", file: "canva.key", fields: ["Client ID", "Client secret"], join: (v) => v.join(":"), ok: (k) => k.includes(":") && k.length >= 20 },
+  google: { label: "Google client secret (Drive)", file: "google.key", fields: ["Client secret"], join: (v) => v[0], ok: (k) => k.length >= 16 },
   resend: { label: "Resend", file: "resend.key", fields: ["API key"], join: (v) => v[0], ok: (k) => k.startsWith("re_") && k.length >= 20 },
 };
 const json = (d: unknown, status = 200) => Response.json(d, { status });

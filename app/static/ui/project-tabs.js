@@ -40,7 +40,7 @@
 
   // ── Create ──
   const STATE = { queued: 'Waiting its turn', making: 'Making it', ready: 'Ready', failed: "Didn't work" };
-  function jobHtml(j, formats, canSend) {
+  function jobHtml(j, formats, canSend, canCanva) {
     const name = formats[j.format]?.name || j.format, src = (n) => `/api/create/file?id=${encodeURIComponent(j.id)}&n=${n}`;
     const media = j.status !== 'ready' ? '' : j.format === 'post'
       ? `<div class="pt-out pics">${j.out.map((_, n) => `<a href="${src(n)}&dl=1"><img src="${src(n)}" alt="" loading="lazy"></a>`).join('')}</div>`
@@ -54,7 +54,7 @@
       <header><b>${esc(name)}</b><span>${STATE[j.status] || j.status}${j.status === 'queued' || j.status === 'making' ? '<i class="ag-dots" aria-hidden="true"></i>' : ''}</span></header>
       ${j.brief ? `<p class="pt-brief">${esc(j.brief)}</p>` : ''}
       ${j.error ? `<p class="ag-err">${esc(j.error)}</p>` : ''}${media}${send}
-      <div class="pt-row">${j.status === 'ready' && j.format !== 'post' ? `<a class="rm-second" href="${src(0)}&dl=1">Download</a>` : ''}${j.status !== 'making' ? `<button type="button" class="rm-quiet" data-del="${esc(j.id)}">Remove</button>` : ''}</div>
+      <div class="pt-row">${j.status === 'ready' && j.format !== 'post' ? `<a class="rm-second" href="${src(0)}&dl=1">Download</a>` : ''}${j.status === 'ready' && canCanva ? `<button type="button" class="rm-second" data-canva="${esc(j.id)}">Send to Canva</button>` : ''}${j.status !== 'making' ? `<button type="button" class="rm-quiet" data-del="${esc(j.id)}">Remove</button>` : ''}</div>
     </article>`;
   }
   function create(ctx, ids, done) {
@@ -80,7 +80,7 @@
       }
       // Redraw only when a job changed, so a caption being typed and a video being watched are left alone.
       const now = JSON.stringify(r.jobs.map((j) => [j.id, j.status, !!j.sent]));
-      if (now !== sig) { sig = now; jobsEl.innerHTML = r.jobs.length ? r.jobs.map((j) => jobHtml(j, r.formats, r.canSend)).join('') : '<p class="small muted">Nothing made yet.</p>'; }
+      if (now !== sig) { sig = now; jobsEl.innerHTML = r.jobs.length ? r.jobs.map((j) => jobHtml(j, r.formats, r.canSend, r.canCanva)).join('') : '<p class="small muted">Nothing made yet.</p>'; }
       if (r.jobs.some((j) => j.status === 'queued' || j.status === 'making')) timer = setTimeout(load, 3000);
     }
     const go = dlg.querySelector('[data-go]');
@@ -93,6 +93,8 @@
     };
     jobsEl.addEventListener('click', async (e) => {
       const del = e.target.closest('[data-del]'), snd = e.target.closest('[data-send]');
+      const cv = e.target.closest('[data-canva]');
+      if (cv) { cv.disabled = true; cv.textContent = 'Sending…'; const r = await post('/api/create/canva', { id: cv.dataset.canva }); cv.textContent = r.ok ? 'In Canva' : 'Send to Canva'; cv.disabled = !!r.ok; say(r.ok ? r.note : (r.error || "That didn't send.")); }
       if (del) { del.disabled = true; await post('/api/create/remove', { id: del.dataset.del }); sig = ''; load(); }
       if (snd) {
         const job = snd.closest('.pt-job'); snd.disabled = true;

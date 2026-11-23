@@ -14,6 +14,7 @@
 // One ledger per person (<dir>/create.json); what was made sits in <dir>/created/<job id>/.
 
 import { join, resolve, extname } from "node:path";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, rmSync, statSync, readdirSync } from "node:fs";
 import * as store from "./store.ts";
 import { DATA } from "./paths.ts";
@@ -41,6 +42,7 @@ const MAX_VIDEO_BYTES = 600 * 1024 ** 2;   // a longer source is a job for a rea
 const SECONDS_EACH = 2.6;                  // one picture in a board video
 const BG = "0x0E1519";                     // the dusk behind a picture that isn't upright
 const KEEP = 60;
+const TYPES: Record<string, string> = { ".mp4": "video/mp4", ".jpg": "image/jpeg" };
 
 const file = (dir: string) => join(dir, "create.json");
 const empty = (): Ledger => ({ jobs: [] });
@@ -87,6 +89,28 @@ export function made(p: Person, id: string, n: number): string | null {
   const abs = join(outDir(p.dir, id), name); return existsSync(abs) ? abs : null;
 }
 export async function markSent(p: Person, id: string, to: string, note: string) { await change(p.dir, (l) => { const j = l.jobs.find((x) => x.id === id); if (j) { j.sent = { to, at: now(), note }; j.updated = now(); } }); }
+
+// ── Links a scheduling tool can fetch ──
+// A scheduling tool pulls media from a web address, so a made file gets a long unguessable link for a week:
+// /c/<token>/<n>. Only made files are ever served this way, never anything else in the library.
+type Link = { dir: string; id: string; until: string };
+const LINKS = join(DATA, "created-links.json");
+const hash = (s: string) => createHash("sha256").update(s).digest("hex");
+export async function publish(p: Person, id: string, base: string): Promise<string[]> {
+  const job = ledger(p.dir).jobs.find((j) => j.id === id && j.status === "ready"); if (!job) return [];
+  const token = randomBytes(24).toString("base64url");
+  await store.update<Record<string, Link>>(LINKS, {}, (l) => { for (const k of Object.keys(l)) if (Date.parse(l[k].until) < Date.now()) delete l[k]; l[hash(token)] = { dir: p.dir, id, until: new Date(Date.now() + 7 * 864e5).toISOString() }; return l; });
+  return job.out.map((name, n) => `${base}/c/${token}/${n}${extname(name)}`);
+}
+export async function door(req: Request): Promise<Response | null> {
+  const m = new URL(req.url).pathname.match(/^\/c\/([A-Za-z0-9_-]{20,64})\/(\d{1,2})(?:\.[a-z0-9]{2,4})?$/); if (!m || req.method !== "GET") return null;
+  const gone = new Response("This link has stopped working.", { status: 404, headers: { "x-robots-tag": "noindex" } });
+  let l: Link | undefined; try { l = store.read<Record<string, Link>>(LINKS, {})[hash(m[1])]; } catch {}
+  if (!l || Date.parse(l.until) < Date.now()) return gone;
+  const name = ledger(l.dir).jobs.find((j) => j.id === l!.id)?.out[+m[2]]; if (!name || /[\/\\]/.test(name)) return gone;
+  const abs = join(outDir(l.dir, l.id), name); if (!existsSync(abs)) return gone;
+  return new Response(Bun.file(abs), { headers: { "content-type": TYPES[extname(abs)] ?? "application/octet-stream", "x-robots-tag": "noindex, nofollow", "cache-control": "private, max-age=3600" } });
+}
 
 // ── Making ──
 async function run(args: string[], ms = 20 * 60_000): Promise<void> {
@@ -159,12 +183,12 @@ export async function recover(people: () => Promise<Person[]>) {
 // ── Routes ──
 type With = (fn: (req: Request, p: Person) => Promise<Response>) => (req: Request) => Promise<Response>;
 const json = (d: unknown, status = 200) => Response.json(d, { status });
-const TYPES: Record<string, string> = { ".mp4": "video/mp4", ".jpg": "image/jpeg" };
 export function createRoutes(withPerson: With, deps: { kick: () => void; projectName: (id: string) => Promise<string | null>;
-  send?: (p: Person, job: Job, files: string[], body: { caption: string; networks: string[] }) => Promise<{ ok?: boolean; error?: string; note?: string }> }) {
+  canSend: () => boolean; send: (p: Person, job: Job, body: { caption: string; networks: string[] }) => Promise<{ ok?: boolean; error?: string; note?: string }>;
+  canCanva: (p: Person) => boolean; toCanva: (p: Person, file: string, name: string) => Promise<{ ok?: boolean; error?: string }> }) {
   return {
     "/api/create": {
-      GET: withPerson(async (req, p) => json({ jobs: list(p.dir, new URL(req.url).searchParams.get("project") ?? undefined), formats: FORMATS, canSend: !!deps.send })),
+      GET: withPerson(async (req, p) => json({ jobs: list(p.dir, new URL(req.url).searchParams.get("project") ?? undefined), formats: FORMATS, canSend: deps.canSend(), canCanva: deps.canCanva(p) })),
       POST: withPerson(async (req, p) => {
         const b = (await req.json().catch(() => ({}))) as any; const project = String(b.project ?? "");
         const name = await deps.projectName(project); if (!name) return json({ error: "That project isn't available." }, 404);
@@ -184,11 +208,20 @@ export function createRoutes(withPerson: With, deps: { kick: () => void; project
     "/api/create/send": { POST: withPerson(async (req, p) => {
       const b = (await req.json().catch(() => ({}))) as any; const job = ledger(p.dir).jobs.find((j) => j.id === String(b.id));
       if (!job || job.status !== "ready") return json({ error: "That one isn't ready." }, 404);
-      if (!deps.send) return json({ error: "Connect a scheduling tool first.", connect: "/connectors" }, 409);
-      const files = job.out.map((_, n) => made(p, job.id, n)).filter(Boolean) as string[];
-      const r = await deps.send(p, job, files, { caption: String(b.caption ?? ""), networks: (Array.isArray(b.networks) ? b.networks : []).map(String) });
+      if (!deps.canSend()) return json({ error: "Connect a scheduling tool first.", connect: "/connectors" }, 409);
+      const networks = (Array.isArray(b.networks) ? b.networks : []).map(String); if (!networks.length) return json({ error: "Pick where it goes." }, 400);
+      const r = await deps.send(p, job, { caption: String(b.caption ?? ""), networks });
       if (r.ok) await markSent(p, job.id, "metricool", r.note ?? "Saved as a draft.");
       return json(r, r.ok ? 200 : 400);
+    }) },
+    // Put what was made into the person's Canva uploads, to finish it there.
+    "/api/create/canva": { POST: withPerson(async (req, p) => {
+      const b = (await req.json().catch(() => ({}))) as any; const job = ledger(p.dir).jobs.find((j) => j.id === String(b.id));
+      if (!job || job.status !== "ready") return json({ error: "That one isn't ready." }, 404);
+      if (!deps.canCanva(p)) return json({ error: "Connect Canva first.", connect: "/connectors" }, 409);
+      let sent = 0, error = "";
+      for (let n = 0; n < job.out.length; n++) { const abs = made(p, job.id, n); if (!abs) continue; const r = await deps.toCanva(p, abs, `${job.projectName} ${FORMATS[job.format].name} ${n + 1}`.slice(0, 50)); if (r.ok) sent++; else error = r.error ?? "Canva didn't take it."; }
+      return sent ? json({ ok: true, note: `${sent} file${sent === 1 ? "" : "s"} in your Canva uploads.` }) : json({ error: error || "Nothing to send." }, 400);
     }) },
   };
 }
