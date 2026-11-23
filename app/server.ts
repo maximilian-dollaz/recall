@@ -37,6 +37,7 @@ import { mintKey, emailForKey, deviceForKey } from "./keys.ts";
 import * as deepgram from "./deepgram.ts";
 import * as remind from "./remind.ts";
 import * as share from "./share.ts";
+import * as agents from "./agents.ts";
 
 import { CODE, DATA as ROOT, PORTS, TWIN } from "./paths.ts";
 import { PUBLIC_URL as CONFIG_URL, PUBLIC_HOST, OWNER_NAME, TAILNET_HOST } from "./config.ts";
@@ -414,7 +415,9 @@ setInterval(() => organizeAll().catch(() => {}), 5 * 60_000);
 async function sparksFrom(person: Person, slug: string, title: string, text: string) {
   const date = text.match(/^Date: (\d{4}-\d{2}-\d{2})/m)?.[1] ?? today();
   const found = await withEngine({ kind: "claude" }, () => remind.find(text, title, chat, pieces.locate));
-  for (const s of found) { const made = await remind.add(person.dir, { ...s, from: { slug, title, date } }); if (made) console.log(`[remind] ${person.id}: new spark "${made.title}" from ${slug}`); }
+  for (const s of found) { const made = await remind.add(person.dir, { ...s, from: { slug, title, date } }); if (made) { console.log(`[remind] ${person.id}: new spark "${made.title}" from ${slug}`);
+    // An idea is something to move forward: an agent starts on it without being asked (agents.ts).
+    if (made.kind === "idea") agents.create(person.dir, { directive: made.words, title: made.title, from: { kind: "spark", id: made.id, title: made.title }, auto: true }).then((r) => r && kickAgents()).catch(() => {}); } }
 }
 setInterval(async () => {
   for (const email of Object.keys((await listPeople()).people)) {
@@ -422,6 +425,14 @@ setInterval(async () => {
     if (p) await remind.tick(p.dir, PUBLIC_URL).catch((e) => console.error(`[remind] tick ${p.id}: ${String(e).slice(0, 200)}`));
   }
 }, 5 * 60_000);
+// Agents (agents.ts): one run at a time; a run cut short by a restart carries on.
+const allPeople = async () => { const out: Person[] = []; for (const email of Object.keys((await listPeople()).people)) { const p = await whoIs("127.0.0.1", email).catch(() => null); if (p && !out.some((o) => o.dir === p.dir)) out.push(p); } return out; };
+const kickAgents = () => { setTimeout(() => agents.drain(allPeople).catch((e) => console.error(`[agents] ${String(e).slice(0, 200)}`)), 200); };
+agents.recover(allPeople).then(kickAgents).catch(() => {});
+setInterval(kickAgents, 30_000);
+// A new idea or action pulled out of a meeting goes to an agent on its own (capped per day in agents.ts).
+pieces.made.piece = (person, p) => { if (p.kind !== "idea" && p.kind !== "action") return;
+  agents.create(person.dir, { directive: `${p.title}\n\n"${p.quote}"`, title: p.title, from: { kind: "piece", id: p.slug, title: p.from }, auto: true }).then((r) => r && kickAgents()).catch(() => {}); };
 setInterval(() => syncMeetings().catch((e) => console.error(`[meetings] sync: ${String(e).slice(0, 200)}`)), 30 * 60_000);
 setTimeout(() => syncMeetings().catch(() => {}), 60_000); // after a restart, carry on with any sync it cut short
 let kickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1046,6 +1057,9 @@ const routed = Bun.serve({
     "/api/remind/subscribe": { POST: withPerson(async (req, p) => { try { await remind.subscribe(p.dir, await req.json(), req.headers.get("user-agent") ?? ""); return json({ ok: true }, 200); } catch (e) { return json({ error: String(e) }); } }) },
     "/api/remind/log": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})); console.log(`[remind phone ${p.id}] ${JSON.stringify(b).slice(0, 600)}`); return json({ ok: true }, 200); }) },
     "/api/remind/now": { POST: withPerson(async (_req, p) => json({ sent: await remind.now(p.dir, PUBLIC_URL) }, 200)) },
+    ...agents.agentRoutes(withPerson, { kick: kickAgents,
+      sparkWords: (p, id) => { const s = remind.ledger(p.dir).sparks.find((x) => x.id === id); return s ? { directive: [s.words, s.when_then].filter(Boolean).join("\n"), title: s.title } : null; },
+      itemWords: async (p, id) => { const it = await item(p, id).catch(() => null); return it ? { directive: [it.title, it.summary, it.markdown].filter(Boolean).join("\n").slice(0, 3000), title: it.title } : null; } }),
     "/api/me": withPerson(async (_req, p) => json({ id: p.id, name: p.name, source: p.source }, 200)),
     "/api/health": async () => json({ ok: true, library: await gb.callTool("whoami").catch((e) => ({ error: String(e) })) }, 200),
   },

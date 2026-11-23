@@ -166,6 +166,7 @@ async function step(person: Person, path: string, onDone: (p: Person) => void): 
       await gb.addTag(scope, slug, "piece").catch(() => {});
       if (project) await gb.addTag(scope, slug, `project:${project}`).catch(() => {});
       job.made.push({ slug, title: p.title, kind: p.kind, q });
+      try { made.piece?.(person, { slug, title: p.title, kind: p.kind, quote: p.quote, from: job.title }); } catch {}
     }
     job.next++;
     await Bun.write(path, JSON.stringify(job));
@@ -186,6 +187,9 @@ async function step(person: Person, path: string, onDone: (p: Person) => void): 
   console.log(`[pieces] ${person.id}: ${job.slug} done, ${job.made.length} pieces from ${job.windows.length} parts`);
   onDone(person);
 }
+
+/** Told about each new piece as it is written (server.ts hands ideas and actions to an agent). */
+export const made: { piece?: (person: Person, p: { slug: string; title: string; kind: Kind; quote: string; from: string }) => void } = {};
 
 /** The pieces worker: one window at a time, only while nobody's new save is waiting. */
 export function start(hooks: { busy: () => boolean; people: () => Promise<Person[]>; onDone: (p: Person) => void }) {

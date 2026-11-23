@@ -346,6 +346,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/ui/visualize.css">
 <link rel="stylesheet" href="/static/ui/theme.css">
+<link rel="stylesheet" href="/static/ui/next.css">
 <style>
   /* Remind tab (static/ui/remind.js) */
   #remind-body { display:grid; gap:12px }
@@ -393,7 +394,7 @@
   .rm-done { margin:0; color:var(--fg); font-size:1.05rem }
   .rm-send { justify-self:start; background:none; border:0; color:var(--muted); text-decoration:underline; font:inherit; padding:6px 0; cursor:pointer }
 </style>
-<script src="/static/ui/remind.js"></script><!-- the look: palette, glass, backlight (overrides the base styles above) -->
+<script src="/static/ui/remind.js"></script><script src="/static/ui/agents.js"></script><!-- the look: palette, glass, backlight (overrides the base styles above) -->
 </head>
 <body>
 <div class="wrap">
@@ -405,6 +406,7 @@
       <button id="tab-find">Find</button>
       <button id="tab-cues">Clarify<span id="cue-count" class="badge" hidden></span></button>
       <button id="tab-remind">Remind</button>
+      <button id="tab-agents">Agents<span id="agent-count" class="badge" hidden></span></button>
       <button id="tab-improve">Improve</button>
     </nav>
   </header>
@@ -453,6 +455,8 @@
 
   <section id="reminders" class="card" hidden><div id="remind-body"></div></section>
 
+  <section id="agents" class="card" hidden><div id="agents-body"></div></section>
+
   <section id="improve" class="card" hidden>
     <form id="wish">
       <label class="small" for="wish-text">What do you wish this did?</label>
@@ -474,12 +478,14 @@ const $ = (s) => document.querySelector(s);
 const fadeIn = (e) => { if (e.target.tagName === 'IMG') e.target.classList.add('in'); };
 document.addEventListener('load', fadeIn, true); document.addEventListener('error', fadeIn, true); // (an element's load never reaches window)
 new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) for (const i of (n.tagName === 'IMG' ? [n] : n.querySelectorAll('img'))) if (i.complete) i.classList.add('in'); }).observe(document.documentElement, { childList: true, subtree: true });
-const tabs = { save: $('#tab-save'), find: $('#tab-find'), cues: $('#tab-cues'), reminders: $('#tab-remind'), improve: $('#tab-improve') };
+let agentRun = new URLSearchParams(location.search).get('run'); // a notification opens one agent run
+const tabs = { save: $('#tab-save'), find: $('#tab-find'), cues: $('#tab-cues'), reminders: $('#tab-remind'), agents: $('#tab-agents'), improve: $('#tab-improve') };
 function show(which) {
   document.body.classList.toggle('wide', which === 'find');
   for (const k of Object.keys(tabs)) { $('#' + k).hidden = which !== k; if (which === k) tabs[k].setAttribute('aria-current', 'page'); else tabs[k].removeAttribute('aria-current'); }
   if (which === 'cues') loadCues();
   if (which === 'reminders' && window.loadRemind) window.loadRemind($('#remind-body'));
+  if (which === 'agents' && window.loadAgents) { window.loadAgents($('#agents-body'), { run: agentRun }); agentRun = null; }
   if (which === 'find') { if ($('#q').value.trim()) { loadIndex(); instant(); doSearch(); } else { loadShelves(); loadIndex(); } setTimeout(() => { if (matchMedia('(hover: hover)').matches) $('#q').focus(); grow(); }, 50); } // on a phone, focusing would open the keyboard and push the projects down
   try { localStorage.setItem('cl-tab', which); } catch {}
 }
@@ -1571,6 +1577,11 @@ document.addEventListener('keydown', (e) => {
   const btn = card.querySelectorAll('[data-opt]')[Number(e.key) - 1]; if (btn) { e.preventDefault(); btn.click(); }
 });
 refreshCueCount(); setInterval(refreshCueCount, 30000);
+// Agents waiting on your call: the count on the Agents tab.
+window.setAgentCount = (n) => { const b = $('#agent-count'); b.textContent = n || ''; b.hidden = !n; };
+const refreshAgentCount = () => fetch('/api/agents').then(r => r.json()).then(d => setAgentCount(d.waiting)).catch(() => {});
+refreshAgentCount(); setInterval(refreshAgentCount, 30000);
+window.openAgents = (run) => { agentRun = run || null; show('agents'); };
 
 
 </script>

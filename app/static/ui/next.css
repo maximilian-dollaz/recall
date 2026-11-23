@@ -1,0 +1,43 @@
+/* The parts of Recall added 22 to 23 Nov: Agents, Today, the project tabs (Share, Create, Remind), Connectors.
+   Uses the theme's tokens (theme.css) and the Remind tile styles in index.html. */
+
+/* ── Agents ── */
+.ag-new { display:grid; gap:10px; margin-bottom:18px }
+.ag-new textarea { width:100%; box-sizing:border-box; min-height:64px; resize:vertical }
+.ag-row { display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center }
+.ag-row .primary { margin:0 }
+.ag-auto { display:inline-flex; gap:8px; align-items:center; font-size:.9rem; color:var(--fg-2, var(--fg)); cursor:pointer; min-height:44px }
+.ag-auto input { width:18px; height:18px; accent-color:var(--accent) }
+.ag-hint, .ag-msg { margin:0 } .ag-msg:empty { display:none } .ag-msg { color:var(--danger, #E5A08E) }
+.ag-list { display:grid; gap:12px }
+.ag-card { display:grid; gap:8px; padding:14px; border:1px solid var(--line); border-radius:16px; background:var(--glass-soft, rgba(127,127,127,.06)); transition:opacity .25s ease, transform .25s ease }
+.ag-card.rm-out { opacity:0; transform:translateX(24px) }
+.ag-card.ag-needs-you { border-color:var(--lit-rim, var(--accent)); box-shadow:var(--halo, none) }
+.ag-card header { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:.8rem; color:var(--muted) }
+.ag-state { display:inline-flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:.06em; font-weight:600 }
+.ag-needs-you .ag-state { color:var(--accent) }
+.ag-card h3 { margin:0; font-size:1.1rem; font-weight:600; line-height:1.3 }
+.ag-from { font-size:.86rem; color:var(--muted) }
+.ag-sum { margin:0; font-size:.98rem; line-height:1.45 } .ag-dim { color:var(--muted) }
+.ag-err { margin:0; color:var(--danger, #E5A08E); font-size:.92rem }
+.ag-ask { display:grid; gap:10px; padding:12px; border-radius:12px; border:1px solid var(--line); background:var(--field, rgba(0,0,0,.15)) }
+.ag-q { font:500 1.25rem/1.3 "Cormorant Garamond", Georgia, serif }
+.ag-opts { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px }
+.ag-opts .rm-second { min-height:44px; text-align:center }
+.ag-own { display:flex; gap:8px } .ag-own input { flex:1 1 auto; min-width:0 } .ag-own .primary { margin:0; flex:0 0 auto; width:auto; padding-inline:18px }
+.ag-steps { display:grid; gap:6px }
+.ag-step { border:1px solid var(--line); border-radius:12px; overflow:hidden }
+.ag-step summary { display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; padding:10px 12px; cursor:pointer; list-style:none; min-height:24px }
+.ag-step summary::-webkit-details-marker { display:none }
+.ag-step summary::after { content:"+"; margin-left:auto; color:var(--muted) } .ag-step[open] summary::after { content:"\2212" }
+.ag-kind { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600; white-space:nowrap }
+.ag-st { font-size:.96rem } .ag-st i { color:var(--muted); font-style:normal }
+.ag-text { padding:0 12px 12px; font-size:.95rem; line-height:1.5; overflow-wrap:anywhere }
+.ag-text p { margin:0 0 8px } .ag-text ul { margin:0 0 8px; padding-left:20px } .ag-text a { color:var(--link, inherit) }
+.ag-step .ag-row { padding:0 12px 12px } .ag-note { font-size:.82rem; color:var(--muted) }
+.ag-src { font-size:.86rem; color:var(--muted) } .ag-src summary { cursor:pointer; padding:4px 0 } .ag-src ul { margin:6px 0 0; padding-left:18px; display:grid; gap:4px }
+.ag-src a { color:var(--link, inherit) } .ag-src span { opacity:.7 }
+.ag-foot { display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap } .ag-foot:empty { display:none }
+.ag-dots { width:18px; height:6px; display:inline-block; background:radial-gradient(circle 2px, currentColor 98%, transparent) 0 50%/6px 6px repeat-x; animation:ag-dots 1.2s steps(4) infinite }
+@keyframes ag-dots { from { clip-path:inset(0 100% 0 0) } to { clip-path:inset(0 -34% 0 0) } }
+@media (prefers-reduced-motion: reduce) { .ag-dots { animation:none } .ag-card { transition:none } }

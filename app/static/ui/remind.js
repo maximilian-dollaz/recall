@@ -19,6 +19,7 @@
     lived: '<button class="primary" type="button" data-a="lived">Yes, lived it</button>',
     landing: '<button class="rm-second" type="button" data-a="landing">Still landing</button>',
     letgo: '<button class="rm-quiet" type="button" data-a="let-go">Let go</button>',
+    agent: '<button class="rm-quiet" type="button" data-agent="1">Hand to an agent</button>',
   };
   function tile(s, btns, note = '') {
     return `<article class="rm-tile" data-id="${esc(s.id)}">
@@ -112,13 +113,22 @@
       const ev = st.sparks.filter((s) => s.state === 'evidence').sort((a, b) => (b.evidence || '').localeCompare(a.evidence || ''));
       const gone = st.sparks.filter((s) => s.state === 'let-go');
       count('deck', on.length); count('landing', landing.length); count('jar', ev.length);
-      q('.rm-deck').innerHTML = on.length ? on.map((s) => tile(s, BTN.lived + BTN.landing + BTN.letgo)).join('')
+      q('.rm-deck').innerHTML = on.length ? on.map((s) => tile(s, BTN.lived + BTN.landing + BTN.agent + BTN.letgo)).join('')
         : `<p class="rm-done">${st.sparks.length ? 'All processed. The ones still landing come back tomorrow.' : 'Nothing yet. Say “remind me” in a voice note or a Granola note and it lands here.'}</p>`;
-      q('.rm-landing').innerHTML = landing.length ? landing.map((s) => tile(s, BTN.lived + BTN.letgo, `Comes back ${when(s.hold)}`)).join('')
+      q('.rm-landing').innerHTML = landing.length ? landing.map((s) => tile(s, BTN.lived + BTN.agent + BTN.letgo, `Comes back ${when(s.hold)}`)).join('')
         : '<p class="rm-done">Nothing still landing. Tap “Still landing” on a reminder and it waits here until it comes back.</p>';
       jar(ev, gone);
     };
     // Tap a button on any tile: it slides out and moves to its subtab.
+    // Hand to an agent: the reminder stays where it is; the agent's work shows in the Agents tab.
+    root.addEventListener('click', async (e) => {
+      const b = e.target.closest('.rm-tile button[data-agent]'); if (!b || b.disabled) return;
+      b.disabled = true; b.textContent = 'Handing over…';
+      const run = await window.handToAgent?.({ kind: 'spark', id: b.closest('.rm-tile').dataset.id });
+      if (!run) { b.disabled = false; b.textContent = 'Hand to an agent'; return; }
+      b.outerHTML = `<button class="rm-quiet" type="button" data-open-agent="${esc(run.id)}">With an agent. Open</button>`;
+    });
+    root.addEventListener('click', (e) => { const o = e.target.closest('[data-open-agent]'); if (o) window.openAgents?.(o.dataset.openAgent); });
     root.addEventListener('click', async (e) => {
       const btn = e.target.closest('.rm-tile button[data-a]'); if (!btn || btn.disabled) return;
       const card = btn.closest('.rm-tile'); const s = st.sparks.find((x) => x.id === card.dataset.id); if (!s) return;
