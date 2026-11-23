@@ -251,10 +251,10 @@ ${text.slice(0, 24_000)}` }], { json: true });
 export async function addAssets(dir: string, items: { id: string; title: string; saved: string; thumb?: string }[], note: string, when: (said: string) => string | undefined) {
   const words = note.replace(/\s+/g, " ").trim().slice(0, 400); if (words.length < 3) return [];
   const day = when(words); const first = day ? localTime(day, 8 * 60 + 30, ledger(dir).tz ?? TZ) : undefined;
-  const made: Spark[] = [];
-  for (const it of items.slice(0, 24)) {
-    const s = await add(dir, { words, title: it.title.slice(0, 80), kind: "asset", from: { slug: it.id, title: it.title, date: (it.saved || localDay()).slice(0, 10) }, thumb: it.thumb }, first && first > new Date() ? first : undefined);
-    if (s) made.push(s);
-  }
-  return made;
+  // One reminder for what was picked together (its first picture on the tile), not one per asset.
+  const it = items[0]; if (!it) return [];
+  const pic = items.find((x) => x.thumb)?.thumb;
+  const title = items.length > 1 ? `${it.title.slice(0, 60)} and ${items.length - 1} more` : it.title.slice(0, 80);
+  const s = await add(dir, { words, title, kind: "asset", from: { slug: it.id, title: it.title, date: (it.saved || localDay()).slice(0, 10) }, thumb: pic }, first && first > new Date() ? first : undefined);
+  return s ? [s] : [];
 }

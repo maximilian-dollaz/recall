@@ -1072,7 +1072,7 @@ const routed = Bun.serve({
     "/api/remind/asset": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})) as any; const want = new Set((Array.isArray(b.items) ? b.items : []).map(String));
       const items = projects.scanPages(p.dir).filter((it) => want.has(it.id)); if (!items.length) return json({ error: "Pick something first." });
       const made = await remind.addAssets(p.dir, items, String(b.note ?? ""), (said) => parseWhen(said));
-      return made.length ? json({ added: made.length, first: made[0].next }, 200) : json({ error: String(b.note ?? "").trim().length < 3 ? "Say how, when and what for." : "Those are already in Remind with that note." }); }) },
+      return made.length ? json({ added: items.length, first: made[0].next }, 200) : json({ error: String(b.note ?? "").trim().length < 3 ? "Say how, when and what for." : "Those are already in Remind with that note." }); }) },
     "/api/remind/subscribe": { POST: withPerson(async (req, p) => { try { await remind.subscribe(p.dir, await req.json(), req.headers.get("user-agent") ?? ""); return json({ ok: true }, 200); } catch (e) { return json({ error: String(e) }); } }) },
     "/api/remind/log": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})); console.log(`[remind phone ${p.id}] ${JSON.stringify(b).slice(0, 600)}`); return json({ ok: true }, 200); }) },
     "/api/remind/now": { POST: withPerson(async (_req, p) => json({ sent: await remind.now(p.dir, PUBLIC_URL) }, 200)) },

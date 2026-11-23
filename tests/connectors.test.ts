@@ -47,7 +47,7 @@ test("nothing configured: every connector is listed, honest, and nothing is sent
   expect(by.granola.state).toBe("ready"); expect(by.granola.action?.href).toBe("/connect/granola");
   expect(by.otter.state).toBe("ready"); expect(by.otter.action?.href).toBe("/connect/otter");
   expect(by["apple-notes"].state).toBe("needs-you");
-  expect(by.drive.state).toBe("needs-you"); expect(by.drive.needs).toBe("Google client secret + redirect URI registered"); expect(by.drive.action).toBeUndefined();
+  expect(by.drive.state).toBe("needs-you"); expect(by.drive.needs).toBe("A Google setup step, done by the owner"); expect(by.drive.action).toBeUndefined();
   expect(by.photos.state).toBe("shortcut"); expect(by.voice.action?.href).toBe("/guide");
   expect(by.metricool.state).toBe("needs-you"); expect(by.metricool.action).toBeUndefined(); // no button that leads nowhere
   expect(by.canva.state).toBe("needs-you"); expect(by.canva.needs).toContain("Canva integration");

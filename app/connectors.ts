@@ -43,7 +43,7 @@ export const DRIVE_CAP = 20;            // files saved per sync
 const DRIVE_FIRST_DAYS = Number(Bun.env.DRIVE_FIRST_DAYS ?? 30); // the first sync looks this far back, not at the whole Drive
 const DRIVE_MAX_BYTES = 50 * 1024 ** 2; // a bigger file is skipped
 const DOC = "application/vnd.google-apps.document";
-export const DRIVE_NEEDS = "Google client secret + redirect URI registered";
+export const DRIVE_NEEDS = "A Google setup step, done by the owner";
 const BOOT = Date.now();
 type Drive = { state?: string; redirect?: string; refresh?: string; connected_at?: string; last_sync?: string; cursor?: string; seen?: Record<string, string>; saved?: number; syncing?: string; last_error?: string };
 
@@ -152,7 +152,7 @@ export function all(person: { id: string }, opts: { keyBoxes?: string[] } = {}):
   }
   const notesLast = safe(appleNotesLast, undefined);
   out.push({ id: "apple-notes", name: "Apple Notes", what: "Notes you write or change on the Mac are saved. Locked notes are skipped.", direction: "in",
-    ...(notesLast ? { state: "on", last: notesLast } : { state: "needs-you", needs: "Run tools/sync-apple-notes.ts on the Mac and allow it to read Notes" }) });
+    ...(notesLast ? { state: "on", last: notesLast } : { state: "needs-you", needs: "One setup step on the Mac, done by the owner" }) });
   const d = safe(() => driveStatus(person.id), { connected: false, saved: 0, syncing: false } as ReturnType<typeof driveStatus>);
   const connectDrive = { label: "Connect Google Drive", href: "/connect/drive" };
   out.push({ id: "drive", name: "Google Drive", what: "Your own Docs, PDFs and pictures in Drive are saved when they are new or changed. Recall can only read.", direction: "in",

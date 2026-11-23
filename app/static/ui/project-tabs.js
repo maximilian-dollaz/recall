@@ -33,9 +33,10 @@
       go.disabled = true;
       const r = await post('/api/remind/asset', { items: ids, note: note.value });
       if (!r.ok) { go.disabled = false; msg.textContent = r.error || "That didn't save. Try again."; return; }
-      dlg.close(); say(`${r.added} added to Remind`); done?.();
+      const first = r.first ? new Date(r.first).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+      dlg.close(); say(`Added to Remind.${first ? ` First back ${first}.` : ''}`); done?.();
     };
-    setTimeout(() => note.focus(), 50);
+    if (matchMedia('(hover: hover)').matches) setTimeout(() => note.focus(), 50); // on a phone the keyboard would cover the button
   }
 
   // ── Create ──
@@ -58,7 +59,8 @@
     </article>`;
   }
   function create(ctx, ids, done) {
-    const items = picks(ctx, ids), hasVid = items.some((it) => it.kind === 'video' || (it.files || []).some((f) => VID.test(f)));
+    const items = picks(ctx, ids), hasVid = items.some((it) => it.kind === 'video' || (it.files || []).some((f) => VID.test(f))), hasPic = items.some((it) => it.kind === 'image');
+    const can = (k) => k === 'reel' ? hasVid : hasPic;
     const dlg = sheet('pt-create', `<h3>${items.length ? `Create from ${items.length} picked` : `Made for ${esc(ctx.d.project.name)}`}</h3>
       ${items.length ? `${strip(items)}<div class="pt-formats" role="radiogroup" aria-label="What to make"></div>
       <textarea name="brief" rows="2" placeholder="How and why?" aria-label="How and why?"></textarea>
@@ -66,7 +68,7 @@
       <div class="inv-act"><button type="button" class="quiet" data-x>Close</button><button type="button" class="primary" data-go>Add to queue</button></div><h4 class="sh-h">Made for this project</h4>` : ''}
       <div class="pt-jobs" aria-live="polite"><p class="small muted">Loading…</p></div>
       ${items.length ? '' : '<div class="inv-act"><button type="button" class="quiet" data-x>Close</button></div>'}`);
-    let timer = null, format = hasVid ? 'reel' : 'board-video', added = false, sig = '';
+    let timer = null, format = hasVid ? 'reel' : hasPic ? 'board-video' : '', added = false, sig = '';
     dlg.addEventListener('close', () => { clearTimeout(timer); if (added) done?.(); });
     dlg.querySelectorAll('[data-x]').forEach((b) => b.onclick = () => dlg.close());
     const jobsEl = dlg.querySelector('.pt-jobs'), msg = dlg.querySelector('.inv-msg');
@@ -75,7 +77,7 @@
       const r = await fetch('/api/create?project=' + encodeURIComponent(ctx.id)).then((x) => x.json()).catch(() => null); if (!r || !dlg.isConnected) return;
       const fe = dlg.querySelector('.pt-formats');
       if (fe && !fe.children.length) {
-        fe.innerHTML = Object.entries(r.formats).map(([k, f]) => `<button type="button" role="radio" data-f="${k}" aria-checked="${k === format}"><b>${esc(f.name)}</b><span>${esc(f.what)}</span></button>`).join('');
+        fe.innerHTML = !format ? '<p class="small muted">Pick pictures or a video to make something. Notes and links can’t be made into one yet.</p>' : Object.entries(r.formats).filter(([k]) => can(k)).map(([k, f]) => `<button type="button" role="radio" data-f="${k}" aria-checked="${k === format}"><b>${esc(f.name)}</b><span>${esc(f.what)}</span></button>`).join('');
         fe.onclick = (e) => { const b = e.target.closest('[data-f]'); if (!b) return; format = b.dataset.f; fe.querySelectorAll('[data-f]').forEach((x) => x.setAttribute('aria-checked', String(x === b))); };
       }
       // Redraw only when a job changed, so a caption being typed and a video being watched are left alone.
@@ -84,12 +86,15 @@
       if (r.jobs.some((j) => j.status === 'queued' || j.status === 'making')) timer = setTimeout(load, 3000);
     }
     const go = dlg.querySelector('[data-go]');
+    if (go && !format) go.disabled = true;
     if (go) go.onclick = async () => {
       go.disabled = true; msg.textContent = '';
       const r = await post('/api/create', { project: ctx.id, items: ids, format, brief: dlg.querySelector('[name=brief]').value });
       go.disabled = false;
       if (!r.ok) { msg.textContent = r.error || "That didn't go in the queue. Try again."; return; }
-      added = true; dlg.querySelector('[name=brief]').value = ''; say('Added to the queue'); load();
+      added = true; say('Added to the queue');
+      // The picks are used: leave only what was made, so a second tap can't add it twice.
+      dlg.querySelectorAll('.pt-picks, .pt-formats, [name=brief], .inv-msg').forEach((x) => x.remove()); go.remove(); dlg.querySelector('h3').textContent = `Made for ${ctx.d.project.name}`; load();
     };
     jobsEl.addEventListener('click', async (e) => {
       const del = e.target.closest('[data-del]'), snd = e.target.closest('[data-send]');

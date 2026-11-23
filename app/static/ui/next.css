@@ -122,3 +122,6 @@ label.rm-sparks { display:flex; margin:var(--s4) 0 0 }
 .sel-bar button { font:500 .8125rem/1.2 var(--font-ui); padding:0 11px; min-height:44px }
 .sel-bar #selcancel, .sel-bar #selcreator, .sel-bar #selqueue { border-color:transparent; color:var(--fg-2) }
 @media (max-width:520px) { nav { -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - var(--s6)), transparent); mask-image:linear-gradient(90deg, #000 calc(100% - var(--s6)), transparent); scroll-padding-inline:var(--s4); padding-right:var(--s6) } .sel-bar { border-radius:var(--r-panel) } }
+.ag-said { margin:0; font-size:.92rem; color:var(--fg-2) }
+.ag-card.ag-focus { box-shadow:var(--halo-on) }
+video.pt-out { aspect-ratio:9/16; width:auto; max-width:100%; max-height:46vh; margin:0 auto; display:block }

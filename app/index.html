@@ -1310,7 +1310,7 @@ function startSelect(ctx, mode = 'share') {
     const bar = document.createElement('div'); bar.className = 'sel-bar'; bar.setAttribute('role', 'toolbar');
     const picked = () => [...selIds], done = () => { endSelect(el); ctx.again?.(); };
     bar.innerHTML = '<span role="status"></span>' + (mode === 'share' ? '<button type="button" class="primary" id="selshare" disabled>Share</button><button type="button" id="selcancel">Cancel</button><button type="button" id="selall">Share entire project</button>'
-      : mode === 'create' ? `<button type="button" class="primary" id="selgo" disabled>Make</button><button type="button" id="selcancel">Cancel</button><button type="button" id="selqueue">Queue</button>${ctx.creator ? '<button type="button" id="selcreator">Creator mode</button>' : ''}`
+      : mode === 'create' ? `<button type="button" class="primary" id="selgo" disabled>Make</button><button type="button" id="selcancel">Cancel</button><button type="button" id="selqueue">Made</button>${ctx.creator ? '<button type="button" id="selcreator">Creator mode</button>' : ''}`
       : '<button type="button" class="primary" id="selgo" disabled>Remind</button><button type="button" id="selcancel">Cancel</button>');
     el.append(bar);
     bar.querySelector('#selcancel').onclick = () => endSelect(el);
@@ -1399,9 +1399,11 @@ function boardItem(it, team, full, thumb) {
     ${it.notes ? `<p class="said">${esc(it.notes)}</p>` : ''}
     ${it.project ? `<p class="cap">In ${esc(projectRows.find(p => p.id === it.project)?.name || teamRows.find(p => p.id === it.project)?.name || it.project)}</p>` : ''}
     ${it.summary ? `<p class="cap">${esc(it.summary.replace(/^(The )?owner('s)?\s+/i, ''))}</p>` : ''}
-    <div class="sh-links">${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(host(it.url))} ↗</a>` : ''}${docs.map(f => `<a href="${full(f)}" target="_blank">${esc(f.split('/').pop())}</a>`).join('')}${window.Visualize?.isOpen() ? '<button id="shviz">Add to Creator mode</button>' : ''}${team ? '' : '<button id="shmore">Details</button><button id="shdel">Delete</button>'}</div></div>`;
+    <div class="sh-links">${it.url ? `<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(host(it.url))} ↗</a>` : ''}${docs.map(f => `<a href="${full(f)}" target="_blank">${esc(f.split('/').pop())}</a>`).join('')}${window.Visualize?.isOpen() ? '<button id="shviz">Add to Creator mode</button>' : ''}${team ? '' : '<button id="shmore">Details</button><button id="shagent">Hand to an agent</button><button id="shdel">Delete</button>'}</div></div>`;
   if (!team) sh.querySelector('.sh').insertAdjacentHTML('beforeend', moveRow(it.project));
   boardEl.append(sh);
+  const ha = sh.querySelector('#shagent'); if (ha) ha.onclick = async () => { if (ha.dataset.run) return openAgents(ha.dataset.run); ha.disabled = true; ha.textContent = 'Handing over…';
+    const run = await handToAgent({ kind: 'item', id: it.id }); ha.disabled = false; if (run) { ha.dataset.run = run.id; ha.textContent = 'With an agent. Open'; } else ha.textContent = 'Hand to an agent'; };
   // The small picture shows at once (it's already loaded for the grid); the original replaces it once it arrives,
   // so a phone on a slow connection never stares at an empty sheet, and a format the browser can't show keeps the small one.
   sh.querySelectorAll('img[data-full]').forEach(img => { if (!img.dataset.full) return; const big = new Image(); big.onload = () => { img.src = big.src; }; big.src = img.dataset.full; });

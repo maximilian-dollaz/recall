@@ -54,8 +54,8 @@ const clip = (s: unknown, n: number) => String(s ?? "").replace(/<\/?cite[^>]*>/
 /** What the Agents tab shows: newest first, the ones waiting on the person at the top. */
 export function list(dir: string) {
   const l = ledger(dir);
-  const rank = (r: Run) => (r.status === "needs-you" ? 0 : r.status === "working" || r.status === "queued" ? 1 : 2);
-  const runs = [...l.runs].sort((a, b) => rank(a) - rank(b) || b.updated.localeCompare(a.updated));
+  // Newest first, and a card never moves while you use it (Today and the tab's badge point at the ones waiting on you).
+  const runs = [...l.runs].sort((a, b) => b.created.localeCompare(a.created));
   return { runs, auto: l.auto, waiting: runs.filter((r) => r.status === "needs-you").length, web: !LOCAL };
 }
 

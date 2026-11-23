@@ -142,6 +142,9 @@
       setTimeout(render, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 260);
     });
     render();
+    // A reminder already with an agent says so (and opens it) instead of offering a second hand-off.
+    fetch('/api/agents').then((r) => r.json()).then((a) => { for (const run of a.runs || []) { if (run.from?.kind !== 'spark' || !['queued', 'working', 'needs-you'].includes(run.status)) continue;
+      const b = root.querySelector(`.rm-tile[data-id="${run.from.id}"] button[data-agent]`); if (b) b.outerHTML = `<button class="rm-quiet" type="button" data-open-agent="${esc(run.id)}">With an agent. Open</button>`; } }).catch(() => {});
     // Sparks: the slow reading of older notes for lines worth bringing back (sparks.ts).
     fetch('/api/sparks').then((r) => r.json()).then((sp) => { if (!sp.total) return; const l = q('.rm-sparks'); l.hidden = false;
       l.querySelector('span').textContent = `Sparks: read your older notes for lines worth bringing back. ${sp.read} of ${sp.total} read.`;

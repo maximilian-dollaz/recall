@@ -87,7 +87,7 @@ test("an asset goes into Remind with the person's words, first back on the day t
   const p = person();
   const items = [{ id: "inspiration/pillow", title: "The pillow", saved: "2026-10-01", thumb: "libraries/x/files/a/p.jpg" }, { id: "inspiration/lamp", title: "The lamp", saved: "2026-10-02" }];
   const made = await remind.addAssets(p.dir, items, "Look at these next Friday before the design call", (s) => parseWhen(s));
-  expect(made.length).toBe(2); expect(made[0].kind).toBe("asset"); expect(made[0].thumb).toBe("libraries/x/files/a/p.jpg");
+  expect(made.length).toBe(1); expect(made[0].kind).toBe("asset"); expect(made[0].title).toBe("The pillow and 1 more"); expect(made[0].thumb).toBe("libraries/x/files/a/p.jpg");
   expect(made[0].words).toBe("Look at these next Friday before the design call");
   expect(new Date(made[0].next).getTime()).toBeGreaterThan(Date.now());
   expect((await remind.addAssets(p.dir, items, "Look at these next Friday before the design call", (s) => parseWhen(s))).length).toBe(0); // the same note on the same asset: once

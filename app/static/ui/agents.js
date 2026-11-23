@@ -19,7 +19,7 @@
   function step(r, s, i) {
     const key = `${r.id}:${i}`;
     return `<details class="ag-step" data-k="${key}"${open.has(key) ? ' open' : ''}>
-      <summary><span class="ag-kind">${KIND[s.kind] || esc(s.kind)}</span><span class="ag-st">${esc(s.title)}${s.to ? ` <i>to ${esc(s.to)}</i>` : ''}</span></summary>
+      <summary><span class="ag-kind">${KIND[s.kind] || esc(s.kind)}</span><span class="ag-st">${esc(s.title)}${s.to && !s.title.toLowerCase().includes(s.to.toLowerCase()) ? ` <i>to ${esc(s.to)}</i>` : ''}</span></summary>
       <div class="ag-text">${prose(s.text)}</div>
       ${s.kind === 'draft' ? `<div class="ag-row"><button type="button" class="rm-second" data-copy="${key}">Copy</button><span class="ag-note">A draft. Nothing is sent.</span></div>` : ''}
     </details>`;
@@ -28,7 +28,7 @@
   function card(r) {
     const waiting = r.status === 'needs-you' && r.ask;
     const busy = r.status === 'queued' || r.status === 'working';
-    const state = waiting ? 'Needs your call' : r.status === 'working' ? 'Working' : r.status === 'queued' ? 'Waiting its turn' : r.status === 'done' ? 'Done' : r.status === 'stopped' ? 'Stopped' : "Didn't finish";
+    const state = waiting ? 'Needs your call' : r.status === 'working' ? 'Working' : r.status === 'queued' ? 'Starting' : r.status === 'done' ? 'Done' : r.status === 'stopped' ? 'Stopped' : "Didn't finish";
     const from = `${FROM[r.from?.kind] || ''}${r.from?.title && r.from.kind !== 'said' ? `: ${esc(r.from.title)}` : ''}${r.auto ? ' · started on its own' : ''}`;
     const srcs = (r.sources || []).slice(0, 8);
     return `<article class="ag-card ag-${r.status}${focus === r.id ? ' ag-focus' : ''}" data-id="${esc(r.id)}">
@@ -39,10 +39,11 @@
       ${waiting ? `<div class="ag-ask"><div class="ag-q">${esc(r.ask.question)}</div>
         <div class="ag-opts">${r.ask.options.map((o) => `<button type="button" class="rm-second" data-answer="${esc(o)}">${esc(o)}</button>`).join('')}</div>
         <form class="ag-own"><input type="text" name="a" placeholder="Or say it your way" autocomplete="off" aria-label="Your answer" value="${esc(drafts[r.id] || '')}"><button type="submit" class="primary">Send</button></form></div>` : ''}
+      ${busy && r.answers?.length ? `<p class="ag-said">You said: ${esc(r.answers[r.answers.length - 1].answer)}</p>` : ''}
       ${r.status === 'failed' ? `<p class="ag-err">${esc(r.error || 'Something went wrong.')}</p>` : ''}
       ${r.steps.length ? `<div class="ag-steps">${r.steps.map((s, i) => step(r, s, i)).join('')}</div>` : ''}
       ${srcs.length ? `<details class="ag-src"><summary>${r.sources.length} source${r.sources.length === 1 ? '' : 's'}</summary><ul>${srcs.map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a> <span>${esc(host(s.url))}</span></li>`).join('')}</ul></details>` : ''}
-      <div class="ag-foot">${waiting ? '<button type="button" class="rm-quiet" data-close="done">That’s enough</button>' : ''}${busy ? '<button type="button" class="rm-quiet" data-close="stopped">Stop</button>' : ''}${r.status === 'failed' ? '<button type="button" class="rm-second" data-retry="1">Try again</button>' : ''}${!busy ? '<button type="button" class="rm-quiet" data-remove="1">Remove</button>' : ''}</div>
+      <div class="ag-foot">${waiting ? '<button type="button" class="rm-quiet" data-close="done">Finish here</button>' : ''}${busy ? '<button type="button" class="rm-quiet" data-close="stopped">Stop</button>' : ''}${r.status === 'failed' ? '<button type="button" class="rm-second" data-retry="1">Try again</button>' : ''}${!busy ? '<button type="button" class="rm-quiet" data-remove="1">Remove</button>' : ''}</div>
     </article>`;
   }
 
@@ -52,7 +53,7 @@
     if (!root.querySelector('.ag-new')) {
       const wired = root._wired; root._wired = true;
       root.innerHTML = `<form class="ag-new"><textarea name="d" rows="2" placeholder="What do you want moved forward?" aria-label="What do you want moved forward?"></textarea>
-        <div class="ag-row"><button class="primary" type="submit">Hand to an agent</button><label class="ag-auto"><input type="checkbox" name="auto"> Agents start on their own</label></div>
+        <div class="ag-row"><button class="primary" type="submit">Hand to an agent</button><label class="ag-auto"><input type="checkbox" name="auto"> Start an agent on new ideas from my notes and meetings</label></div>
         <p class="ag-hint small muted">An agent researches, checks if it can be done, finds people and drafts messages. It never sends anything. It stops and asks when it needs your call.</p>
         <p class="ag-msg small" role="status"></p></form><div class="ag-list" aria-live="polite"></div>`;
       const form = root.querySelector('.ag-new'), msg = root.querySelector('.ag-msg');
@@ -93,8 +94,9 @@
       const typing = document.activeElement?.closest?.('.ag-card')?.dataset.id;
       listEl.innerHTML = d.runs.length ? d.runs.map(card).join('') : '<p class="rm-done">Nothing handed over yet. Type above, or tap “Hand to an agent” on a reminder.</p>';
       if (typing) listEl.querySelector(`.ag-card[data-id="${typing}"] input[name=a]`)?.focus();
-      if (focus) { const f = listEl.querySelector(`.ag-card[data-id="${focus}"]`); if (f && opts.run) f.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
     }
+    // Opened for one run (a notification, a Today row, a reminder): light it and bring it into view.
+    if (opts.run) { listEl.querySelectorAll('.ag-focus').forEach((c) => c.classList.remove('ag-focus')); const f = listEl.querySelector(`.ag-card[data-id="${opts.run}"]`); if (f) { f.classList.add('ag-focus'); f.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }
     window.setAgentCount?.(d.waiting);
     if (d.runs.some((r) => r.status === 'queued' || r.status === 'working') && !root.closest('[hidden]')) timer = setTimeout(function again() { load(root).catch(() => { timer = setTimeout(again, 5000); }); }, 5000); // a failed fetch (a phone waking up) tries again
   }

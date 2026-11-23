@@ -30,7 +30,7 @@ function creds(): Creds | null {
 }
 /** True when the key file holds all three parts. Nothing is sent to Metricool to find out. */
 export const ready = () => !!creds();
-export const NEEDS = "A Metricool API token, user id and brand id (saved as metricool.key)";
+export const NEEDS = "A Metricool key, added by the owner";
 
 async function call(c: Creds, method: string, path: string, body?: unknown, query: Record<string, string> = {}): Promise<any> {
   const u = new URL(BASE + path);

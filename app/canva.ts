@@ -20,7 +20,7 @@ import * as files from "./connector-store.ts";
 const AUTHORIZE = "https://www.canva.com/api/oauth/authorize";
 const API = "https://api.canva.com/rest/v1";
 const SCOPE = "asset:read asset:write";
-export const NEEDS = "A Canva integration (client id + secret)";
+export const NEEDS = "A Canva key, added by the owner";
 type Who = { id: string };
 type Stored = { state?: string; verifier?: string; redirect?: string; access?: string; access_until?: number; refresh?: string; connected_at?: string; last_upload?: string; last_error?: string };
 
