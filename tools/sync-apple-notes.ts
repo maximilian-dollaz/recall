@@ -27,10 +27,12 @@ export function htmlToText(html: string): string {
   const ENT: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
   return String(html ?? "")
     .replace(/<(style|script|head)\b[\s\S]*?<\/\1>/gi, "")
-    .replace(/<li\b[^>]*>/gi, "\n- ")
+    // Every block edge becomes one line break, however many tags meet there; a <br> is a break of its own.
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(div|p|h[1-6]|li|tr|ul|ol|table|blockquote)>/gi, "\n")
+    .replace(/<li\b[^>]*>/gi, "\u0001- ")
     .replace(/<\/t[dh]>/gi, "\t")
+    .replace(/<\/?(div|p|h[1-6]|li|tr|ul|ol|table|blockquote)\b[^>]*>/gi, "\u0001")
+    .replace(/\u0001+/g, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&#(\d+);/g, (_m, n) => String.fromCodePoint(Number(n))).replace(/&#x([0-9a-f]+);/gi, (_m, n) => String.fromCodePoint(parseInt(n, 16)))
     .replace(/&([a-z]+);/gi, (m, n) => ENT[n.toLowerCase()] ?? m)
