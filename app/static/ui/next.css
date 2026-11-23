@@ -41,3 +41,27 @@
 .ag-dots { width:18px; height:6px; display:inline-block; background:radial-gradient(circle 2px, currentColor 98%, transparent) 0 50%/6px 6px repeat-x; animation:ag-dots 1.2s steps(4) infinite }
 @keyframes ag-dots { from { clip-path:inset(0 100% 0 0) } to { clip-path:inset(0 -34% 0 0) } }
 @media (prefers-reduced-motion: reduce) { .ag-dots { animation:none } .ag-card { transition:none } }
+
+/* ── Project tabs: the Create and Remind sheets ── */
+.pt-sheet { width:min(520px, calc(100vw - 24px)); max-height:calc(100dvh - 32px); overflow:auto }
+.pt-sheet textarea { width:100%; box-sizing:border-box; resize:vertical }
+.pt-sheet .inv-msg:empty { display:none } .pt-sheet .inv-msg { color:var(--danger, #E5A08E) }
+.pt-picks { display:flex; gap:6px; flex-wrap:wrap; margin:2px 0 6px }
+.pt-picks i { width:48px; height:48px; border-radius:8px; background:var(--field, rgba(0,0,0,.2)) center/cover; border:1px solid var(--line); display:block; font-style:normal }
+.pt-picks .pt-word { width:auto; min-width:48px; max-width:120px; padding:0 8px; display:grid; place-items:center; font-size:.72rem; color:var(--muted); overflow:hidden; white-space:nowrap; text-overflow:ellipsis }
+.pt-formats { display:grid; gap:6px; margin:4px 0 }
+.pt-formats button { font:inherit; text-align:left; display:grid; gap:2px; padding:10px 12px; min-height:44px; border-radius:12px; border:1px solid var(--line); background:transparent; color:var(--fg); cursor:pointer }
+.pt-formats button span { font-size:.84rem; color:var(--muted) }
+.pt-formats button[aria-checked="true"] { border-color:var(--lit-rim, var(--accent)); background:var(--lit-fill, rgba(244,227,181,.14)) }
+.pt-jobs { display:grid; gap:10px }
+.pt-job { display:grid; gap:8px; padding:12px; border:1px solid var(--line); border-radius:14px; background:var(--glass-soft, rgba(127,127,127,.06)) }
+.pt-job header { display:flex; justify-content:space-between; gap:8px; align-items:center } .pt-job header span { font-size:.82rem; color:var(--muted); display:inline-flex; gap:8px; align-items:center }
+.pt-ready header span { color:var(--accent) }
+.pt-brief { margin:0; font-size:.9rem; color:var(--fg-2, var(--fg)) }
+video.pt-out { width:100%; max-height:46vh; border-radius:10px; background:#000 }
+.pt-out.pics { display:grid; grid-template-columns:repeat(auto-fill, minmax(84px, 1fr)); gap:6px } .pt-out.pics img { width:100%; aspect-ratio:4/5; object-fit:cover; border-radius:8px; display:block }
+.pt-send { font-size:.92rem } .pt-send summary { cursor:pointer; min-height:32px } .pt-send textarea { margin:8px 0 }
+.pt-nets { display:flex; gap:16px; margin-bottom:8px } .pt-nets label { display:inline-flex; gap:6px; align-items:center; min-height:32px }
+.pt-row { display:flex; gap:8px; justify-content:flex-end; align-items:center; flex-wrap:wrap } .pt-row a.rm-second { text-decoration:none; padding:8px 16px }
+.pt-job a { color:var(--link, inherit) }
+.rm-pic { width:100%; max-height:240px; object-fit:cover; border-radius:12px; display:block }

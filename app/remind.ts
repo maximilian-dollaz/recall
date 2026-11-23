@@ -24,7 +24,8 @@ import * as store from "./store.ts";
 import { DATA, TWIN } from "./paths.ts";
 import { reconcile, type TopicView } from "./topics.ts";
 
-export type Kind = "being" | "realization" | "principle" | "idea" | "quote";
+// "asset": something saved (a picture, a note, a link) put into Remind from its project, with the person's own words on how, when and what for.
+export type Kind = "being" | "realization" | "principle" | "idea" | "quote" | "asset";
 export type Spark = {
   id: string; words: string; title: string; question?: string; when_then?: string; kind: Kind;
   from: { slug?: string; title: string; date: string };
@@ -32,6 +33,7 @@ export type Spark = {
   state: "on" | "being" | "evidence" | "let-go"; created: string; last?: string;
   hold?: string;     // "Still landing": out of sight until this moment (tomorrow)
   evidence?: string; // when it was lived and went into the evidence jar
+  thumb?: string;    // an asset's picture (a path under the person's library), shown on its tile
 };
 type Sub = { endpoint: string; keys: { p256dh: string; auth: string }; added: string; ua?: string };
 type Ledger = { sparks: Spark[]; sent: Record<string, string[]>; tz?: string };
@@ -106,15 +108,16 @@ function slotMinute(day: string, w: typeof WINDOWS[number]) {
 
 // ── Adding ──
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
-export async function add(dir: string, s: Pick<Spark, "words" | "title" | "kind" | "from"> & Partial<Pick<Spark, "question" | "when_then">>, firstAt?: Date) {
+export async function add(dir: string, s: Pick<Spark, "words" | "title" | "kind" | "from"> & Partial<Pick<Spark, "question" | "when_then" | "thumb">>, firstAt?: Date) {
   let made: Spark | undefined;
   await change(dir, (l) => {
-    if (l.sparks.some((x) => norm(x.words) === norm(s.words))) return; // already there
+    // Already there: the same words (or, for an asset, the same asset with the same words).
+    if (l.sparks.some((x) => norm(x.words) === norm(s.words) && (s.kind !== "asset" || x.from.slug === s.from.slug))) return;
     // New sparks start tomorrow or later, spread out so the first days aren't a flood.
     const waiting = l.sparks.filter((x) => x.state === "on" && x.sent === 0).length;
     const start = firstAt ?? new Date(Date.now() + (1 + Math.floor(waiting / 3)) * DAY);
     made = { id: Math.random().toString(36).slice(2, 10), words: s.words.trim(), title: s.title.trim(), question: s.question?.trim() || undefined, when_then: s.when_then?.trim() || undefined,
-      kind: s.kind, from: s.from, step: 0, next: start.toISOString(), sent: 0, asked: 0, lived: [], landing: 0, state: "on", created: new Date().toISOString() };
+      kind: s.kind, from: s.from, ...(s.thumb ? { thumb: s.thumb } : {}), step: 0, next: start.toISOString(), sent: 0, asked: 0, lived: [], landing: 0, state: "on", created: new Date().toISOString() };
     l.sparks.push(made);
   });
   return made;
@@ -136,7 +139,7 @@ export function message(s: Spark, base: string) {
   const when = new Date(s.from.date + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   return ask
     ? { title: s.question!, body: "Answer it in your head, then tap to see what you said.", url: `/remind/${s.id}?ask=1`, tag: s.id, ask: true }
-    : { title: s.title, body: `“${s.words}” (you, ${when})`, url: `/remind/${s.id}`, tag: s.id, ask: false };
+    : { title: s.title, body: s.kind === "asset" ? s.words : `“${s.words}” (you, ${when})`, url: `/remind/${s.id}`, tag: s.id, ask: false };
 }
 
 async function sendOne(dir: string, s: Spark, base: string) {
@@ -240,4 +243,18 @@ ${text.slice(0, 24_000)}` }], { json: true });
   return (Array.isArray(parsed?.sparks) ? parsed.sparks : []).slice(0, 2).filter((s: any) =>
     typeof s?.words === "string" && typeof s?.title === "string" && kinds.has(s.kind) &&
     s.words.split(/\.{3}|…/).map((p: string) => p.trim()).filter((p: string) => p.length >= 12).every((p: string) => locate(text, p) >= 0));
+}
+
+// ── From a project: put an asset into Remind with a note on how, when and what for ──
+/** One reminder per chosen item, carrying the person's note as its words. A date said in the note ("next Friday",
+ *  "in two weeks") is when it first comes back; otherwise tomorrow. `when` parses the date (reminders.parseWhen). */
+export async function addAssets(dir: string, items: { id: string; title: string; saved: string; thumb?: string }[], note: string, when: (said: string) => string | undefined) {
+  const words = note.replace(/\s+/g, " ").trim().slice(0, 400); if (words.length < 3) return [];
+  const day = when(words); const first = day ? localTime(day, 8 * 60 + 30) : undefined;
+  const made: Spark[] = [];
+  for (const it of items.slice(0, 24)) {
+    const s = await add(dir, { words, title: it.title.slice(0, 80), kind: "asset", from: { slug: it.id, title: it.title, date: (it.saved || localDay()).slice(0, 10) }, thumb: it.thumb }, first && first > new Date() ? first : undefined);
+    if (s) made.push(s);
+  }
+  return made;
 }

@@ -394,7 +394,7 @@
   .rm-done { margin:0; color:var(--fg); font-size:1.05rem }
   .rm-send { justify-self:start; background:none; border:0; color:var(--muted); text-decoration:underline; font:inherit; padding:6px 0; cursor:pointer }
 </style>
-<script src="/static/ui/remind.js"></script><script src="/static/ui/agents.js"></script><!-- the look: palette, glass, backlight (overrides the base styles above) -->
+<script src="/static/ui/remind.js"></script><script src="/static/ui/agents.js"></script><script src="/static/ui/project-tabs.js"></script><!-- the look: palette, glass, backlight (overrides the base styles above) -->
 </head>
 <body>
 <div class="wrap">
@@ -1138,7 +1138,7 @@ async function openProject(id, team = false, fromEl = null, topic = null, who = 
   const summary = buckets.map(k => `${k.items.length} ${k.items.length === 1 ? k.name.toLowerCase().replace(/s$/, '') : k.name.toLowerCase()}`).join(' · ');
   el.querySelector('.bd-top').innerHTML = `<button class="bd-close" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <div class="bd-title"><h2>${esc(d.project.name)}</h2><span>${esc(summary || 'Nothing saved here yet')}</span></div>
-    <div class="bd-actions" role="group" aria-label="Project">${team ? `${teamMember ? '<button id="pviz">Create</button>' : ''}<button id="pcopy">Copy for Claude</button>` : `<button id="pshare" aria-pressed="false">Share</button>${teamMember ? '<button id="pviz">Create</button>' : ''}<button id="premind" disabled aria-disabled="true">Remind</button>`}</div>`;
+    <div class="bd-actions" role="group" aria-label="Project">${team ? `${teamMember ? '<button id="pviz">Create</button>' : ''}<button id="pcopy">Copy for Claude</button>` : `<button id="pshare" aria-pressed="false">Share</button><button id="pcreate" aria-pressed="false">Create</button><button id="premind" aria-pressed="false">Remind</button>`}</div>`;
   const tile = (it) => { const c = card(it); return !c || team ? c : `<div class="tile-wrap">${c}<button class="tile-x" data-x="${esc(it.id)}" aria-label="Delete ${esc(it.title)}" title="Delete"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`; };
   el.querySelector('.bd-body').innerHTML = peopleRow + topics + (buckets.length ? `<div class="bd-grid" style="grid-template-columns:${cols}">${buckets.map(k => `<section class="bucket ${k.id}"><h3>${k.name} <span>${k.items.length}</span></h3><div class="bk">${k.items.map(tile).join('')}</div></section>`).join('')}</div>`
     : `<div class="status">Nothing here yet. Save something and say it's for ${esc(d.project.name)}.</div>`);
@@ -1168,15 +1168,22 @@ async function openProject(id, team = false, fromEl = null, topic = null, who = 
   el.querySelectorAll('[data-x]').forEach(x => x.onclick = (e) => { e.stopPropagation(); x.closest('.tile-wrap').classList.add('gone'); deleteItems([x.dataset.x], () => again(topic)); });
   // For Claude or any agent: everything in the project as text, with who saved it and their words.
   const text = d.pack || [`# ${d.project.name} (dream board)`, '', ...d.items.map(it => [`## ${it.title} (${it.kind}, ${it.saved}${it.by ? ', saved by ' + it.by : ''})`, it.summary, it.notes ? 'Why it was saved: ' + it.notes.replace(/\s+/g, ' ') : '', it.url || '', (it.tags || []).length ? 'Tags: ' + it.tags.join(', ') : ''].filter(Boolean).join('\n'))].join('\n\n');
-  const ps = el.querySelector('#pshare'); if (ps) { const ctx = { el, id, d, text, pteam: !(d.alwaysShared || !teamMember), again: () => again(topic) }; ps.onclick = () => selecting ? endSelect(el) : startSelect(ctx); if (selecting) startSelect(ctx); }
-  const vizBoard = team ? teamBoard : `me-${me.id}`;
-  createToggle(el.querySelector('#pviz'), el, { boardId: vizBoard, projectId: id, projectName: d.project.name, team });
+  // Three tabs on your own project, one at a time: Share, Create, Remind. Each one picks artifacts first (project-tabs.js does the rest).
+  const vizBoard = team ? teamBoard : `me-${me.id}`, vopts = { boardId: vizBoard, projectId: id, projectName: d.project.name, team };
+  if (team) createToggle(el.querySelector('#pviz'), el, vopts);
+  else {
+    if (window.Visualize?.isOpen()) Visualize.mount(el, vopts);
+    const ctx = { el, id, d, text, pteam: !(d.alwaysShared || !teamMember), again: () => again(topic), creator: teamMember && window.Visualize ? () => { endSelect(el); Visualize.mount(el, vopts); } : null };
+    for (const mode of ['share', 'create', 'remind']) { const b = el.querySelector('#p' + mode); if (!b) continue;
+      b.onclick = () => { const same = selecting && selMode === mode; if (selecting) endSelect(el); if (same) return; if (window.Visualize?.isOpen()) Visualize.unmount(); startSelect(ctx, mode); }; }
+    if (selecting) startSelect(ctx, selMode);
+  }
   const pc = el.querySelector('#pcopy'); if (pc) pc.onclick = async () => { try { await navigator.clipboard.writeText(text); pc.textContent = 'Copied. Paste it into Claude.'; } catch { pc.textContent = 'Select and copy'; } };
 }
 // Share: two ways. The entire project, or specific artifacts you pick on the board (tap, tap more, or drag across).
 // The link is made the moment the sheet opens, so every channel is one tap. Anyone with it can open it, no Recall
 // account needed. People get a page, agents get the same thing as text. Read-only, 30 days, stoppable here.
-let selecting = false; const selIds = new Set();
+let selecting = false, selMode = 'share'; const selIds = new Set();
 function packOf(name, items) {
   return [`# ${name}`, '', ...items.map(it => [`## ${it.title} (${it.kind}, ${it.saved}${it.by ? ', saved by ' + it.by : ''})`, it.summary, it.notes ? 'Why it was saved: ' + it.notes.replace(/\s+/g, ' ') : '', it.url || ''].filter(Boolean).join('\n'))].join('\n\n');
 }
@@ -1280,23 +1287,30 @@ function paintSel(el) {
   el.querySelectorAll('.bd-body [data-i]').forEach(x => x.classList.toggle('sel', selIds.has(x.dataset.i)));
   const bar = el.querySelector('.sel-bar'); if (!bar) return;
   bar.querySelector('span').textContent = selIds.size ? `${selIds.size} selected` : 'Tap or drag to pick';
-  bar.querySelector('#selshare').disabled = !selIds.size;
+  bar.querySelector('.primary').disabled = !selIds.size;
 }
 function endSelect(el) {
-  selecting = false; selIds.clear(); el.classList.remove('selecting'); el.querySelector('.sel-bar')?.remove(); el.querySelector('#pshare')?.setAttribute('aria-pressed', 'false');
+  selecting = false; selIds.clear(); el.classList.remove('selecting'); el.querySelector('.sel-bar')?.remove(); el.querySelectorAll('#pshare, #pcreate, #premind').forEach(b => b.setAttribute('aria-pressed', 'false'));
   const body = el.querySelector('.bd-body'); if (body) body.onpointerdown = body.onpointermove = body.onpointerup = body.onpointercancel = null;
   el.querySelectorAll('.bd-body [data-i]').forEach(x => { x.classList.remove('sel'); x.draggable = true; });
 }
-function startSelect(ctx) {
-  const el = ctx.el; selecting = true; el.classList.add('selecting'); el.querySelector('#pshare')?.setAttribute('aria-pressed', 'true');
+function startSelect(ctx, mode = 'share') {
+  const el = ctx.el; selecting = true; selMode = mode; el.classList.add('selecting');
+  for (const m of ['share', 'create', 'remind']) el.querySelector('#p' + m)?.setAttribute('aria-pressed', String(m === mode));
   el.querySelectorAll('.bd-body [data-i]').forEach(x => { x.draggable = false; });
-  if (!el.querySelector('.sel-bar')) {
+  el.querySelector('.sel-bar')?.remove();
+  {
     const bar = document.createElement('div'); bar.className = 'sel-bar'; bar.setAttribute('role', 'toolbar');
-    bar.innerHTML = `<span role="status"></span><button type="button" class="primary" id="selshare" disabled>Share</button><button type="button" id="selcancel">Cancel</button><button type="button" id="selall">Share entire project</button>`;
+    const picked = () => [...selIds], done = () => { endSelect(el); ctx.again?.(); };
+    bar.innerHTML = '<span role="status"></span>' + (mode === 'share' ? '<button type="button" class="primary" id="selshare" disabled>Share</button><button type="button" id="selcancel">Cancel</button><button type="button" id="selall">Share entire project</button>'
+      : mode === 'create' ? `<button type="button" class="primary" id="selgo" disabled>Make</button><button type="button" id="selcancel">Cancel</button><button type="button" id="selqueue">Queue</button>${ctx.creator ? '<button type="button" id="selcreator">Creator mode</button>' : ''}`
+      : '<button type="button" class="primary" id="selgo" disabled>Remind</button><button type="button" id="selcancel">Cancel</button>');
     el.append(bar);
     bar.querySelector('#selcancel').onclick = () => endSelect(el);
-    bar.querySelector('#selshare').onclick = () => shareSheet({ ...ctx, mode: 'pick' });
-    bar.querySelector('#selall').onclick = () => shareSheet({ ...ctx, mode: 'all' });
+    if (mode === 'share') { bar.querySelector('#selshare').onclick = () => shareSheet({ ...ctx, mode: 'pick' }); bar.querySelector('#selall').onclick = () => shareSheet({ ...ctx, mode: 'all' }); }
+    if (mode === 'create') { bar.querySelector('#selgo').onclick = () => ProjectTabs.create(ctx, picked(), done); bar.querySelector('#selqueue').onclick = () => ProjectTabs.create(ctx, [], done);
+      const cm = bar.querySelector('#selcreator'); if (cm) cm.onclick = ctx.creator; }
+    if (mode === 'remind') bar.querySelector('#selgo').onclick = () => ProjectTabs.remind(ctx, picked(), done);
   }
   // Drag across tiles with the mouse to pick everything the box touches. (A finger keeps scrolling; it taps to pick.)
   const body = el.querySelector('.bd-body'); let st = null, box = null, moved = false;

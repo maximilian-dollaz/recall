@@ -23,9 +23,10 @@
   };
   function tile(s, btns, note = '') {
     return `<article class="rm-tile" data-id="${esc(s.id)}">
+      ${s.thumb ? `<img class="rm-pic" src="/thumb/${encodeURIComponent(s.thumb)}?s=720" alt="" loading="lazy">` : ''}
       <h3 class="rm-title">${esc(s.title)}</h3>
       <blockquote class="rm-words">“${esc(s.words)}”</blockquote>
-      <div class="rm-from">You, ${day(s.from.date)}${s.from.slug ? ` · <a href="/?item=${encodeURIComponent(s.from.slug)}">${esc(s.from.title)}</a>` : ''}</div>
+      <div class="rm-from">${s.kind === 'asset' ? 'Saved' : 'You,'} ${day(s.from.date)}${s.from.slug ? ` · <a href="/?item=${encodeURIComponent(s.from.slug)}">${esc(s.from.title)}</a>` : ''}</div>
       ${s.when_then ? `<div class="rm-then">${esc(s.when_then)}</div>` : ''}
       ${note ? `<div class="rm-note">${note}</div>` : ''}
       <div class="rm-btns">${btns}</div>

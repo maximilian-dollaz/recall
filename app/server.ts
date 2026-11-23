@@ -38,6 +38,7 @@ import * as deepgram from "./deepgram.ts";
 import * as remind from "./remind.ts";
 import * as share from "./share.ts";
 import * as agents from "./agents.ts";
+import * as create from "./create.ts";
 
 import { CODE, DATA as ROOT, PORTS, TWIN } from "./paths.ts";
 import { PUBLIC_URL as CONFIG_URL, PUBLIC_HOST, OWNER_NAME, TAILNET_HOST } from "./config.ts";
@@ -430,6 +431,10 @@ const allPeople = async () => { const out: Person[] = []; for (const email of Ob
 const kickAgents = () => { setTimeout(() => agents.drain(allPeople).catch((e) => console.error(`[agents] ${String(e).slice(0, 200)}`)), 200); };
 agents.recover(allPeople).then(kickAgents).catch(() => {});
 setInterval(kickAgents, 30_000);
+// Create (create.ts): what a project's Create tab queued is made here, one job at a time.
+const kickCreate = () => { setTimeout(() => create.drain(allPeople).catch((e) => console.error(`[create] ${String(e).slice(0, 200)}`)), 200); };
+create.recover(allPeople).then(kickCreate).catch(() => {});
+setInterval(kickCreate, 60_000);
 // A new idea or action pulled out of a meeting goes to an agent on its own (capped per day in agents.ts).
 pieces.made.piece = (person, p) => { if (p.kind !== "idea" && p.kind !== "action") return;
   agents.create(person.dir, { directive: `${p.title}\n\n"${p.quote}"`, title: p.title, from: { kind: "piece", id: p.slug, title: p.from }, auto: true }).then((r) => r && kickAgents()).catch(() => {}); };
@@ -1054,9 +1059,15 @@ const routed = Bun.serve({
     "/api/remind/spark": withPerson(async (req, p) => { const s = remind.ledger(p.dir).sparks.find((x) => x.id === new URL(req.url).searchParams.get("id")); return s ? json(remind.view(s), 200) : json({ error: "not found" }, 404); }),
     "/api/remind/answer": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})); if (!["lived", "landing", "let-go", "back"].includes(b.answer)) return json({ error: "unknown answer" });
       const s = await remind.answer(p.dir, String(b.id), b.answer); return s ? json(remind.view(s), 200) : json({ error: "not found" }, 404); }) },
+    // From a project's Remind tab: the chosen items go into Remind with the person's note (how, when, what for).
+    "/api/remind/asset": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})) as any; const want = new Set((Array.isArray(b.items) ? b.items : []).map(String));
+      const items = projects.scanPages(p.dir).filter((it) => want.has(it.id)); if (!items.length) return json({ error: "Pick something first." });
+      const made = await remind.addAssets(p.dir, items, String(b.note ?? ""), (said) => parseWhen(said));
+      return made.length ? json({ added: made.length, first: made[0].next }, 200) : json({ error: String(b.note ?? "").trim().length < 3 ? "Say how, when and what for." : "Those are already in Remind with that note." }); }) },
     "/api/remind/subscribe": { POST: withPerson(async (req, p) => { try { await remind.subscribe(p.dir, await req.json(), req.headers.get("user-agent") ?? ""); return json({ ok: true }, 200); } catch (e) { return json({ error: String(e) }); } }) },
     "/api/remind/log": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})); console.log(`[remind phone ${p.id}] ${JSON.stringify(b).slice(0, 600)}`); return json({ ok: true }, 200); }) },
     "/api/remind/now": { POST: withPerson(async (_req, p) => json({ sent: await remind.now(p.dir, PUBLIC_URL) }, 200)) },
+    ...create.createRoutes(withPerson, { kick: kickCreate, projectName: async (id) => projects.projectsOf(await loadCatalog()).find((x) => x.id === id)?.name ?? null }),
     ...agents.agentRoutes(withPerson, { kick: kickAgents,
       sparkWords: (p, id) => { const s = remind.ledger(p.dir).sparks.find((x) => x.id === id); return s ? { directive: [s.words, s.when_then].filter(Boolean).join("\n"), title: s.title } : null; },
       itemWords: async (p, id) => { const it = await item(p, id).catch(() => null); return it ? { directive: [it.title, it.summary, it.markdown].filter(Boolean).join("\n").slice(0, 3000), title: it.title } : null; } }),
