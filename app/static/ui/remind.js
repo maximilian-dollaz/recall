@@ -56,6 +56,29 @@
       if (el.dataset.shown && was !== el.textContent && n > (+was || 0)) { el.classList.remove('rm-pop'); void el.offsetWidth; el.classList.add('rm-pop'); }
       el.dataset.shown = '1';
     };
+    // The jar, in clusters that form on their own (the same living topics as a project). The plain list shows
+    // first; the clusters fill in when they arrive, and again whenever something new is lived.
+    let groups = null, groupsFor = '';
+    const evItem = (s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b><span class="rm-ev">\u201c${esc(s.words)}\u201d</span><small>lived ${s.evidence ? when(s.evidence) : ''}</small></a>`;
+    const jar = (ev, gone) => {
+      const byId = new Map(ev.map((s) => [s.id, s]));
+      const list = (ids) => `<div class="rm-list">${ids.map((i) => byId.get(i)).filter(Boolean).map(evItem).join('')}</div>`;
+      let body;
+      if (!ev.length) body = '<p class="rm-done">Nothing here yet. Each \u201cYes, lived it\u201d lands here.</p>';
+      else if (!groups || (groups.length === 1 && groups[0].name === 'Everything')) body = list(ev.map((s) => s.id));
+      else {
+        const placed = new Set(groups.flatMap((g) => g.items));
+        const fresh = ev.filter((s) => !placed.has(s.id)).map((s) => s.id);
+        body = (fresh.length ? list(fresh) : '') + groups.map((g) => `<section class="rm-cluster"><h3 class="rm-h">${esc(g.name)} \u00b7 ${g.items.filter((i) => byId.has(i)).length}</h3>`
+          + (g.children ? g.children.map((c) => `<h4 class="rm-h2">${esc(c.name)}</h4>${list(c.items)}`).join('') : list(g.items)) + '</section>').join('');
+      }
+      q('.rm-jar').innerHTML = body + (gone.length ? `<h3 class="rm-h">Let go \u00b7 ${gone.length}</h3><div class="rm-list">${gone.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b></a>`).join('')}</div>` : '');
+      const key = ev.map((s) => s.id).sort().join();
+      if (ev.length && key !== groupsFor) {
+        groupsFor = key;
+        fetch('/api/remind/evidence').then((r) => r.json()).then((r) => { if (r.groups && groupsFor === key) { groups = r.groups; jar(ev, gone); } }).catch(() => {});
+      }
+    };
     const render = () => {
       const on = st.sparks.filter((s) => s.state === 'on' && !held(s)).sort((a, b) => a.next.localeCompare(b.next));
       const landing = st.sparks.filter((s) => s.state === 'on' && held(s)).sort((a, b) => a.hold.localeCompare(b.hold));
@@ -66,9 +89,7 @@
         : `<p class="rm-done">${st.sparks.length ? 'All processed. The ones still landing come back tomorrow.' : 'Nothing yet. Say “remind me” in a voice note or a Granola note and it lands here.'}</p>`;
       q('.rm-landing').innerHTML = landing.length ? landing.map((s) => tile(s, BTN.lived + BTN.letgo, `Comes back ${when(s.hold)}`)).join('')
         : '<p class="rm-done">Nothing still landing. Tap “Still landing” on a reminder and it waits here until it comes back.</p>';
-      q('.rm-jar').innerHTML = (ev.length ? `<div class="rm-list">${ev.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b><span class="rm-ev">“${esc(s.words)}”</span><small>lived ${s.evidence ? when(s.evidence) : ''}</small></a>`).join('')}</div>`
-        : '<p class="rm-done">Nothing here yet. Each “Yes, lived it” lands here.</p>')
-        + (gone.length ? `<h3 class="rm-h">Let go · ${gone.length}</h3><div class="rm-list">${gone.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b></a>`).join('')}</div>` : '');
+      jar(ev, gone);
     };
     // Tap a button on any tile: it slides out and moves to its subtab.
     root.addEventListener('click', async (e) => {

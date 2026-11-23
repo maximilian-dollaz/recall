@@ -36,6 +36,7 @@ import { visualizeRoutes } from "./visualize.ts";
 import { mintKey, emailForKey, deviceForKey } from "./keys.ts";
 import * as deepgram from "./deepgram.ts";
 import * as remind from "./remind.ts";
+import * as share from "./share.ts";
 
 import { CODE, DATA as ROOT, PORTS, TWIN } from "./paths.ts";
 import { PUBLIC_URL as CONFIG_URL, PUBLIC_HOST, OWNER_NAME, TAILNET_HOST } from "./config.ts";
@@ -894,6 +895,7 @@ const door = Bun.serve({
     if (u.pathname === "/auth/google" && req.method === "POST") return googleSignIn(req);
     if (u.pathname === "/signin") return signInPage(req);
     { const bd = await boardDoor(req); if (bd) return bd; } // board invite links (/b/<token>)
+    { const sh = await share.door(req); if (sh) return sh; } // read-only share links (/s/<token>)
     if (u.pathname === "/privacy") return privacyPage();
     if (u.pathname === "/sw.js") return fetch(new Request(`http://127.0.0.1:${PORTS.inner}/sw.js`)); // the service worker: no personal data
     if (u.pathname === "/guide") return guidePage(req); // public: a teammate reads it before signing in
@@ -994,6 +996,10 @@ const routed = Bun.serve({
     "/api/shelves": async () => json(await loadCatalog(), 200),
     "/api/index": withPerson(async (_req, p) => json({ items: await indexFor(p) }, 200)),
     "/api/projects": withPerson(async (_req, p) => json({ projects: projects.projectsFor(p.dir, await loadCatalog()).map((r) => ({ ...r, shared: boards.isShared(r.id, p.id) })) }, 200)),
+    "/api/share": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})) as any; const r = await share.create(p, String(b.project ?? ""), Array.isArray(b.items) ? b.items.map(String) : null); return json(r, (r as any).error ? 404 : 200); }) },
+    "/api/recipients": { GET: withPerson(async (_req, p) => json(share.recipients(p), 200)), POST: withPerson(async (req, p) => json(share.remember(p, await req.json().catch(() => ({}))), 200)) },
+    "/api/share/email": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})) as any; const r = await share.emailLink(p, String(b.token ?? ""), String(b.to ?? "").trim()); return json(r, (r as any).error ? 400 : 200); }) },
+    "/api/share/stop": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})) as any; return json(share.stop(p, String(b.token ?? "")), 200); }) },
     "/api/project": withPerson(async (req, p) => { const id = new URL(req.url).searchParams.get("id") ?? ""; const catalog = await loadCatalog(); return json({ ...(await projects.projectView(p.dir, catalog, id)), shared: boards.isShared(id, p.id, catalog), alwaysShared: boards.alwaysShared(catalog, id) }, 200); }),
     "/api/topic/rename": { POST: withPerson(async (req, p) => { const b = await req.json(); return json({ ok: await topics.rename(p.dir, String(b.project), String(b.topic), String(b.name ?? "")) }, 200); }) },
     // Each card carries what it's about (open), and a group card the titles of its items.
@@ -1033,6 +1039,7 @@ const routed = Bun.serve({
     "/sw.js": () => new Response(Bun.file(join(import.meta.dir, "static/sw.js")), { headers: { "content-type": "text/javascript", "cache-control": "no-cache", "service-worker-allowed": "/" } }),
     "/api/remind/key": () => json({ key: remind.publicKey() }, 200),
     "/api/remind/status": withPerson(async (_req, p) => json({ on: remind.on(p.dir), sparks: remind.ledger(p.dir).sparks.map(remind.view) }, 200)),
+    "/api/remind/evidence": withPerson(async (_req, p) => { try { return json({ groups: await remind.clusters(p.dir) }, 200); } catch (e) { console.error(`[remind] clusters: ${(e as Error).message}`); return json({ groups: null }, 200); } }),
     "/api/remind/spark": withPerson(async (req, p) => { const s = remind.ledger(p.dir).sparks.find((x) => x.id === new URL(req.url).searchParams.get("id")); return s ? json(remind.view(s), 200) : json({ error: "not found" }, 404); }),
     "/api/remind/answer": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})); if (!["lived", "landing", "let-go", "back"].includes(b.answer)) return json({ error: "unknown answer" });
       const s = await remind.answer(p.dir, String(b.id), b.answer); return s ? json(remind.view(s), 200) : json({ error: "not found" }, 404); }) },

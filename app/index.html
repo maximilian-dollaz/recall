@@ -181,8 +181,8 @@
   .invite::backdrop { background:rgba(8,12,15,.55) }
   .inv-in { display:grid; gap:8px; padding:21px } .inv-in h3 { margin:0 0 5px } .inv-in p { margin:0 }
   .sh-mode { justify-self:stretch; display:flex } .sh-mode button { flex:1; min-height:44px } .sh-mode span { opacity:.7; margin-left:4px }
-  .sel-bar { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom)); z-index:25; display:flex; align-items:center; gap:8px; padding:8px 8px 8px 18px; border-radius:999px; border:1px solid var(--rim, rgba(255,255,255,.18)); background:rgba(20,30,38,.88); color:var(--fg, #f3eee6); -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px); box-shadow:0 8px 34px rgba(5,10,14,.5) }
-  .sel-bar span { margin-right:6px; white-space:nowrap } .sel-bar button { font:inherit; min-height:44px; padding:8px 18px; border-radius:999px; cursor:pointer; border:1px solid var(--rim, rgba(255,255,255,.18)); background:transparent; color:inherit } .sel-bar .primary { background:#e8a95c; color:#1d1a17; border-color:#e8a95c; font-weight:600 } .sel-bar button:disabled { opacity:.45; cursor:default }
+  .sel-bar { flex-wrap:wrap; justify-content:center; width:max-content; max-width:calc(100vw - 24px); position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom)); z-index:25; display:flex; align-items:center; gap:8px; padding:8px 8px 8px 18px; border-radius:999px; border:1px solid var(--rim, rgba(255,255,255,.18)); background:rgba(20,30,38,.88); color:var(--fg, #f3eee6); -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px); box-shadow:0 8px 34px rgba(5,10,14,.5) }
+  .sel-bar span { margin-right:6px; white-space:nowrap } @media (max-width:560px) { .sel-bar { border-radius:22px; padding:10px 12px } .sel-bar span { flex:1 0 100%; text-align:center; margin:0 0 2px } .sel-bar button { padding:8px 14px } } .sel-bar button { font:inherit; min-height:44px; padding:8px 18px; border-radius:999px; cursor:pointer; border:1px solid var(--rim, rgba(255,255,255,.18)); background:transparent; color:inherit } .sel-bar .primary { background:#e8a95c; color:#1d1a17; border-color:#e8a95c; font-weight:600 } .sel-bar button:disabled { opacity:.45; cursor:default }
   .selecting .bd-body { user-select:none; -webkit-user-select:none } .selecting .bd-body [data-i] { cursor:pointer }
   .selecting .bd-body [data-i] { position:relative }
   .bd-body [data-i].sel { outline:3px solid #e8a95c; outline-offset:-3px; border-radius:inherit } .bd-body [data-i].sel::after { content:"✓"; position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:50%; background:#e8a95c; color:#1d1a17; display:grid; place-items:center; font-weight:700; line-height:1 }
@@ -196,6 +196,7 @@
   .sh-ic:last-child .sh-pop, .sh-ic:nth-last-child(2) .sh-pop { left:auto; right:0 } .sh-pop[hidden] { display:none }
   .sh-pop > button { display:flex; justify-content:space-between; align-items:baseline; gap:10px; width:100%; min-height:44px; padding:8px 12px; border:0; border-radius:10px; background:transparent; color:var(--fg); font:inherit; text-align:left; cursor:pointer } .sh-pop > button:hover { background:rgba(255,255,255,.1) } .sh-pop small { opacity:.65; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
   .sh-new { display:grid; grid-template-columns:1fr 1fr auto; gap:6px; padding:6px 4px 2px } .sh-new input { font:inherit; font-size:.9rem; min-width:0; padding:9px 10px; border-radius:10px; border:1px solid var(--rim, rgba(255,255,255,.18)); background:rgba(0,0,0,.25); color:var(--fg) } .sh-new button { font:inherit; padding:9px 14px; border-radius:10px; border:0; background:#e8a95c; color:#1d1a17; font-weight:600; cursor:pointer }
+  .pshare { position:absolute; top:8px; right:8px; z-index:3; width:36px; height:36px; display:grid; place-items:center; border-radius:50%; background:rgba(14,21,25,.62); color:#f3eee6; border:1px solid rgba(255,255,255,.2); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); cursor:pointer; opacity:0; transition:opacity .2s } .pshare svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round } .panel:hover .pshare, .pshare:focus-visible, .panel:focus-within .pshare { opacity:1 } @media (hover:none) { .pshare { opacity:.92 } } .pshare:hover { background:rgba(232,169,92,.9); color:#1d1a17 }
   .sh-chan { display:flex; gap:8px; flex-wrap:wrap } .sh-chan button { font:inherit; font-size:.95rem; min-height:44px; padding:10px 18px; border-radius:999px; border:1px solid var(--rim, rgba(255,255,255,.14)); background:transparent; color:var(--fg); cursor:pointer } .sh-chan button.primary { background:#e8a95c; color:#1d1a17; border-color:#e8a95c; font-weight:600 } .sh-chan button:disabled { opacity:.45; cursor:default } .sh-h { margin:8px 0 0; font-size:.85rem; font-weight:600; color:var(--muted, #a59d8f) } #shlink { font-size:.85rem; text-overflow:ellipsis }
   .bd-actions button:disabled { opacity:.45; cursor:default }
   .inv-act { display:flex; gap:8px; justify-content:flex-end; margin-top:8px } .inv-act button { font:inherit; padding:10px 18px; border-radius:999px; cursor:pointer }
@@ -356,6 +357,7 @@
   .rm-n.rm-pop { animation:rm-pop .5s ease }
   @keyframes rm-pop { 40% { transform:scale(1.5) } }
   @media (prefers-reduced-motion: reduce) { .rm-n.rm-pop { animation:none } }
+  .rm-cluster { display:grid; gap:8px } .rm-h2 { font-size:.85rem; font-weight:600; margin:4px 0 0; color:var(--fg-2, var(--fg)) }
   .rm-ev { display:block; font:500 1.05rem/1.35 "Cormorant Garamond", Georgia, serif; margin:4px 0 }
   .rm-on { display:grid; gap:10px } .rm-on p, .rm-home { margin:0 }
   .rm-h { font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:10px 0 0 }
@@ -918,7 +920,8 @@ function panelHtml(c, on, thumb = myThumb, grid = false) {
   }
   const mosaic = cells ? `<div class="mosaic${!grid && th.length <= 2 ? ' one' : !grid && th.length % 2 ? ' odd' : ''}">${tiles}</div>` : '';
   const chips = Object.entries(c.counts || {}).filter(([, n]) => n).map(([k, n]) => `<span class="pchip">${KIND_ICON[k] || '·'} ${n} ${esc(((KIND[k] || k).toLowerCase()).replace(n === 1 ? /s$/ : /$^/, ''))}</span>`).join('');
-  return `<button class="panel${on ? ' on' : ''}${cells ? '' : ' empty'}${c.team ? ' teampanel' : ''}" data-dock="${esc(c.id)}" aria-label="${esc(c.name)}">${mosaic}${(c.faces || []).length ? `<span class="faces">${c.faces.slice(0, 4).map(face).join('')}</span>` : ''}<div class="ptext">${c.team ? '<span class="pkicker">Shared</span>' : ''}<span class="pname">${esc(c.name)}</span><span class="pmeta">${esc(c.meta || '')}</span><div class="pkinds">${chips}</div></div></button>`;
+  const shareBtn = grid && !c.team ? `<span class="pshare" role="button" tabindex="0" data-share="${esc(c.id)}" aria-label="Share ${esc(c.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8 8l4-4 4 4M5 13v6a1 1 0 001 1h12a1 1 0 001-1v-6"/></svg></span>` : '';
+  return `<button class="panel${on ? ' on' : ''}${cells ? '' : ' empty'}${c.team ? ' teampanel' : ''}" data-dock="${esc(c.id)}" aria-label="${esc(c.name)}">${shareBtn}${mosaic}${(c.faces || []).length ? `<span class="faces">${c.faces.slice(0, 4).map(face).join('')}</span>` : ''}<div class="ptext">${c.team ? '<span class="pkicker">Shared</span>' : ''}<span class="pname">${esc(c.name)}</span><span class="pmeta">${esc(c.meta || '')}</span><div class="pkinds">${chips}</div></div></button>`;
 }
 function dockHtml(cards, thumb = myThumb, grid = false) { return `<div class="dock${grid ? ' homegrid' : ''}">${cards.map((c, i) => panelHtml(c, !grid && i === (c.on ?? 0), thumb, grid)).join('')}</div>`; }
 // The team board, kept current: whatever anyone adds or shares shows up within a few seconds, without a reload.
@@ -930,7 +933,12 @@ function teamCard(rows) {
   const faces = [...new Map(rows.flatMap(r => r.contributors || []).map(c => [c.id, c])).values()];
   return { id: TEAM, name: 'Dream board', team: true, thumbs, thumb: teamThumb, faces, meta: `${rows.length} project${rows.length === 1 ? '' : 's'}${people.length ? ' · ' + people.join(', ') : ''}` };
 }
-function wireHome() { const st = $('#projstage'); if (st) wireDock(st, (id, p) => id === TEAM ? openTeamBoard(p) : openProject(id, false, p), dropInto); }
+function wireHome() {
+  const st = $('#projstage'); if (!st) return;
+  wireDock(st, (id, p) => id === TEAM ? openTeamBoard(p) : openProject(id, false, p), dropInto);
+  // Share a whole project without opening it.
+  st.querySelectorAll('[data-share]').forEach(b => { const go = async (e) => { e.stopPropagation(); e.preventDefault(); const id = b.dataset.share; const d = await fetch('/api/project?id=' + encodeURIComponent(id)).then(r => r.json()).catch(() => null); if (!d || d.error) { toast("Couldn't open that project."); return; } shareSheet({ el: null, id, d, mode: 'all', text: d.pack, pteam: !(d.alwaysShared || !teamMember), again: () => loadShelves() }); }; b.onclick = go; b.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') go(e); }; });
+}
 async function refreshTeam() {
   if (document.hidden || $('#find').hidden || view !== 'home' || document.body.classList.contains('carrying') || qbox.value.trim()) return;
   const rows = await fetch('/api/team').then(r => r.json()).then(d => d.projects || []).catch(() => null);
@@ -1114,7 +1122,7 @@ async function openProject(id, team = false, fromEl = null, topic = null, who = 
   const summary = buckets.map(k => `${k.items.length} ${k.items.length === 1 ? k.name.toLowerCase().replace(/s$/, '') : k.name.toLowerCase()}`).join(' · ');
   el.querySelector('.bd-top').innerHTML = `<button class="bd-close" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <div class="bd-title"><h2>${esc(d.project.name)}</h2><span>${esc(summary || 'Nothing saved here yet')}</span></div>
-    <div class="bd-actions" role="group" aria-label="Project">${team ? `${teamMember ? '<button id="pviz">Create</button>' : ''}<button id="pcopy">Copy for Claude</button>` : `<button id="pshare" aria-haspopup="dialog">Share</button>${teamMember ? '<button id="pviz">Create</button>' : ''}<button id="premind" disabled aria-disabled="true">Remind</button>`}</div>`;
+    <div class="bd-actions" role="group" aria-label="Project">${team ? `${teamMember ? '<button id="pviz">Create</button>' : ''}<button id="pcopy">Copy for Claude</button>` : `<button id="pshare" aria-pressed="false">Share</button>${teamMember ? '<button id="pviz">Create</button>' : ''}<button id="premind" disabled aria-disabled="true">Remind</button>`}</div>`;
   const tile = (it) => { const c = card(it); return !c || team ? c : `<div class="tile-wrap">${c}<button class="tile-x" data-x="${esc(it.id)}" aria-label="Delete ${esc(it.title)}" title="Delete"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`; };
   el.querySelector('.bd-body').innerHTML = peopleRow + topics + (buckets.length ? `<div class="bd-grid" style="grid-template-columns:${cols}">${buckets.map(k => `<section class="bucket ${k.id}"><h3>${k.name} <span>${k.items.length}</span></h3><div class="bk">${k.items.map(tile).join('')}</div></section>`).join('')}</div>`
     : `<div class="status">Nothing here yet. Save something and say it's for ${esc(d.project.name)}.</div>`);
@@ -1144,7 +1152,7 @@ async function openProject(id, team = false, fromEl = null, topic = null, who = 
   el.querySelectorAll('[data-x]').forEach(x => x.onclick = (e) => { e.stopPropagation(); x.closest('.tile-wrap').classList.add('gone'); deleteItems([x.dataset.x], () => again(topic)); });
   // For Claude or any agent: everything in the project as text, with who saved it and their words.
   const text = d.pack || [`# ${d.project.name} (dream board)`, '', ...d.items.map(it => [`## ${it.title} (${it.kind}, ${it.saved}${it.by ? ', saved by ' + it.by : ''})`, it.summary, it.notes ? 'Why it was saved: ' + it.notes.replace(/\s+/g, ' ') : '', it.url || '', (it.tags || []).length ? 'Tags: ' + it.tags.join(', ') : ''].filter(Boolean).join('\n'))].join('\n\n');
-  const ps = el.querySelector('#pshare'); if (ps) { const ctx = { el, id, d, text, pteam: !(d.alwaysShared || !teamMember), again: () => again(topic) }; ps.onclick = () => shareSheet(ctx); if (selecting) startSelect(ctx); }
+  const ps = el.querySelector('#pshare'); if (ps) { const ctx = { el, id, d, text, pteam: !(d.alwaysShared || !teamMember), again: () => again(topic) }; ps.onclick = () => selecting ? endSelect(el) : startSelect(ctx); if (selecting) startSelect(ctx); }
   const vizBoard = team ? teamBoard : `me-${me.id}`;
   createToggle(el.querySelector('#pviz'), el, { boardId: vizBoard, projectId: id, projectName: d.project.name, team });
   const pc = el.querySelector('#pcopy'); if (pc) pc.onclick = async () => { try { await navigator.clipboard.writeText(text); pc.textContent = 'Copied. Paste it into Claude.'; } catch { pc.textContent = 'Select and copy'; } };
@@ -1168,10 +1176,9 @@ async function shareSheet(ctx) {
   let dlg = document.getElementById('sharesheet'); if (dlg) dlg.remove();
   dlg = document.createElement('dialog'); dlg.id = 'sharesheet'; dlg.className = 'invite';
   const name = d.project.name, N = d.items.length;
-  let mode = selecting && selIds.size ? 'pick' : 'all', cur = null, run = 0;
+  let mode = ctx.mode || 'all', cur = null, run = 0;
   const chan = [['sms', 'Message'], ['wa', 'WhatsApp'], ['sig', 'Signal'], ['mail', 'Email']];
   dlg.innerHTML = `<div class="inv-in"><h3>Share ${esc(name)}</h3>
-    <div class="inv-pick sh-mode" role="group" aria-label="What to share"><button type="button" data-m="all">Entire project <span>${N}</span></button><button type="button" data-m="pick">Specific artifacts <span id="shn"></span></button></div>
     <p class="muted" id="shnote"></p>
     <div class="sh-icons" role="group" aria-label="Send to a person">${chan.map(([k, t]) => `<div class="sh-ic" data-ic="${k}"><button type="button" data-c="${k}" disabled aria-haspopup="true" aria-expanded="false">${ICON[k]}<span>${t}</span></button><div class="sh-pop" hidden></div></div>`).join('')}${navigator.share ? `<div class="sh-ic"><button type="button" data-c="more" disabled>${ICON.more}<span>More</span></button></div>` : ''}</div>
     <h4 class="sh-h">For an agent</h4>
@@ -1203,9 +1210,7 @@ async function shareSheet(ctx) {
   async function refresh() {
     const my = ++run; cur = null; chans().forEach(b => b.disabled = true); stop.hidden = true; say('');
     const pick = mode === 'pick', ids = pick ? [...selIds] : null;
-    dlg.querySelectorAll('[data-m]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === mode)));
-    dlg.querySelector('#shn').textContent = selIds.size && selecting ? String(selIds.size) : '';
-    dlg.querySelector('#shnote').textContent = pick ? `${selIds.size} artifact${selIds.size === 1 ? '' : 's'}. Anyone with the link can open them. No account needed.` : `All ${N} items. Anyone with the link can open the project. No account needed. Read-only, works for 30 days.`;
+    dlg.querySelector('#shnote').textContent = pick ? `${selIds.size} artifact${selIds.size === 1 ? '' : 's'}. Anyone with the link can open them. No account needed.` : `All ${N} item${N === 1 ? '' : 's'}. Anyone with the link can open the project. No account needed. Read-only, works for 30 days.`;
     box.value = 'Making the link…';
     const r = await fetch('/api/share', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ project: id, items: ids }) }).then(r => r.json()).catch(() => ({}));
     if (my !== run) return;
@@ -1252,11 +1257,6 @@ async function shareSheet(ctx) {
     w.addEventListener('mouseenter', () => { if (!matchMedia('(hover:hover)').matches || w.querySelector('[data-c]').disabled) return; clearTimeout(closeT); if (w.querySelector('.sh-pop').hidden) togglePop(w.dataset.ic); });
     w.addEventListener('mouseleave', () => { if (!matchMedia('(hover:hover)').matches) return; closeT = setTimeout(() => { if (!w.contains(document.activeElement) || document.activeElement.tagName === 'BUTTON') closePops(); }, 350); });
   });
-  dlg.querySelector('[data-m="all"]').onclick = () => { mode = 'all'; refresh(); };
-  dlg.querySelector('[data-m="pick"]').onclick = () => {
-    if (selecting && selIds.size) { mode = 'pick'; refresh(); return; }
-    dlg.close(); startSelect(ctx); // nothing picked yet: go pick on the board
-  };
   refresh();
 }
 // Picking artifacts on the board: tap one, tap more, or drag across a group (mouse). A bar at the bottom shows the count.
@@ -1267,19 +1267,20 @@ function paintSel(el) {
   bar.querySelector('#selshare').disabled = !selIds.size;
 }
 function endSelect(el) {
-  selecting = false; selIds.clear(); el.classList.remove('selecting'); el.querySelector('.sel-bar')?.remove();
+  selecting = false; selIds.clear(); el.classList.remove('selecting'); el.querySelector('.sel-bar')?.remove(); el.querySelector('#pshare')?.setAttribute('aria-pressed', 'false');
   const body = el.querySelector('.bd-body'); if (body) body.onpointerdown = body.onpointermove = body.onpointerup = body.onpointercancel = null;
   el.querySelectorAll('.bd-body [data-i]').forEach(x => { x.classList.remove('sel'); x.draggable = true; });
 }
 function startSelect(ctx) {
-  const el = ctx.el; selecting = true; el.classList.add('selecting');
+  const el = ctx.el; selecting = true; el.classList.add('selecting'); el.querySelector('#pshare')?.setAttribute('aria-pressed', 'true');
   el.querySelectorAll('.bd-body [data-i]').forEach(x => { x.draggable = false; });
   if (!el.querySelector('.sel-bar')) {
     const bar = document.createElement('div'); bar.className = 'sel-bar'; bar.setAttribute('role', 'toolbar');
-    bar.innerHTML = `<span role="status"></span><button type="button" class="quiet" id="selcancel">Cancel</button><button type="button" class="primary" id="selshare" disabled>Share</button>`;
+    bar.innerHTML = `<span role="status"></span><button type="button" class="primary" id="selshare" disabled>Share</button><button type="button" id="selcancel">Cancel</button><button type="button" id="selall">Share entire project</button>`;
     el.append(bar);
     bar.querySelector('#selcancel').onclick = () => endSelect(el);
-    bar.querySelector('#selshare').onclick = () => shareSheet(ctx);
+    bar.querySelector('#selshare').onclick = () => shareSheet({ ...ctx, mode: 'pick' });
+    bar.querySelector('#selall').onclick = () => shareSheet({ ...ctx, mode: 'all' });
   }
   // Drag across tiles with the mouse to pick everything the box touches. (A finger keeps scrolling; it taps to pick.)
   const body = el.querySelector('.bd-body'); let st = null, box = null, moved = false;

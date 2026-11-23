@@ -13,6 +13,8 @@
 //                wallpaper (habituation).
 //   Lived        "Yes, lived it" moves it to the evidence jar: proof of what has been embodied, kept to come
 //                back to, never sent again. "Still landing" puts it away until tomorrow. (Max, 22 Nov 2026)
+//   Clusters     The evidence groups itself by meaning, with the same living topics that group a project's
+//                items (topics.ts): a cluster is born from three close ones, divides when large, fuses when alike.
 // One ledger per person (<dir>/remind.json) and the phones that asked for it (<dir>/push.json).
 
 import { join } from "node:path";
@@ -20,6 +22,7 @@ import { existsSync, readFileSync } from "node:fs";
 import webpush from "web-push";
 import * as store from "./store.ts";
 import { DATA, TWIN } from "./paths.ts";
+import { reconcile, type TopicView } from "./topics.ts";
 
 export type Kind = "being" | "realization" | "principle" | "idea" | "quote";
 export type Spark = {
@@ -204,6 +207,15 @@ export function stage(s: Spark): "knowing" | "understanding" | "thinking" | "doi
   return "knowing";
 }
 export const view = (s: Spark) => ({ ...s, stage: stage(s) });
+
+/** The evidence jar in clusters, grouped the way a project's items are (topics.ts). Spark ids come back as they are. */
+const EVIDENCE = { id: "remind-evidence", name: "Evidence" };
+export async function clusters(dir: string): Promise<TopicView[]> {
+  const ev = ledger(dir).sparks.filter((s) => s.state === "evidence");
+  const items = ev.map((s) => ({ id: `rm-${s.id}`, title: s.title, kind: "remind", summary: s.words, notes: s.when_then ?? "", saved: (s.evidence ?? s.created ?? "").slice(0, 10), files: [], tags: [] }));
+  const strip = (t: TopicView): TopicView => ({ ...t, items: t.items.map((i) => i.replace(/^rm-/, "")), ...(t.children ? { children: t.children.map(strip) } : {}) });
+  return (await reconcile(dir, EVIDENCE, items)).map(strip);
+}
 
 // ── New saves: sparks found in the person's own words ──
 /** The passages in a new meeting or voice note worth coming back. `chat` is the librarian's model; `locate`
