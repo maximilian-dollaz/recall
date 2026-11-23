@@ -357,7 +357,17 @@
   .rm-n.rm-pop { animation:rm-pop .5s ease }
   @keyframes rm-pop { 40% { transform:scale(1.5) } }
   @media (prefers-reduced-motion: reduce) { .rm-n.rm-pop { animation:none } }
-  .rm-cluster { display:grid; gap:8px } .rm-h2 { font-size:.85rem; font-weight:600; margin:4px 0 0; color:var(--fg-2, var(--fg)) }
+  .rm-jar .dock.homegrid .mosaic .rm-ttl { display:block; overflow:hidden; font-style:normal; font-size:.66rem; line-height:1.2; padding:5px; border-radius:9px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1); color:#e9e2d6; text-align:left; overflow-wrap:break-word; hyphens:auto; -webkit-hyphens:auto }
+  .rm-jar .dock.homegrid .panel { color:#f3eee6 }
+  @media (max-width:720px) { .rm-jar .dock.homegrid .mosaic .rm-ttl { font-size:.5rem; line-height:1.15; padding:3px 4px } .rm-jar .dock.homegrid .ptext { padding:2px 7px 6px; gap:0 } .rm-jar .dock.homegrid .pname { font-size:.8rem } .rm-jar .dock.homegrid .pmeta { font-size:.62rem } }
+  .rm-grid { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px }
+  @media (max-width:520px) { .rm-grid { grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px } }
+  .rm-card { aspect-ratio:1 / 1; display:flex; flex-direction:column; justify-content:flex-start; gap:6px; padding:12px; border-radius:14px; border:1px solid var(--line); background:var(--glass-soft, rgba(127,127,127,.06)); color:var(--fg); text-decoration:none; overflow:hidden }
+  .rm-card b { font-weight:600; font-size:.95rem; line-height:1.25 } .rm-card small { color:var(--muted); font-size:.75rem; margin-top:auto }
+  .rm-card .rm-cw { flex:0 1 auto; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; max-height:3.9em; font:500 .92rem/1.3 "Cormorant Garamond", Georgia, serif; color:var(--fg-2, var(--fg)) }
+  .rm-card .pic { flex:1; min-height:0; border-radius:9px; background-size:cover; background-position:center }
+  .rm-crumb { display:grid; gap:4px; margin-bottom:10px } .rm-crumb .rm-h { margin:0 }
+  .rm-back { justify-self:start; font:inherit; font-size:.85rem; background:none; border:0; padding:4px 0; color:var(--muted); cursor:pointer }
   .rm-ev { display:block; font:500 1.05rem/1.35 "Cormorant Garamond", Georgia, serif; margin:4px 0 }
   .rm-on { display:grid; gap:10px } .rm-on p, .rm-home { margin:0 }
   .rm-h { font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:10px 0 0 }
