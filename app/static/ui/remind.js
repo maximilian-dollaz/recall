@@ -12,67 +12,76 @@
     ? navigator.serviceWorker.register('/sw.js').then(() => Promise.race([navigator.serviceWorker.ready, new Promise((_, no) => setTimeout(() => no(new Error('no service worker')), 4000))]))
     : Promise.reject(new Error('no service worker')));
 
-  // The deck: one reminder at a time. "Yes, lived it" puts it in the evidence jar, "Still landing" puts it away
-  // until tomorrow; either way the next one comes up, until all are processed.
+  // Three subtabs, top right. Remind: every reminder that comes back, all at once. Still landing: the ones you put
+  // away until tomorrow. Evidence: the ones you have lived (let go ones sit at the bottom).
   const when = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  function tile(s, i, n) {
-    return `<article class="rm-tile">
-      <div class="rm-count">${i} of ${n}</div>
+  const BTN = {
+    lived: '<button class="primary" type="button" data-a="lived">Yes, lived it</button>',
+    landing: '<button class="rm-second" type="button" data-a="landing">Still landing</button>',
+    letgo: '<button class="rm-quiet" type="button" data-a="let-go">Let go</button>',
+  };
+  function tile(s, btns, note = '') {
+    return `<article class="rm-tile" data-id="${esc(s.id)}">
       <h3 class="rm-title">${esc(s.title)}</h3>
-      <blockquote class="rm-words">\u201c${esc(s.words)}\u201d</blockquote>
+      <blockquote class="rm-words">“${esc(s.words)}”</blockquote>
       <div class="rm-from">You, ${day(s.from.date)}${s.from.slug ? ` · <a href="/?item=${encodeURIComponent(s.from.slug)}">${esc(s.from.title)}</a>` : ''}</div>
       ${s.when_then ? `<div class="rm-then">${esc(s.when_then)}</div>` : ''}
-      <div class="rm-btns"><button class="primary" type="button" data-a="lived">Yes, lived it</button><button class="rm-second" type="button" data-a="landing">Still landing</button><button class="rm-quiet" type="button" data-a="let-go">Let go</button></div>
+      ${note ? `<div class="rm-note">${note}</div>` : ''}
+      <div class="rm-btns">${btns}</div>
     </article>`;
   }
 
   async function load(root) {
     const st = await (await fetch('/api/remind/status')).json();
-    const now = Date.now();
-    const queue = st.sparks.filter((s) => s.state === 'on' && !(s.hold && Date.parse(s.hold) > now)).sort((a, b) => a.next.localeCompare(b.next));
-    const total = queue.length;
+    const held = (s) => s.hold && Date.parse(s.hold) > Date.now();
     root.innerHTML = `
-      <div class="rm-top" role="tablist"><button type="button" role="tab" class="rm-sub" data-v="deck" aria-selected="true">Remind</button><button type="button" role="tab" class="rm-sub" data-v="jar" aria-selected="false">Evidence <span class="rm-n"></span></button></div>
+      <div class="rm-top" role="tablist"><button type="button" role="tab" class="rm-sub" data-v="deck" aria-selected="true">Remind <span class="rm-n" data-n="deck"></span></button><button type="button" role="tab" class="rm-sub" data-v="landing" aria-selected="false">Still landing <span class="rm-n" data-n="landing"></span></button><button type="button" role="tab" class="rm-sub" data-v="jar" aria-selected="false">Evidence <span class="rm-n" data-n="jar"></span></button></div>
       <div class="rm-view" data-v="deck">
       <div class="rm-on" hidden><p class="rm-text">Your words come back to this phone, up to three times a day, until you live them.</p><button class="primary rm-enable" type="button">Turn on Remind</button></div>
       <p class="rm-home small muted" hidden>Open Recall from your home screen, then come back here to turn on Remind.</p>
-      <div class="rm-deck"></div>
+      <div class="rm-deck rm-tiles"></div>
       <button class="rm-send" type="button" hidden>Send one now</button>
       </div>
+      <div class="rm-view rm-landing rm-tiles" data-v="landing" hidden></div>
       <div class="rm-view rm-jar" data-v="jar" hidden></div>`;
-    // The Evidence subtab, top right: what you have lived. Let go ones sit at the bottom of it.
+    const q = (s) => root.querySelector(s);
     const view = (v) => {
       root.querySelectorAll('.rm-sub').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.v === v)));
       root.querySelectorAll('.rm-view').forEach((d) => d.hidden = d.dataset.v !== v);
     };
-    root.querySelector('.rm-top').onclick = (e) => { const b = e.target.closest('.rm-sub'); if (b) view(b.dataset.v); };
-    const q = (s) => root.querySelector(s);
-    const deck = q('.rm-deck');
-    const jar = () => {
+    q('.rm-top').onclick = (e) => { const b = e.target.closest('.rm-sub'); if (b) view(b.dataset.v); };
+    // A count that changes pops, so you see where the reminder went.
+    const count = (k, n) => {
+      const el = q(`.rm-n[data-n="${k}"]`); const was = el.textContent; el.textContent = n || '';
+      if (el.dataset.shown && was !== el.textContent && n > (+was || 0)) { el.classList.remove('rm-pop'); void el.offsetWidth; el.classList.add('rm-pop'); }
+      el.dataset.shown = '1';
+    };
+    const render = () => {
+      const on = st.sparks.filter((s) => s.state === 'on' && !held(s)).sort((a, b) => a.next.localeCompare(b.next));
+      const landing = st.sparks.filter((s) => s.state === 'on' && held(s)).sort((a, b) => a.hold.localeCompare(b.hold));
       const ev = st.sparks.filter((s) => s.state === 'evidence').sort((a, b) => (b.evidence || '').localeCompare(a.evidence || ''));
       const gone = st.sparks.filter((s) => s.state === 'let-go');
-      const n = q('.rm-n'); const was = n.textContent; n.textContent = ev.length || '';
-      if (n.dataset.shown && was !== n.textContent) { n.classList.remove('rm-pop'); void n.offsetWidth; n.classList.add('rm-pop'); }
-      n.dataset.shown = '1';
-      q('.rm-jar').innerHTML = (ev.length ? `<div class="rm-list">${ev.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b><span class="rm-ev">\u201c${esc(s.words)}\u201d</span><small>lived ${s.evidence ? when(s.evidence) : ''}</small></a>`).join('')}</div>`
-        : '<p class="rm-done">Nothing here yet. Each \u201cYes, lived it\u201d lands here.</p>')
+      count('deck', on.length); count('landing', landing.length); count('jar', ev.length);
+      q('.rm-deck').innerHTML = on.length ? on.map((s) => tile(s, BTN.lived + BTN.landing + BTN.letgo)).join('')
+        : `<p class="rm-done">${st.sparks.length ? 'All processed. The ones still landing come back tomorrow.' : 'Nothing yet. Say “remind me” in a voice note or a Granola note and it lands here.'}</p>`;
+      q('.rm-landing').innerHTML = landing.length ? landing.map((s) => tile(s, BTN.lived + BTN.letgo, `Comes back ${when(s.hold)}`)).join('')
+        : '<p class="rm-done">Nothing still landing. Tap “Still landing” on a reminder and it waits here until it comes back.</p>';
+      q('.rm-jar').innerHTML = (ev.length ? `<div class="rm-list">${ev.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b><span class="rm-ev">“${esc(s.words)}”</span><small>lived ${s.evidence ? when(s.evidence) : ''}</small></a>`).join('')}</div>`
+        : '<p class="rm-done">Nothing here yet. Each “Yes, lived it” lands here.</p>')
         + (gone.length ? `<h3 class="rm-h">Let go · ${gone.length}</h3><div class="rm-list">${gone.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b></a>`).join('')}</div>` : '');
     };
-    const next = () => {
-      if (!queue.length) { deck.innerHTML = `<p class="rm-done">${total ? 'All processed. The ones still landing come back tomorrow.' : st.sparks.length ? 'Nothing waiting. The ones still landing come back tomorrow.' : 'Nothing yet. Say \u201cremind me\u201d in a voice note or a Granola note and it lands here.'}</p>`; return; }
-      deck.innerHTML = tile(queue[0], total - queue.length + 1, total);
-      deck.querySelector('.rm-tile').classList.add('rm-in');
-    };
-    deck.onclick = async (e) => {
-      const btn = e.target.closest('button[data-a]'); if (!btn || btn.disabled) return;
-      const s = queue[0]; if (!s) return;
-      deck.querySelectorAll('button').forEach((b) => b.disabled = true);
+    // Tap a button on any tile: it slides out and moves to its subtab.
+    root.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.rm-tile button[data-a]'); if (!btn || btn.disabled) return;
+      const card = btn.closest('.rm-tile'); const s = st.sparks.find((x) => x.id === card.dataset.id); if (!s) return;
+      card.querySelectorAll('button').forEach((b) => b.disabled = true);
       const r = await post('/api/remind/answer', { id: s.id, answer: btn.dataset.a });
-      if (!r.ok) { deck.querySelectorAll('button').forEach((b) => b.disabled = false); return; }
-      Object.assign(st.sparks.find((x) => x.id === s.id), await r.json());
-      queue.shift(); jar(); next();
-    };
-    next(); jar();
+      if (!r.ok) { card.querySelectorAll('button').forEach((b) => b.disabled = false); return; }
+      Object.assign(s, await r.json());
+      card.classList.add('rm-out');
+      setTimeout(render, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 260);
+    });
+    render();
     q('.rm-send').hidden = !st.on;
     q('.rm-send').onclick = async () => { const r = await (await post('/api/remind/now')).json(); q('.rm-send').textContent = r.sent ? 'Sent' : 'Nothing to send'; };
 
