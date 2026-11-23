@@ -8,7 +8,7 @@
   const ago = (iso) => { const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
   const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
   // Step text: escaped, with paragraphs, simple lists and links kept.
-  const prose = (t) => esc(t).split(/\n{2,}/).map((p) => {
+  const prose = (t) => esc(String(t ?? '').replace(/<\/?cite[^>]*>/g, '')).split(/\n{2,}/).map((p) => {
     const lines = p.split('\n');
     if (lines.every((l) => /^\s*(?:[-*•]|\d+[.)])\s+/.test(l))) return `<ul>${lines.map((l) => `<li>${l.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '')}</li>`).join('')}</ul>`;
     return `<p>${lines.join('<br>')}</p>`;
