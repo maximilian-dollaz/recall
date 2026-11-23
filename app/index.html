@@ -180,6 +180,24 @@
   .invite { width:min(440px, calc(100vw - 32px)); padding:0; border-radius:21px; border:1px solid var(--rim, rgba(255,255,255,.14)); background:rgba(20,30,38,.82); color:var(--fg); -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px); box-shadow:0 13px 55px rgba(5,10,14,.5) }
   .invite::backdrop { background:rgba(8,12,15,.55) }
   .inv-in { display:grid; gap:8px; padding:21px } .inv-in h3 { margin:0 0 5px } .inv-in p { margin:0 }
+  .sh-mode { justify-self:stretch; display:flex } .sh-mode button { flex:1; min-height:44px } .sh-mode span { opacity:.7; margin-left:4px }
+  .sel-bar { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom)); z-index:25; display:flex; align-items:center; gap:8px; padding:8px 8px 8px 18px; border-radius:999px; border:1px solid var(--rim, rgba(255,255,255,.18)); background:rgba(20,30,38,.88); color:var(--fg, #f3eee6); -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px); box-shadow:0 8px 34px rgba(5,10,14,.5) }
+  .sel-bar span { margin-right:6px; white-space:nowrap } .sel-bar button { font:inherit; min-height:44px; padding:8px 18px; border-radius:999px; cursor:pointer; border:1px solid var(--rim, rgba(255,255,255,.18)); background:transparent; color:inherit } .sel-bar .primary { background:#e8a95c; color:#1d1a17; border-color:#e8a95c; font-weight:600 } .sel-bar button:disabled { opacity:.45; cursor:default }
+  .selecting .bd-body { user-select:none; -webkit-user-select:none } .selecting .bd-body [data-i] { cursor:pointer }
+  .selecting .bd-body [data-i] { position:relative }
+  .bd-body [data-i].sel { outline:3px solid #e8a95c; outline-offset:-3px; border-radius:inherit } .bd-body [data-i].sel::after { content:"✓"; position:absolute; top:8px; right:8px; width:26px; height:26px; border-radius:50%; background:#e8a95c; color:#1d1a17; display:grid; place-items:center; font-weight:700; line-height:1 }
+  .marquee { position:fixed; z-index:40; pointer-events:none; border:1px solid #e8a95c; background:rgba(232,169,92,.18); border-radius:4px }
+  #sharesheet { overflow:visible }
+  .sh-icons { display:flex; gap:4px; flex-wrap:wrap } .sh-ic { position:relative; flex:1 1 0; min-width:62px }
+  .sh-ic > button { width:100%; display:grid; justify-items:center; gap:4px; padding:10px 4px; border-radius:14px; border:1px solid transparent; background:transparent; color:var(--fg); font:inherit; font-size:.78rem; cursor:pointer; min-height:64px }
+  .sh-ic > button:hover, .sh-ic > button[aria-expanded="true"] { background:rgba(255,255,255,.08); border-color:var(--rim, rgba(255,255,255,.14)) } .sh-ic > button:disabled { opacity:.45; cursor:default }
+  .sh-ic svg { width:26px; height:26px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round } .sh-ic svg circle[r="1.4"] { fill:currentColor; stroke:none }
+  .sh-pop { position:absolute; z-index:5; top:calc(100% + 4px); left:0; min-width:230px; max-width:min(300px, calc(100vw - 48px)); display:grid; gap:2px; padding:6px; border-radius:16px; border:1px solid var(--rim, rgba(255,255,255,.18)); background:rgba(20,30,38,.96); -webkit-backdrop-filter:blur(21px); backdrop-filter:blur(21px); box-shadow:0 13px 40px rgba(5,10,14,.6) }
+  .sh-ic:last-child .sh-pop, .sh-ic:nth-last-child(2) .sh-pop { left:auto; right:0 } .sh-pop[hidden] { display:none }
+  .sh-pop > button { display:flex; justify-content:space-between; align-items:baseline; gap:10px; width:100%; min-height:44px; padding:8px 12px; border:0; border-radius:10px; background:transparent; color:var(--fg); font:inherit; text-align:left; cursor:pointer } .sh-pop > button:hover { background:rgba(255,255,255,.1) } .sh-pop small { opacity:.65; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  .sh-new { display:grid; grid-template-columns:1fr 1fr auto; gap:6px; padding:6px 4px 2px } .sh-new input { font:inherit; font-size:.9rem; min-width:0; padding:9px 10px; border-radius:10px; border:1px solid var(--rim, rgba(255,255,255,.18)); background:rgba(0,0,0,.25); color:var(--fg) } .sh-new button { font:inherit; padding:9px 14px; border-radius:10px; border:0; background:#e8a95c; color:#1d1a17; font-weight:600; cursor:pointer }
+  .sh-chan { display:flex; gap:8px; flex-wrap:wrap } .sh-chan button { font:inherit; font-size:.95rem; min-height:44px; padding:10px 18px; border-radius:999px; border:1px solid var(--rim, rgba(255,255,255,.14)); background:transparent; color:var(--fg); cursor:pointer } .sh-chan button.primary { background:#e8a95c; color:#1d1a17; border-color:#e8a95c; font-weight:600 } .sh-chan button:disabled { opacity:.45; cursor:default } .sh-h { margin:8px 0 0; font-size:.85rem; font-weight:600; color:var(--muted, #a59d8f) } #shlink { font-size:.85rem; text-overflow:ellipsis }
+  .bd-actions button:disabled { opacity:.45; cursor:default }
   .inv-act { display:flex; gap:8px; justify-content:flex-end; margin-top:8px } .inv-act button { font:inherit; padding:10px 18px; border-radius:999px; cursor:pointer }
   .inv-act .quiet { background:transparent; color:var(--fg); border:1px solid var(--rim, rgba(255,255,255,.14)) }
   #invlink { font-size:.9rem; text-overflow:ellipsis } .inv-msg { min-height:1.3em }
@@ -330,6 +348,15 @@
 <style>
   /* Remind tab (static/ui/remind.js) */
   #remind-body { display:grid; gap:12px }
+  .rm-view { display:grid; gap:12px } .rm-view[hidden] { display:none }
+  .rm-top { justify-self:end; display:flex; gap:2px; padding:3px; border:1px solid var(--line); border-radius:999px; margin-bottom:-2px }
+  .rm-sub { font:inherit; font-size:.84rem; padding:6px 13px; border:0; border-radius:999px; background:transparent; color:var(--muted); cursor:pointer; display:inline-flex; gap:6px; align-items:center }
+  .rm-sub[aria-selected="true"] { background:var(--fg); color:var(--bg) }
+  .rm-n { font-weight:600; display:inline-block } .rm-n:empty { display:none }
+  .rm-n.rm-pop { animation:rm-pop .5s ease }
+  @keyframes rm-pop { 40% { transform:scale(1.5) } }
+  @media (prefers-reduced-motion: reduce) { .rm-n.rm-pop { animation:none } }
+  .rm-ev { display:block; font:500 1.05rem/1.35 "Cormorant Garamond", Georgia, serif; margin:4px 0 }
   .rm-on { display:grid; gap:10px } .rm-on p, .rm-home { margin:0 }
   .rm-h { font-size:.78rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:10px 0 0 }
   .rm-list { display:grid; gap:8px }
@@ -1084,7 +1111,7 @@ async function openProject(id, team = false, fromEl = null, topic = null, who = 
   const summary = buckets.map(k => `${k.items.length} ${k.items.length === 1 ? k.name.toLowerCase().replace(/s$/, '') : k.name.toLowerCase()}`).join(' · ');
   el.querySelector('.bd-top').innerHTML = `<button class="bd-close" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <div class="bd-title"><h2>${esc(d.project.name)}</h2><span>${esc(summary || 'Nothing saved here yet')}</span></div>
-    <div class="bd-actions">${team ? '' : `${d.alwaysShared || !teamMember ? '' : `<button class="${d.shared ? '' : 'primary'}" id="pteam">${d.shared ? 'Stop sharing' : 'Share to Dream board'}</button>`}<button id="pshare">Send</button>`}${teamMember ? '<button id="pviz">Creator mode</button>' : ''}<button id="pcopy">Copy for Claude</button></div>`;
+    <div class="bd-actions" role="group" aria-label="Project">${team ? `${teamMember ? '<button id="pviz">Create</button>' : ''}<button id="pcopy">Copy for Claude</button>` : `<button id="pshare" aria-haspopup="dialog">Share</button>${teamMember ? '<button id="pviz">Create</button>' : ''}<button id="premind" disabled aria-disabled="true">Remind</button>`}</div>`;
   const tile = (it) => { const c = card(it); return !c || team ? c : `<div class="tile-wrap">${c}<button class="tile-x" data-x="${esc(it.id)}" aria-label="Delete ${esc(it.title)}" title="Delete"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`; };
   el.querySelector('.bd-body').innerHTML = peopleRow + topics + (buckets.length ? `<div class="bd-grid" style="grid-template-columns:${cols}">${buckets.map(k => `<section class="bucket ${k.id}"><h3>${k.name} <span>${k.items.length}</span></h3><div class="bk">${k.items.map(tile).join('')}</div></section>`).join('')}</div>`
     : `<div class="status">Nothing here yet. Save something and say it's for ${esc(d.project.name)}.</div>`);
@@ -1094,7 +1121,7 @@ async function openProject(id, team = false, fromEl = null, topic = null, who = 
   el.querySelectorAll('[data-t]').forEach(x => x.onclick = () => again(x.dataset.t || null));
   // Your own board: drag a picture or note onto a topic pill and it stays in that topic (the librarian won't move it).
   if (!team) {
-    el.querySelectorAll('.bd-body [data-i]').forEach(c => { if (c.draggable !== true) c.draggable = true; c.addEventListener('dragstart', (e) => { e.dataTransfer.setData(CARRY, c.dataset.i); e.dataTransfer.effectAllowed = 'copyMove'; }); });
+    el.querySelectorAll('.bd-body [data-i]').forEach(c => { c.draggable = !selecting; c.addEventListener('dragstart', (e) => { e.dataTransfer.setData(CARRY, c.dataset.i); e.dataTransfer.effectAllowed = 'copyMove'; }); });
     el.querySelectorAll('.bd-topics [data-t]').forEach(x => { if (!x.dataset.t || x.dataset.t === 'loose') return;
       x.addEventListener('dragover', (e) => { if (!e.dataTransfer.types.includes(CARRY)) return; e.preventDefault(); x.classList.add('drop'); });
       x.addEventListener('dragleave', () => x.classList.remove('drop'));
@@ -1107,24 +1134,163 @@ async function openProject(id, team = false, fromEl = null, topic = null, who = 
   const byId = new Map(d.items.map(it => [it.id, it]));
   el.querySelectorAll('[data-i]').forEach(x => x.onclick = () => {
     const it = byId.get(x.dataset.i);
+    if (selecting) { if (el.querySelector('.bd-body').dataset.swallow) return; selIds.has(it.id) ? selIds.delete(it.id) : selIds.add(it.id); paintSel(el); return; }
     if (window.Visualize?.isOpen()) { Visualize.addItem(it.id, { title: it.title, kind: it.kind, thumb: it.thumb ? thumb(it.thumb) : undefined }); x.classList.add('added'); setTimeout(() => x.classList.remove('added'), 900); return; }
     boardItem(it, team, full, thumb);
   });
   el.querySelectorAll('[data-x]').forEach(x => x.onclick = (e) => { e.stopPropagation(); x.closest('.tile-wrap').classList.add('gone'); deleteItems([x.dataset.x], () => again(topic)); });
-  const pt = el.querySelector('#pteam'); if (pt) pt.onclick = async () => { pt.disabled = true; pt.setAttribute('aria-busy', 'true'); await fetch('/api/team/share', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ project: id, on: !d.shared }) }); boardDirty = true; again(topic); };
   // For Claude or any agent: everything in the project as text, with who saved it and their words.
   const text = d.pack || [`# ${d.project.name} (dream board)`, '', ...d.items.map(it => [`## ${it.title} (${it.kind}, ${it.saved}${it.by ? ', saved by ' + it.by : ''})`, it.summary, it.notes ? 'Why it was saved: ' + it.notes.replace(/\s+/g, ' ') : '', it.url || '', (it.tags || []).length ? 'Tags: ' + it.tags.join(', ') : ''].filter(Boolean).join('\n'))].join('\n\n');
-  const ps = el.querySelector('#pshare'); if (ps) ps.onclick = async () => {
-    try {
-      const files = [];
-      for (const it of d.items.filter(it => it.kind === 'image' && it.thumb).slice(0, 6)) { const f = it.thumb; const blob = await (await fetch('/files/' + encodeURIComponent(f))).blob(); files.push(new File([blob], f.split('/').pop(), { type: blob.type || (VIDEO.test(f) ? 'video/quicktime' : 'image/jpeg') })); }
-      const payload = files.length && navigator.canShare && navigator.canShare({ files }) ? { files, text } : { title: d.project.name, text };
-      if (navigator.share) await navigator.share(payload); else { await navigator.clipboard.writeText(text); ps.textContent = 'Copied'; }
-    } catch (e) { if (e.name !== 'AbortError') ps.textContent = 'Couldn\'t share'; }
-  };
+  const ps = el.querySelector('#pshare'); if (ps) { const ctx = { el, id, d, text, pteam: !(d.alwaysShared || !teamMember), again: () => again(topic) }; ps.onclick = () => shareSheet(ctx); if (selecting) startSelect(ctx); }
   const vizBoard = team ? teamBoard : `me-${me.id}`;
   createToggle(el.querySelector('#pviz'), el, { boardId: vizBoard, projectId: id, projectName: d.project.name, team });
-  const pc = el.querySelector('#pcopy'); pc.onclick = async () => { try { await navigator.clipboard.writeText(text); pc.textContent = 'Copied. Paste it into Claude.'; } catch { pc.textContent = 'Select and copy'; } };
+  const pc = el.querySelector('#pcopy'); if (pc) pc.onclick = async () => { try { await navigator.clipboard.writeText(text); pc.textContent = 'Copied. Paste it into Claude.'; } catch { pc.textContent = 'Select and copy'; } };
+}
+// Share: two ways. The entire project, or specific artifacts you pick on the board (tap, tap more, or drag across).
+// The link is made the moment the sheet opens, so every channel is one tap. Anyone with it can open it, no Recall
+// account needed. People get a page, agents get the same thing as text. Read-only, 30 days, stoppable here.
+let selecting = false; const selIds = new Set();
+function packOf(name, items) {
+  return [`# ${name}`, '', ...items.map(it => [`## ${it.title} (${it.kind}, ${it.saved}${it.by ? ', saved by ' + it.by : ''})`, it.summary, it.notes ? 'Why it was saved: ' + it.notes.replace(/\s+/g, ' ') : '', it.url || ''].filter(Boolean).join('\n'))].join('\n\n');
+}
+const ICON = {
+  sms: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 011 1v10a1 1 0 01-1 1H10l-5 4v-4H4a1 1 0 01-1-1V6a1 1 0 011-1z"/></svg>',
+  wa: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 00-7.7 13.6L3 21l4.5-1.2A9 9 0 1012 3z"/><path d="M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.6-2-1-1 .8a4 4 0 01-2-2l.8-1-1-2L9 8.5z"/></svg>',
+  sig: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 00-7.8 13.4L3 21l4.6-1.2A9 9 0 1012 3z" stroke-dasharray="2 2.4"/><circle cx="12" cy="12" r="3.2"/></svg>',
+  mail: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.5 6.5L12 13l8.5-6.5"/></svg>',
+  more: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/></svg>',
+};
+async function shareSheet(ctx) {
+  const { el, id, d, pteam, again, text } = ctx;
+  let dlg = document.getElementById('sharesheet'); if (dlg) dlg.remove();
+  dlg = document.createElement('dialog'); dlg.id = 'sharesheet'; dlg.className = 'invite';
+  const name = d.project.name, N = d.items.length;
+  let mode = selecting && selIds.size ? 'pick' : 'all', cur = null, run = 0;
+  const chan = [['sms', 'Message'], ['wa', 'WhatsApp'], ['sig', 'Signal'], ['mail', 'Email']];
+  dlg.innerHTML = `<div class="inv-in"><h3>Share ${esc(name)}</h3>
+    <div class="inv-pick sh-mode" role="group" aria-label="What to share"><button type="button" data-m="all">Entire project <span>${N}</span></button><button type="button" data-m="pick">Specific artifacts <span id="shn"></span></button></div>
+    <p class="muted" id="shnote"></p>
+    <div class="sh-icons" role="group" aria-label="Send to a person">${chan.map(([k, t]) => `<div class="sh-ic" data-ic="${k}"><button type="button" data-c="${k}" disabled aria-haspopup="true" aria-expanded="false">${ICON[k]}<span>${t}</span></button><div class="sh-pop" hidden></div></div>`).join('')}${navigator.share ? `<div class="sh-ic"><button type="button" data-c="more" disabled>${ICON.more}<span>More</span></button></div>` : ''}</div>
+    <h4 class="sh-h">For an agent</h4>
+    <div class="sh-chan"><button type="button" data-c="agent" disabled>Copy agent link</button><button type="button" data-c="agentmsg" disabled>Copy for an agent</button><button type="button" data-c="all" disabled>Copy all text</button></div>
+    <input id="shlink" type="text" readonly aria-label="Link" value="Making the link…">
+    ${pteam ? `<h4 class="sh-h">Team</h4><div class="sh-chan"><button type="button" data-c="team" class="${d.shared ? '' : 'primary'}">${d.shared ? 'Stop sharing to Dream board' : 'Share to Dream board'}</button></div>` : ''}
+    <p class="inv-msg small muted" role="status"></p>
+    <div class="inv-act"><button type="button" class="quiet" id="shstop" hidden>Stop this link</button><button type="button" class="quiet" id="shclose">Close</button></div></div>`;
+  document.body.append(dlg);
+  const msg = dlg.querySelector('.inv-msg'), box = dlg.querySelector('#shlink'), say = (t) => { msg.textContent = t; };
+  const chans = () => [...dlg.querySelectorAll('[data-c]')].filter(b => b.dataset.c !== 'team');
+  dlg.querySelector('#shclose').onclick = () => dlg.close();
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  dlg.addEventListener('close', () => dlg.remove());
+  dlg.showModal();
+  const copy = async (t, ok) => { try { await navigator.clipboard.writeText(t); say(ok); } catch { box.value = t; box.focus(); box.select(); say('Press Copy (⌘C) to copy the selected text.'); } };
+  const tm = dlg.querySelector('[data-c="team"]');
+  if (tm) tm.onclick = async () => { tm.disabled = true; await fetch('/api/team/share', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ project: id, on: !d.shared }) }); boardDirty = true; dlg.close(); again(); };
+  const ios = /iPhone|iPad|Macintosh/.test(navigator.userAgent), q = encodeURIComponent;
+  const items = () => mode === 'pick' ? d.items.filter(i => selIds.has(i.id)) : d.items;
+  const go = {
+    more: async () => { const line = `${name} on Recall: ${cur.page}`; try { const files = []; for (const it of items().filter(it => it.kind === 'image' && it.thumb).slice(0, 4)) { const f = it.thumb; const blob = await (await fetch('/files/' + encodeURIComponent(f))).blob(); files.push(new File([blob], f.split('/').pop(), { type: blob.type || 'image/jpeg' })); } await navigator.share(files.length && navigator.canShare?.({ files }) ? { files, text: line } : { title: name, text: line, url: cur.page }); } catch (e) { if (e.name !== 'AbortError') say("Couldn't open the share sheet."); } },
+    agent: () => copy(cur.agent, 'Copied. Paste the link into their agent.'),
+    agentmsg: () => copy(`Read this Recall project and use it as context. It is read-only text with picture links: ${cur.agent}`, 'Copied. Paste it into their agent.'),
+    all: () => copy(mode === 'all' ? text : packOf(name, items()), 'Copied. Paste it anywhere.'),
+  };
+  const stop = dlg.querySelector('#shstop');
+  stop.onclick = async () => { if (cur) await fetch('/api/share/stop', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: cur.token }) }); dlg.close(); toast('Link stopped.'); };
+  async function refresh() {
+    const my = ++run; cur = null; chans().forEach(b => b.disabled = true); stop.hidden = true; say('');
+    const pick = mode === 'pick', ids = pick ? [...selIds] : null;
+    dlg.querySelectorAll('[data-m]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === mode)));
+    dlg.querySelector('#shn').textContent = selIds.size && selecting ? String(selIds.size) : '';
+    dlg.querySelector('#shnote').textContent = pick ? `${selIds.size} artifact${selIds.size === 1 ? '' : 's'}. Anyone with the link can open them. No account needed.` : `All ${N} items. Anyone with the link can open the project. No account needed. Read-only, works for 30 days.`;
+    box.value = 'Making the link…';
+    const r = await fetch('/api/share', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ project: id, items: ids }) }).then(r => r.json()).catch(() => ({}));
+    if (my !== run) return;
+    if (!r.page) { box.value = ''; say(r.error || "The link didn't load. Close this and try again."); return; }
+    cur = r; box.value = r.page; stop.hidden = false;
+    chans().forEach(b => { const c = b.dataset.c; if (POP[c]) { b.disabled = false; b.onclick = () => togglePop(c); } else if (go[c]) { b.disabled = false; b.onclick = go[c]; } });
+  }
+  // Each app icon opens a short list of the people you shared with last. Click one and it goes: the chat opens with the
+  // message ready (one tap to send in that app), or an email sends straight from Recall. The first time, type who.
+  const POP = { sms: 'phone', wa: 'phone', sig: 'phone', mail: 'email' }, APP = { sms: 'Messages', wa: 'WhatsApp', sig: 'Signal', mail: 'Email' };
+  let people = [], emailDirect = false, closeT = 0;
+  fetch('/api/recipients').then(r => r.json()).then(r => { people = r.list || []; emailDirect = !!r.email; }).catch(() => {});
+  const digits = (n) => { const d = String(n).replace(/\D/g, ''); return d.length === 10 ? '1' + d : d; };
+  function act(c, who) {
+    const line = `${name} on Recall: ${cur.page}`, num = who.phone, mail = who.email;
+    fetch('/api/recipients', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(who) }).then(r => r.json()).then(() => fetch('/api/recipients')).then(r => r.json()).then(r => { people = r.list || people; }).catch(() => {});
+    if (c === 'sms') location.href = `sms:${num}${ios ? '&' : '?'}body=${q(line)}`;
+    else if (c === 'wa') window.open(`https://wa.me/${digits(num)}?text=${q(line)}`, '_blank', 'noopener');
+    else if (c === 'sig') { navigator.clipboard?.writeText(line).catch(() => {}); window.open(`https://signal.me/#p/${num.startsWith('+') ? num : '+' + digits(num)}`, '_blank', 'noopener'); say('Copied. Paste it in the chat.'); }
+    else if (c === 'mail') {
+      if (!emailDirect) { location.href = `mailto:${mail}?subject=${q(name)}&body=${q(line)}`; return; }
+      say('Sending…');
+      fetch('/api/share/email', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: cur.token, to: mail }) }).then(r => r.json()).then(r => { if (r.ok) { say(`Sent to ${who.name || mail}.`); toast(`Sent to ${who.name || mail}.`); } else if (r.fallback) location.href = `mailto:${mail}?subject=${q(name)}&body=${q(line)}`; else say(r.error || "Didn't send."); }).catch(() => say("Didn't send."));
+    }
+    closePops();
+  }
+  function closePops() { dlg.querySelectorAll('.sh-pop').forEach(p => { p.hidden = true; p.parentElement.querySelector('[data-c]').setAttribute('aria-expanded', 'false'); }); }
+  function togglePop(c) {
+    const wrap = dlg.querySelector(`[data-ic="${c}"]`), pop = wrap.querySelector('.sh-pop'), was = !pop.hidden; closePops(); if (was) return;
+    const field = POP[c], mine = people.filter(x => x[field]).slice(0, 5);
+    pop.innerHTML = mine.map((x, i) => `<button type="button" data-p="${i}"><b>${esc(x.name)}</b>${x.name !== x[field] ? `<small>${esc(x[field])}</small>` : ''}</button>`).join('') +
+      `<form class="sh-new"><input name="n" placeholder="Name" autocomplete="off" aria-label="Name"><input name="v" placeholder="${field === 'email' ? 'Email' : 'Phone number'}" inputmode="${field === 'email' ? 'email' : 'tel'}" autocomplete="off" required aria-label="${field === 'email' ? 'Email' : 'Phone number'}"><button type="submit">Send</button></form>` +
+      (c !== 'mail' ? `<button type="button" data-p="app">Choose in ${APP[c]}</button>` : '');
+    pop.hidden = false; wrap.querySelector('[data-c]').setAttribute('aria-expanded', 'true');
+    pop.querySelectorAll('[data-p]').forEach(b => b.onclick = () => {
+      if (b.dataset.p === 'app') { const line = `${name} on Recall: ${cur.page}`; if (c === 'sms') location.href = `sms:${ios ? '&' : '?'}body=${q(line)}`; else if (c === 'wa') window.open(`https://wa.me/?text=${q(line)}`, '_blank', 'noopener'); else { navigator.clipboard?.writeText(line).catch(() => {}); say('Copied. Open Signal and paste it.'); } closePops(); return; }
+      act(c, mine[+b.dataset.p]);
+    });
+    pop.querySelector('form').onsubmit = (e) => { e.preventDefault(); const f = e.target; act(c, { name: f.n.value.trim(), [field]: f.v.value.trim() }); };
+    if (!mine.length) pop.querySelector('[name=v]').focus({ preventScroll: true });
+  }
+  // On a computer, hovering an icon opens its list; on a phone, tapping does.
+  dlg.querySelectorAll('.sh-ic[data-ic]').forEach(w => {
+    w.addEventListener('mouseenter', () => { if (!matchMedia('(hover:hover)').matches || w.querySelector('[data-c]').disabled) return; clearTimeout(closeT); if (w.querySelector('.sh-pop').hidden) togglePop(w.dataset.ic); });
+    w.addEventListener('mouseleave', () => { if (!matchMedia('(hover:hover)').matches) return; closeT = setTimeout(() => { if (!w.contains(document.activeElement) || document.activeElement.tagName === 'BUTTON') closePops(); }, 350); });
+  });
+  dlg.querySelector('[data-m="all"]').onclick = () => { mode = 'all'; refresh(); };
+  dlg.querySelector('[data-m="pick"]').onclick = () => {
+    if (selecting && selIds.size) { mode = 'pick'; refresh(); return; }
+    dlg.close(); startSelect(ctx); // nothing picked yet: go pick on the board
+  };
+  refresh();
+}
+// Picking artifacts on the board: tap one, tap more, or drag across a group (mouse). A bar at the bottom shows the count.
+function paintSel(el) {
+  el.querySelectorAll('.bd-body [data-i]').forEach(x => x.classList.toggle('sel', selIds.has(x.dataset.i)));
+  const bar = el.querySelector('.sel-bar'); if (!bar) return;
+  bar.querySelector('span').textContent = selIds.size ? `${selIds.size} selected` : 'Tap or drag to pick';
+  bar.querySelector('#selshare').disabled = !selIds.size;
+}
+function endSelect(el) {
+  selecting = false; selIds.clear(); el.classList.remove('selecting'); el.querySelector('.sel-bar')?.remove();
+  const body = el.querySelector('.bd-body'); if (body) body.onpointerdown = body.onpointermove = body.onpointerup = body.onpointercancel = null;
+  el.querySelectorAll('.bd-body [data-i]').forEach(x => { x.classList.remove('sel'); x.draggable = true; });
+}
+function startSelect(ctx) {
+  const el = ctx.el; selecting = true; el.classList.add('selecting');
+  el.querySelectorAll('.bd-body [data-i]').forEach(x => { x.draggable = false; });
+  if (!el.querySelector('.sel-bar')) {
+    const bar = document.createElement('div'); bar.className = 'sel-bar'; bar.setAttribute('role', 'toolbar');
+    bar.innerHTML = `<span role="status"></span><button type="button" class="quiet" id="selcancel">Cancel</button><button type="button" class="primary" id="selshare" disabled>Share</button>`;
+    el.append(bar);
+    bar.querySelector('#selcancel').onclick = () => endSelect(el);
+    bar.querySelector('#selshare').onclick = () => shareSheet(ctx);
+  }
+  // Drag across tiles with the mouse to pick everything the box touches. (A finger keeps scrolling; it taps to pick.)
+  const body = el.querySelector('.bd-body'); let st = null, box = null, moved = false;
+  body.onpointerdown = (e) => { if (e.pointerType !== 'mouse' || e.button !== 0 || e.target.closest('.tile-x, .bd-topics, .bd-people')) return; st = { x: e.clientX, y: e.clientY, base: new Set(selIds) }; moved = false; };
+  body.onpointermove = (e) => {
+    if (!st) return; if (!moved && Math.hypot(e.clientX - st.x, e.clientY - st.y) < 6) return;
+    if (!moved) { moved = true; box = document.createElement('div'); box.className = 'marquee'; document.body.append(box); }
+    const x1 = Math.min(st.x, e.clientX), x2 = Math.max(st.x, e.clientX), y1 = Math.min(st.y, e.clientY), y2 = Math.max(st.y, e.clientY);
+    Object.assign(box.style, { left: x1 + 'px', top: y1 + 'px', width: x2 - x1 + 'px', height: y2 - y1 + 'px' });
+    el.querySelectorAll('.bd-body [data-i]').forEach(t => { const r = t.getBoundingClientRect(); const hit = !(r.right < x1 || r.left > x2 || r.bottom < y1 || r.top > y2); if (hit || st.base.has(t.dataset.i)) selIds.add(t.dataset.i); else selIds.delete(t.dataset.i); });
+    paintSel(el);
+  };
+  body.onpointerup = body.onpointercancel = () => { if (moved) body.dataset.swallow = '1'; box?.remove(); box = null; st = null; setTimeout(() => delete body.dataset.swallow, 0); };
+  paintSel(el);
 }
 // The board grows out of the panel that was clicked (or fades in when opened from elsewhere).
 // The board's visible window, and its preview pictures, set to a panel's place on screen.
@@ -1142,7 +1308,7 @@ function growBoard(fromEl, id) {
   return el;
 }
 function closeBoard() {
-  const el = boardEl; if (!el) return; window.Visualize?.unmount(); boardEl = null; backTo = null; openSeq++;
+  const el = boardEl; if (!el) return; selecting = false; selIds.clear(); window.Visualize?.unmount(); boardEl = null; backTo = null; openSeq++;
   const sheet = el.querySelector('.bd-sheet'); if (sheet) sheet.remove();
   const from = [...document.querySelectorAll('.panel[data-dock]')].find(p => p.dataset.dock === boardFrom && p.offsetParent);
   const r = from?.getBoundingClientRect();

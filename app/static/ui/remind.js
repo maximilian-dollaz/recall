@@ -32,17 +32,30 @@
     const queue = st.sparks.filter((s) => s.state === 'on' && !(s.hold && Date.parse(s.hold) > now)).sort((a, b) => a.next.localeCompare(b.next));
     const total = queue.length;
     root.innerHTML = `
+      <div class="rm-top" role="tablist"><button type="button" role="tab" class="rm-sub" data-v="deck" aria-selected="true">Remind</button><button type="button" role="tab" class="rm-sub" data-v="jar" aria-selected="false">Evidence <span class="rm-n"></span></button></div>
+      <div class="rm-view" data-v="deck">
       <div class="rm-on" hidden><p class="rm-text">Your words come back to this phone, up to three times a day, until you live them.</p><button class="primary rm-enable" type="button">Turn on Remind</button></div>
       <p class="rm-home small muted" hidden>Open Recall from your home screen, then come back here to turn on Remind.</p>
       <div class="rm-deck"></div>
-      <div class="rm-jar"></div>
-      <button class="rm-send" type="button" hidden>Send one now</button>`;
+      <button class="rm-send" type="button" hidden>Send one now</button>
+      </div>
+      <div class="rm-view rm-jar" data-v="jar" hidden></div>`;
+    // The Evidence subtab, top right: what you have lived. Let go ones sit at the bottom of it.
+    const view = (v) => {
+      root.querySelectorAll('.rm-sub').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.v === v)));
+      root.querySelectorAll('.rm-view').forEach((d) => d.hidden = d.dataset.v !== v);
+    };
+    root.querySelector('.rm-top').onclick = (e) => { const b = e.target.closest('.rm-sub'); if (b) view(b.dataset.v); };
     const q = (s) => root.querySelector(s);
     const deck = q('.rm-deck');
     const jar = () => {
       const ev = st.sparks.filter((s) => s.state === 'evidence').sort((a, b) => (b.evidence || '').localeCompare(a.evidence || ''));
       const gone = st.sparks.filter((s) => s.state === 'let-go');
-      q('.rm-jar').innerHTML = (ev.length ? `<h3 class="rm-h">Evidence · ${ev.length}</h3><div class="rm-list">${ev.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b><small>lived ${s.evidence ? when(s.evidence) : ''}</small></a>`).join('')}</div>` : '')
+      const n = q('.rm-n'); const was = n.textContent; n.textContent = ev.length || '';
+      if (n.dataset.shown && was !== n.textContent) { n.classList.remove('rm-pop'); void n.offsetWidth; n.classList.add('rm-pop'); }
+      n.dataset.shown = '1';
+      q('.rm-jar').innerHTML = (ev.length ? `<div class="rm-list">${ev.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b><span class="rm-ev">\u201c${esc(s.words)}\u201d</span><small>lived ${s.evidence ? when(s.evidence) : ''}</small></a>`).join('')}</div>`
+        : '<p class="rm-done">Nothing here yet. Each \u201cYes, lived it\u201d lands here.</p>')
         + (gone.length ? `<h3 class="rm-h">Let go · ${gone.length}</h3><div class="rm-list">${gone.map((s) => `<a class="rm-item" href="/remind/${s.id}"><b>${esc(s.title)}</b></a>`).join('')}</div>` : '');
     };
     const next = () => {
