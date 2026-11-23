@@ -86,3 +86,39 @@ video.pt-out { width:100%; max-height:46vh; border-radius:10px; background:#000 
 @media (max-width:520px) { nav { overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; padding-bottom:2px } nav::-webkit-scrollbar { display:none } nav button { flex:0 0 auto !important; padding:8px 13px !important; white-space:nowrap } }
 .rm-sparks { display:flex; gap:8px; align-items:flex-start; margin-top:14px; cursor:pointer } .rm-sparks input { width:18px; height:18px; flex:0 0 auto; accent-color:var(--accent) }
 .connect a.all { background:transparent; color:var(--fg); border:1px solid var(--line) }
+
+/* ── Design pass (23 Nov): radii on 8/13/21, spacing on the 3/5/8/13/21 scale, gold only for light and the one primary ── */
+.ag-card header, .pt-job header { margin:0 }
+.ag-card, .td-being, .td-mini, .td-row, .pt-job, .ag-ask, .ag-step, .pt-formats button { border-radius:var(--r-tile) }
+.td-mini i, video.pt-out, .rm-pic { border-radius:var(--r-thumb) }
+.td-sec { margin-top:var(--s5); gap:var(--s3) }
+.td-work, .ag-new, .pt-jobs, .ag-list { gap:var(--s4) }
+.ag-card, .td-being, .pt-job, .td-row { padding:var(--s4) }
+.ag-steps { gap:var(--s2) } .td-rows { gap:var(--s3) } .ag-new { margin-bottom:var(--s5) }
+.ag-needs-you .ag-state { color:var(--fg) } .pt-ready header span { color:var(--fg-2) }
+/* On a card that waits on you, Send is the one gold action; the compose button steps back while such a card is on screen. */
+.ag-new:has(~ .ag-list .ag-needs-you) .primary { background:transparent; color:var(--fg); border:1px solid var(--rim); box-shadow:none }
+.ag-card h3 { font:600 var(--fs1)/1.236 var(--font-display) }
+.td-date { font-weight:600 }
+.td-h, .ag-kind, .ag-state { font:500 var(--fs-1)/1.4 var(--font-ui); letter-spacing:.16em; text-transform:uppercase }
+.pt-job header b, .pt-formats b { font-weight:600 }
+.ag-hint, .pt-sheet p.small.muted { font-size:.875rem }
+label.rm-sparks { display:flex; margin:var(--s4) 0 0 }
+.ag-step summary { display:grid; grid-template-columns:1fr auto; column-gap:var(--s3); align-items:start }
+.ag-step summary::after { grid-column:2; grid-row:1 / span 2; margin:0 }
+.ag-kind, .ag-st { grid-column:1 } .ag-st i { display:block; font-size:var(--fs-1) }
+.rm-quiet { min-height:44px; padding:0 var(--s3) } .ag-foot, .rm-btns { gap:var(--s4) }
+.ag-src summary { min-height:44px; display:flex; align-items:center } .ag-src li { padding:var(--s3) 0 } .ag-src span { opacity:1 }
+.connect a { color:var(--ink-900) } .connect a.all { color:var(--fg) }
+.pt-sheet .inv-act { position:sticky; bottom:calc(-1 * var(--s5)); padding:var(--s3) 0; background:var(--glass-dense); z-index:1 }
+.pt-job a.rm-second { color:var(--fg) }
+.td-work { grid-template-columns:repeat(3, minmax(0, 144px)) }
+.td-none { padding:var(--s4); border:1px dashed var(--rim); border-radius:var(--r-tile) }
+/* A picked tile: lit, with its tick (the old outline went square and its tick was hidden by the rim light). */
+.bd-body [data-i].sel { outline:0; border-radius:var(--r-tile); box-shadow:0 0 0 2px var(--lit-rim), var(--halo-on) }
+.bd-body [data-i].sel::after { content:none }
+.bd-body [data-i].sel::before { content:"✓"; position:absolute; z-index:2; top:var(--s3); right:var(--s3); width:26px; height:26px; border-radius:50%; background:var(--bone); color:var(--ink-900); display:grid; place-items:center; font-weight:600; line-height:1; -webkit-mask:none; mask:none; padding:0; inset:auto var(--s3) auto auto; top:var(--s3) }
+.sel-bar { background:var(--glass-dense); box-shadow:var(--lift), var(--halo); gap:var(--s3) }
+.sel-bar button { font:500 .8125rem/1.2 var(--font-ui); padding:0 11px; min-height:44px }
+.sel-bar #selcancel, .sel-bar #selcreator, .sel-bar #selqueue { border-color:transparent; color:var(--fg-2) }
+@media (max-width:520px) { nav { -webkit-mask-image:linear-gradient(90deg, #000 calc(100% - var(--s6)), transparent); mask-image:linear-gradient(90deg, #000 calc(100% - var(--s6)), transparent); scroll-padding-inline:var(--s4); padding-right:var(--s6) } .sel-bar { border-radius:var(--r-panel) } }

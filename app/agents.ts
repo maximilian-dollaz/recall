@@ -48,7 +48,8 @@ const empty = (): Ledger => ({ runs: [], auto: true, autoDays: {} });
 export function ledger(dir: string): Ledger { try { return { ...empty(), ...store.read<Ledger>(file(dir), empty()) }; } catch (e) { console.error(`[agents] ${String(e).slice(0, 200)}`); return empty(); } }
 const change = (dir: string, fn: (l: Ledger) => void) => store.update<Ledger>(file(dir), empty(), (l) => { const x = { ...empty(), ...l }; fn(x); return x; });
 const now = () => new Date().toISOString();
-const clip = (s: unknown, n: number) => String(s ?? "").replace(/\s+\n/g, "\n").trim().slice(0, n);
+// Web search answers carry <cite> tags; they are not for the screen.
+const clip = (s: unknown, n: number) => String(s ?? "").replace(/<\/?cite[^>]*>/g, "").replace(/\s+\n/g, "\n").trim().slice(0, n);
 
 /** What the Agents tab shows: newest first, the ones waiting on the person at the top. */
 export function list(dir: string) {

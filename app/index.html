@@ -492,6 +492,7 @@ function show(which) {
   if (which === 'today' && window.loadToday) window.loadToday($('#today-body'));
   if (which === 'agents' && window.loadAgents) { window.loadAgents($('#agents-body'), { run: agentRun }); agentRun = null; }
   if (which === 'find') { if ($('#q').value.trim()) { loadIndex(); instant(); doSearch(); } else { loadShelves(); loadIndex(); } setTimeout(() => { if (matchMedia('(hover: hover)').matches) $('#q').focus(); grow(); }, 50); } // on a phone, focusing would open the keyboard and push the projects down
+  tabs[which]?.scrollIntoView({ inline: 'center', block: 'nearest' }); // seven tabs scroll sideways on a phone: the open one is always in view
   try { localStorage.setItem('cl-tab', which); } catch {}
 }
 for (const k of Object.keys(tabs)) tabs[k].onclick = () => show(k);
