@@ -56,3 +56,6 @@ shortcuts/*.shortcut
 /server/com.recall.tunnel.plist
 # The river painting (artist not known): kept out of the public repo; installs without it show the delta.
 /app/static/river-*
+
+# Share links: snapshots of what a person chose to share.
+shares/

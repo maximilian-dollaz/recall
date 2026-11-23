@@ -1,4 +1,4 @@
-// Email from Recall, through Resend (resend.com): only invites, only to the addresses the inviter typed.
+// Email from Recall, through Resend (resend.com): invites and share links, only to addresses the person typed.
 // On once Max has pasted a Resend key on the Keys page and Resend has verified the sending domain; until then
 // `ready()` is false and the invite box hands back a ready email to send yourself instead.
 // The sender is library/settings.json {"inviteFrom": "..."}, else RECALL_INVITE_FROM.

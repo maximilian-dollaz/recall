@@ -18,7 +18,7 @@ What's built, and what's next, in order. The why behind each step is in [STORY.m
 1. **An always-on server**, so Recall doesn't depend on one laptop being awake ([docs/server.md](docs/server.md)).
 2. **A welcome page and a click-by-click manual** for people opening Recall for the first time.
 3. **Connectors that sync on their own:** pictures from a "Recall" album, Apple Notes, meeting recorders (Otter, Granola), Google Docs and Drive, Claude, voice notes.
-4. **Sharing:** send a project to a friend as a read-only board; make a short video of any board.
+4. **Three tabs inside every project, one at a time:** **Share** (any context to a person or their agent: message, WhatsApp, Signal, email, or an agent link), **Create** (pick assets, say how and why, and the agent makes videos, reels and posts, queued), **Remind** (put an asset into Remind with a note on how, when and what for). Also: make a short video of any board.
 5. **Sparks:** the highest-inspiration passages from years of notes, pulled out in the writer's own words and brought back on a widening rhythm.
 6. **Agents** that act on the pieces: ideas, actions and decisions sent where they need to go.
 
