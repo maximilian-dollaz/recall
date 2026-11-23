@@ -250,7 +250,7 @@ ${text.slice(0, 24_000)}` }], { json: true });
  *  "in two weeks") is when it first comes back; otherwise tomorrow. `when` parses the date (reminders.parseWhen). */
 export async function addAssets(dir: string, items: { id: string; title: string; saved: string; thumb?: string }[], note: string, when: (said: string) => string | undefined) {
   const words = note.replace(/\s+/g, " ").trim().slice(0, 400); if (words.length < 3) return [];
-  const day = when(words); const first = day ? localTime(day, 8 * 60 + 30) : undefined;
+  const day = when(words); const first = day ? localTime(day, 8 * 60 + 30, ledger(dir).tz ?? TZ) : undefined;
   const made: Spark[] = [];
   for (const it of items.slice(0, 24)) {
     const s = await add(dir, { words, title: it.title.slice(0, 80), kind: "asset", from: { slug: it.id, title: it.title, date: (it.saved || localDay()).slice(0, 10) }, thumb: it.thumb }, first && first > new Date() ? first : undefined);

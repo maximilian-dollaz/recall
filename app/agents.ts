@@ -75,7 +75,8 @@ export async function create(dir: string, input: { directive: string; from?: Fro
     made = { id: Math.random().toString(36).slice(2, 10), directive, title: clip(input.title || directive.split(/[.\n]/)[0], 80), from: input.from ?? { kind: "said" },
       status: "queued", auto: input.auto || undefined, steps: [], sources: [], answers: [], round: 0, web: !LOCAL, created: now(), updated: now() };
     l.runs.push(made);
-    if (l.runs.length > KEEP) l.runs.splice(0, l.runs.length - KEEP);
+    // Past KEEP, the oldest finished ones go (never one in flight or waiting on the person).
+    while (l.runs.length > KEEP) { const i = l.runs.findIndex((r) => ["done", "stopped", "failed"].includes(r.status)); if (i < 0) break; l.runs.splice(i, 1); }
   });
   return made;
 }
@@ -144,13 +145,15 @@ async function claudeRound(system: string, user: string): Promise<Thought> {
   const sources: Source[] = []; let text = "";
   const messages: any[] = [{ role: "user", content: user }];
   let tool = 0, fallback = true;
+  const deadline = Date.now() + 12 * 60_000; // one round never holds the queue longer than this
   for (let turn = 0; turn < 6; turn++) {
-    const body: any = { model: MODEL, max_tokens: 8000, system, messages, tools: [{ type: SEARCH_TOOLS[tool], name: "web_search", max_uses: 6 }] };
+    if (Date.now() > deadline) throw new Error("took too long");
+    const body: any = { model: MODEL, max_tokens: 16000, system, messages, tools: [{ type: SEARCH_TOOLS[tool], name: "web_search", max_uses: 6 }] };
     const headers: Record<string, string> = { "content-type": "application/json", "x-api-key": KEY, "anthropic-version": "2023-06-01" };
     if (fallback) { body.fallbacks = "default"; headers["anthropic-beta"] = "server-side-fallback-2026-07-01"; }
     let res: Response | null = null;
-    for (let attempt = 0; attempt < 4; attempt++) {
-      res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: AbortSignal.timeout(540_000), headers, body: JSON.stringify(body) });
+    for (let attempt = 0; attempt < 4 && Date.now() < deadline; attempt++) {
+      res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: AbortSignal.timeout(Math.max(30_000, Math.min(540_000, deadline - Date.now()))), headers, body: JSON.stringify(body) });
       if (res.status === 429 || res.status >= 500) { await Bun.sleep(4000 * (attempt + 1)); continue; }
       break;
     }
@@ -168,6 +171,7 @@ async function claudeRound(system: string, user: string): Promise<Thought> {
       if (b.type === "web_search_tool_result" && Array.isArray(b.content)) for (const r of b.content) if (r?.url && !sources.some((s) => s.url === r.url)) sources.push({ title: clip(r.title || r.url, 120), url: String(r.url) });
     }
     if (d.stop_reason === "refusal") throw new Error("the model declined this one");
+    if (d.stop_reason === "max_tokens") throw new Error("the answer was cut short; try again");
     if (d.stop_reason !== "pause_turn") break;
     messages.push({ role: "assistant", content: d.content });
   }
@@ -254,7 +258,8 @@ export function agentRoutes(withPerson: With, deps: { kick: () => void; sparkWor
   const body = async (req: Request) => (await req.json().catch(() => ({}))) as any;
   return {
     "/api/agents": {
-      GET: withPerson(async (_req, p) => json(list(p.dir))),
+      // ?count=1 is the tab's badge: just the number waiting. The tab itself gets the newest 40 runs.
+      GET: withPerson(async (req, p) => { const l = list(p.dir); return json(new URL(req.url).searchParams.has("count") ? { waiting: l.waiting } : { ...l, runs: l.runs.slice(0, 40) }); }),
       // { directive } typed or spoken, or { from: { kind: "spark" | "item", id } } to hand over something saved.
       POST: withPerson(async (req, p) => {
         const b = await body(req); const kind = b.from?.kind, fid = String(b.from?.id ?? "");

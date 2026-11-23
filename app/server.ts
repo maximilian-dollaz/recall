@@ -423,7 +423,7 @@ async function sparksFrom(person: Person, slug: string, title: string, text: str
   const found = await withEngine({ kind: "claude" }, () => remind.find(text, title, chat, pieces.locate));
   for (const s of found) { const made = await remind.add(person.dir, { ...s, from: { slug, title, date } }); if (made) { console.log(`[remind] ${person.id}: new spark "${made.title}" from ${slug}`);
     // An idea is something to move forward: an agent starts on it without being asked (agents.ts).
-    if (made.kind === "idea") agents.create(person.dir, { directive: made.words, title: made.title, from: { kind: "spark", id: made.id, title: made.title }, auto: true }).then((r) => r && kickAgents()).catch(() => {}); } }
+    if (made.kind === "idea" && await isOwner(person)) agents.create(person.dir, { directive: made.words, title: made.title, from: { kind: "spark", id: made.id, title: made.title }, auto: true }).then((r) => r && kickAgents()).catch(() => {}); } }
 }
 setInterval(async () => {
   for (const email of Object.keys((await listPeople()).people)) {
@@ -437,13 +437,14 @@ const kickAgents = () => { setTimeout(() => agents.drain(allPeople).catch((e) =>
 agents.recover(allPeople).then(kickAgents).catch(() => {});
 setInterval(kickAgents, 30_000);
 // Sparks (sparks.ts): the slow pass over everything saved before Remind existed, a few pages every half hour.
-setInterval(async () => { for (const p of await allPeople()) await sparks.tick(p, (text, title) => withEngine({ kind: "claude" }, () => remind.find(text, title, chat, pieces.locate))).catch((e) => console.error(`[sparks] ${p.id}: ${String(e).slice(0, 200)}`)); }, 30 * 60_000);
+setInterval(async () => { for (const p of await allPeople()) if (await isOwner(p)) await sparks.tick(p, (text, title) => withEngine({ kind: "claude" }, () => remind.find(text, title, chat, pieces.locate))).catch((e) => console.error(`[sparks] ${p.id}: ${String(e).slice(0, 200)}`)); }, 30 * 60_000);
 // Create (create.ts): what a project's Create tab queued is made here, one job at a time.
 const kickCreate = () => { setTimeout(() => create.drain(allPeople).catch((e) => console.error(`[create] ${String(e).slice(0, 200)}`)), 200); };
 create.recover(allPeople).then(kickCreate).catch(() => {});
 setInterval(kickCreate, 60_000);
 // A new idea or action pulled out of a meeting goes to an agent on its own (capped per day in agents.ts).
-pieces.made.piece = (person, p) => { if (p.kind !== "idea" && p.kind !== "action") return;
+// For now only the owner's: a teammate hands things over by hand until the owner turns this on for the team.
+pieces.made.piece = async (person, p) => { if ((p.kind !== "idea" && p.kind !== "action") || !(await isOwner(person).catch(() => false))) return;
   agents.create(person.dir, { directive: `${p.title}\n\n"${p.quote}"`, title: p.title, from: { kind: "piece", id: p.slug, title: p.from }, auto: true }).then((r) => r && kickAgents()).catch(() => {}); };
 setInterval(() => syncMeetings().catch((e) => console.error(`[meetings] sync: ${String(e).slice(0, 200)}`)), 30 * 60_000);
 setTimeout(() => syncMeetings().catch(() => {}), 60_000); // after a restart, carry on with any sync it cut short

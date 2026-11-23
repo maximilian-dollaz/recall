@@ -1604,7 +1604,7 @@ document.addEventListener('keydown', (e) => {
 refreshCueCount(); setInterval(refreshCueCount, 30000);
 // Agents waiting on your call: the count on the Agents tab.
 window.setAgentCount = (n) => { const b = $('#agent-count'); b.textContent = n || ''; b.hidden = !n; };
-const refreshAgentCount = () => fetch('/api/agents').then(r => r.json()).then(d => setAgentCount(d.waiting)).catch(() => {});
+const refreshAgentCount = () => fetch('/api/agents?count=1').then(r => r.json()).then(d => setAgentCount(d.waiting)).catch(() => {});
 refreshAgentCount(); setInterval(refreshAgentCount, 30000);
 window.openAgents = (run) => { agentRun = run || null; show('agents'); };
 

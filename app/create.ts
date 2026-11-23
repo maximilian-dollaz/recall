@@ -61,7 +61,7 @@ function ownFile(p: Person, rel: string): string | null {
 
 /** Add a job. It says plainly when the picked items can't make that format. */
 export async function add(p: Person, input: { project: string; projectName: string; format: Format; brief: string; items: string[] }): Promise<Job | { error: string }> {
-  if (!FORMATS[input.format]) return { error: "Pick what to make." };
+  if (!Object.hasOwn(FORMATS, input.format)) return { error: "Pick what to make." };
   const want = new Set(input.items);
   const items = scanPages(p.dir).filter((it) => want.has(it.id)).map((it) => ({ id: it.id, title: it.title, kind: it.kind, files: it.files }));
   // In the order they were picked.
@@ -72,7 +72,11 @@ export async function add(p: Person, input: { project: string; projectName: stri
   if (input.format !== "reel" && !has(IMG)) return { error: "That needs pictures. Pick at least one." };
   const job: Job = { id: Math.random().toString(36).slice(2, 10), project: input.project, projectName: input.projectName.slice(0, 80), format: input.format, brief: input.brief.replace(/\s+\n/g, "\n").trim().slice(0, 1500),
     items, status: "queued", out: [], created: now(), updated: now() };
-  await change(p.dir, (l) => { l.jobs.push(job); for (const old of l.jobs.splice(0, Math.max(0, l.jobs.length - KEEP))) rmSync(outDir(p.dir, old.id), { recursive: true, force: true }); });
+  await change(p.dir, (l) => {
+    l.jobs.push(job);
+    // Past KEEP, the oldest finished ones go (never one waiting or being made).
+    while (l.jobs.length > KEEP) { const i = l.jobs.findIndex((j) => j.status === "ready" || j.status === "failed"); if (i < 0) break; rmSync(outDir(p.dir, l.jobs[i].id), { recursive: true, force: true }); l.jobs.splice(i, 1); }
+  });
   return job;
 }
 
@@ -152,9 +156,10 @@ async function make(p: Person, job: Job): Promise<string[]> {
   if (!src) throw new Error("That video isn't in your library any more.");
   if (statSync(src).size > MAX_VIDEO_BYTES) throw new Error("That video is too large to make here (over 600 MB). Trim it first.");
   const base = ["ffmpeg", "-v", "error", "-y", "-i", src, "-vf", `${pad(1080, 1920)},fps=30,format=yuv420p`, "-c:v", "libx264", "-preset", "veryfast", "-crf", "21", "-movflags", "+faststart"];
-  // Sound levelled for phones; a clip with no sound is made without it.
-  await run([...base, "-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "160k", join(dir, "reel.mp4")], 45 * 60_000)
-    .catch(() => run([...base, "-an", join(dir, "reel.mp4")], 45 * 60_000));
+  // Sound levelled for phones at 48 kHz (loudnorm raises the rate by itself); a clip with no sound is made without it.
+  const probe = Bun.spawn(["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=index", "-of", "csv=p=0", src], { stdout: "pipe", stderr: "ignore" });
+  const hasAudio = (await new Response(probe.stdout).text()).trim() !== "";
+  await run([...base, ...(hasAudio ? ["-af", "loudnorm=I=-16:TP=-1.5:LRA=11", "-ar", "48000", "-c:a", "aac", "-b:a", "160k"] : ["-an"]), join(dir, "reel.mp4")], 45 * 60_000);
   return ["reel.mp4"];
 }
 

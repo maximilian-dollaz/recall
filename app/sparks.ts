@@ -49,7 +49,7 @@ export async function tick(person: Person, find: (text: string, title: string) =
   for (const it of next) {
     const text = bodyOf(dir, it.id);
     let found: any[] = [];
-    if (text.length >= MIN_CHARS) { try { found = await find(text, it.title); } catch (e) { console.error(`[sparks] ${person.id}: ${it.id}: ${String(e).slice(0, 160)}`); continue; } } // a model error: try this page again later
+    if (text.length >= MIN_CHARS) { try { found = await find(text, it.title); } catch (e) { console.error(`[sparks] ${person.id}: ${it.id}: ${String(e).slice(0, 160)}`); await change(dir, (x) => { x.days = { [day]: (x.days[day] ?? 0) + 1 }; }); break; } } // a model error: counted against today, and this page is tried again on the next pass
     let here = 0;
     for (const f of found) { const made = await remind.add(dir, { ...f, from: { slug: it.id, title: it.title, date: (it.saved || day).slice(0, 10) } }); if (made) { here++; console.log(`[sparks] ${person.id}: "${made.title}" from ${it.id}`); } }
     added += here;

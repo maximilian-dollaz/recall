@@ -12,7 +12,7 @@
     const lines = p.split('\n');
     if (lines.every((l) => /^\s*(?:[-*•]|\d+[.)])\s+/.test(l))) return `<ul>${lines.map((l) => `<li>${l.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '')}</li>`).join('')}</ul>`;
     return `<p>${lines.join('<br>')}</p>`;
-  }).join('').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/(https?:\/\/[^\s<)]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  }).join('').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>').replace(/(https?:\/\/[^\s<)]+?)(?=(?:&quot;|[.,;:!?])*(?:[\s<)]|$))/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
 
   let timer = null, open = new Set(), focus = null, drafts = {};
 
@@ -50,6 +50,7 @@
     if (opts.run) focus = opts.run;
     clearTimeout(timer);
     if (!root.querySelector('.ag-new')) {
+      const wired = root._wired; root._wired = true;
       root.innerHTML = `<form class="ag-new"><textarea name="d" rows="2" placeholder="What do you want moved forward?" aria-label="What do you want moved forward?"></textarea>
         <div class="ag-row"><button class="primary" type="submit">Hand to an agent</button><label class="ag-auto"><input type="checkbox" name="auto"> Agents start on their own</label></div>
         <p class="ag-hint small muted">An agent researches, checks if it can be done, finds people and drafts messages. It never sends anything. It stops and asks when it needs your call.</p>
@@ -63,6 +64,7 @@
         const run = await r.json(); form.d.value = ''; msg.textContent = ''; focus = run.id; load(root);
       };
       form.auto.onchange = () => post('/api/agents/auto', { on: form.auto.checked });
+      if (!wired) {
       root.addEventListener('toggle', (e) => { const k = e.target?.dataset?.k; if (k) e.target.open ? open.add(k) : open.delete(k); }, true);
       root.addEventListener('input', (e) => { const c = e.target.closest?.('.ag-card'); if (c && e.target.name === 'a') drafts[c.dataset.id] = e.target.value; });
       root.addEventListener('submit', async (e) => {
@@ -78,6 +80,7 @@
         if (t.dataset.retry) { t.disabled = true; await post('/api/agents/retry', { id }); return load(root); }
         if (t.dataset.remove) { t.disabled = true; cardEl.classList.add('rm-out'); await post('/api/agents/remove', { id }); return load(root); }
       });
+      }
     }
     const d = await (await fetch('/api/agents')).json();
     root._runs = d.runs;
@@ -93,7 +96,7 @@
       if (focus) { const f = listEl.querySelector(`.ag-card[data-id="${focus}"]`); if (f && opts.run) f.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
     }
     window.setAgentCount?.(d.waiting);
-    if (d.runs.some((r) => r.status === 'queued' || r.status === 'working') && !root.closest('[hidden]')) timer = setTimeout(() => load(root), 5000);
+    if (d.runs.some((r) => r.status === 'queued' || r.status === 'working') && !root.closest('[hidden]')) timer = setTimeout(function again() { load(root).catch(() => { timer = setTimeout(again, 5000); }); }, 5000); // a failed fetch (a phone waking up) tries again
   }
 
   async function send(root, cardEl, a) {
