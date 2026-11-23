@@ -50,7 +50,7 @@ test("nothing configured: every connector is listed, honest, and nothing is sent
   expect(by.drive.state).toBe("needs-you"); expect(by.drive.needs).toBe("A Google setup step, done by the owner"); expect(by.drive.action).toBeUndefined();
   expect(by.photos.state).toBe("shortcut"); expect(by.voice.action?.href).toBe("/guide");
   expect(by.metricool.state).toBe("needs-you"); expect(by.metricool.action).toBeUndefined(); // no button that leads nowhere
-  expect(by.canva.state).toBe("needs-you"); expect(by.canva.needs).toContain("Canva integration");
+  expect(by.canva.state).toBe("needs-you"); expect(by.canva.needs).toContain("Canva key");
   for (const c of list) { expect(["in", "out"]).toContain(c.direction); expect(c.state === "on").toBe(false); expect(`${c.name}${c.what}${c.needs ?? ""}`).not.toMatch(/[!—]/); }
   expect(list.filter((c) => c.direction === "out").map((c) => c.id)).toEqual(["metricool", "canva"]);
 });
