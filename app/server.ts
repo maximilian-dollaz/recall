@@ -39,6 +39,8 @@ import * as remind from "./remind.ts";
 import * as share from "./share.ts";
 import * as agents from "./agents.ts";
 import * as create from "./create.ts";
+import * as sparks from "./sparks.ts";
+import { today as todayView } from "./today.ts";
 
 import { CODE, DATA as ROOT, PORTS, TWIN } from "./paths.ts";
 import { PUBLIC_URL as CONFIG_URL, PUBLIC_HOST, OWNER_NAME, TAILNET_HOST } from "./config.ts";
@@ -431,6 +433,8 @@ const allPeople = async () => { const out: Person[] = []; for (const email of Ob
 const kickAgents = () => { setTimeout(() => agents.drain(allPeople).catch((e) => console.error(`[agents] ${String(e).slice(0, 200)}`)), 200); };
 agents.recover(allPeople).then(kickAgents).catch(() => {});
 setInterval(kickAgents, 30_000);
+// Sparks (sparks.ts): the slow pass over everything saved before Remind existed, a few pages every half hour.
+setInterval(async () => { for (const p of await allPeople()) await sparks.tick(p, (text, title) => withEngine({ kind: "claude" }, () => remind.find(text, title, chat, pieces.locate))).catch((e) => console.error(`[sparks] ${p.id}: ${String(e).slice(0, 200)}`)); }, 30 * 60_000);
 // Create (create.ts): what a project's Create tab queued is made here, one job at a time.
 const kickCreate = () => { setTimeout(() => create.drain(allPeople).catch((e) => console.error(`[create] ${String(e).slice(0, 200)}`)), 200); };
 create.recover(allPeople).then(kickCreate).catch(() => {});
@@ -1067,6 +1071,8 @@ const routed = Bun.serve({
     "/api/remind/subscribe": { POST: withPerson(async (req, p) => { try { await remind.subscribe(p.dir, await req.json(), req.headers.get("user-agent") ?? ""); return json({ ok: true }, 200); } catch (e) { return json({ error: String(e) }); } }) },
     "/api/remind/log": { POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})); console.log(`[remind phone ${p.id}] ${JSON.stringify(b).slice(0, 600)}`); return json({ ok: true }, 200); }) },
     "/api/remind/now": { POST: withPerson(async (_req, p) => json({ sent: await remind.now(p.dir, PUBLIC_URL) }, 200)) },
+    "/api/today": withPerson(async (_req, p) => json(await todayView(p, await loadCatalog()), 200)),
+    "/api/sparks": { GET: withPerson(async (_req, p) => json(sparks.status(p.dir), 200)), POST: withPerson(async (req, p) => { const b = await req.json().catch(() => ({})) as any; return json({ on: await sparks.setOn(p.dir, !!b.on) }, 200); }) },
     ...create.createRoutes(withPerson, { kick: kickCreate, projectName: async (id) => projects.projectsOf(await loadCatalog()).find((x) => x.id === id)?.name ?? null }),
     ...agents.agentRoutes(withPerson, { kick: kickAgents,
       sparkWords: (p, id) => { const s = remind.ledger(p.dir).sparks.find((x) => x.id === id); return s ? { directive: [s.words, s.when_then].filter(Boolean).join("\n"), title: s.title } : null; },

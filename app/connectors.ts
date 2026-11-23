@@ -20,7 +20,7 @@
 // Drive API turned on. A person's Drive sign-in: ~/.gbrain/serve/connectors/<person>/drive.json, owner-only.
 
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { DATA } from "./paths.ts";

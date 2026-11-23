@@ -394,7 +394,7 @@
   .rm-done { margin:0; color:var(--fg); font-size:1.05rem }
   .rm-send { justify-self:start; background:none; border:0; color:var(--muted); text-decoration:underline; font:inherit; padding:6px 0; cursor:pointer }
 </style>
-<script src="/static/ui/remind.js"></script><script src="/static/ui/agents.js"></script><script src="/static/ui/project-tabs.js"></script><!-- the look: palette, glass, backlight (overrides the base styles above) -->
+<script src="/static/ui/remind.js"></script><script src="/static/ui/agents.js"></script><script src="/static/ui/project-tabs.js"></script><script src="/static/ui/today.js"></script><!-- the look: palette, glass, backlight (overrides the base styles above) -->
 </head>
 <body>
 <div class="wrap">
@@ -402,6 +402,7 @@
   <header>
     <h1>Recall<span id="who"></span></h1>
     <nav>
+      <button id="tab-today">Today</button>
       <button id="tab-save" aria-current="page">Save</button>
       <button id="tab-find">Find</button>
       <button id="tab-cues">Clarify<span id="cue-count" class="badge" hidden></span></button>
@@ -455,6 +456,8 @@
 
   <section id="reminders" class="card" hidden><div id="remind-body"></div></section>
 
+  <section id="today" class="card" hidden><div id="today-body"></div></section>
+
   <section id="agents" class="card" hidden><div id="agents-body"></div></section>
 
   <section id="improve" class="card" hidden>
@@ -479,17 +482,19 @@ const fadeIn = (e) => { if (e.target.tagName === 'IMG') e.target.classList.add('
 document.addEventListener('load', fadeIn, true); document.addEventListener('error', fadeIn, true); // (an element's load never reaches window)
 new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) for (const i of (n.tagName === 'IMG' ? [n] : n.querySelectorAll('img'))) if (i.complete) i.classList.add('in'); }).observe(document.documentElement, { childList: true, subtree: true });
 let agentRun = new URLSearchParams(location.search).get('run'); // a notification opens one agent run
-const tabs = { save: $('#tab-save'), find: $('#tab-find'), cues: $('#tab-cues'), reminders: $('#tab-remind'), agents: $('#tab-agents'), improve: $('#tab-improve') };
+const tabs = { today: $('#tab-today'), save: $('#tab-save'), find: $('#tab-find'), cues: $('#tab-cues'), reminders: $('#tab-remind'), agents: $('#tab-agents'), improve: $('#tab-improve') };
 function show(which) {
   document.body.classList.toggle('wide', which === 'find');
   for (const k of Object.keys(tabs)) { $('#' + k).hidden = which !== k; if (which === k) tabs[k].setAttribute('aria-current', 'page'); else tabs[k].removeAttribute('aria-current'); }
   if (which === 'cues') loadCues();
   if (which === 'reminders' && window.loadRemind) window.loadRemind($('#remind-body'));
+  if (which === 'today' && window.loadToday) window.loadToday($('#today-body'));
   if (which === 'agents' && window.loadAgents) { window.loadAgents($('#agents-body'), { run: agentRun }); agentRun = null; }
   if (which === 'find') { if ($('#q').value.trim()) { loadIndex(); instant(); doSearch(); } else { loadShelves(); loadIndex(); } setTimeout(() => { if (matchMedia('(hover: hover)').matches) $('#q').focus(); grow(); }, 50); } // on a phone, focusing would open the keyboard and push the projects down
   try { localStorage.setItem('cl-tab', which); } catch {}
 }
 for (const k of Object.keys(tabs)) tabs[k].onclick = () => show(k);
+window.showTab = (k) => { if (tabs[k]) show(k); };
 // The home-screen app stays open for days: refresh Find whenever it comes back to the front.
 // Only the home screen refreshes on resume; an open item or project stays put.
 document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('#find').hidden && view === 'home') { loadIndex(); if (!qbox.value.trim()) loadShelves(); else doSearch(); } });

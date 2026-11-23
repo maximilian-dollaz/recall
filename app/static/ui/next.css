@@ -65,3 +65,23 @@ video.pt-out { width:100%; max-height:46vh; border-radius:10px; background:#000 
 .pt-row { display:flex; gap:8px; justify-content:flex-end; align-items:center; flex-wrap:wrap } .pt-row a.rm-second { text-decoration:none; padding:8px 16px }
 .pt-job a { color:var(--link, inherit) }
 .rm-pic { width:100%; max-height:240px; object-fit:cover; border-radius:12px; display:block }
+
+/* ── Today ── */
+.td-date { margin:0 0 4px; font:500 1.5rem/1.2 "Cormorant Garamond", Georgia, serif }
+.td-sec { display:grid; gap:10px; margin-top:22px }
+.td-h { margin:0; font-size:.74rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted) }
+.td-none { margin:0; color:var(--muted); font-size:.95rem }
+.td-being { display:grid; gap:10px; padding:16px; border-radius:16px; border:1px solid var(--lit-rim, var(--line)); background:var(--glass-soft, rgba(127,127,127,.06)); box-shadow:var(--halo, none); color:inherit; text-decoration:none }
+.td-being blockquote { margin:0; font:500 1.5rem/1.3 "Cormorant Garamond", Georgia, serif }
+.td-being p { margin:0; font-size:.94rem; color:var(--fg-2, var(--fg)) }
+.td-work { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px }
+.td-proj { font:inherit; color:var(--fg); background:transparent; border:0; padding:0; display:grid; gap:4px; text-align:left; cursor:pointer; min-width:0 }
+.td-proj b { font-weight:600; font-size:.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap } .td-proj small { color:var(--muted); font-size:.8rem }
+.td-mini { display:grid; grid-template-columns:1fr 1fr; gap:3px; aspect-ratio:1; padding:6px; border-radius:16px; border:1px solid var(--line); background:var(--glass-soft, rgba(127,127,127,.06)) }
+.td-mini i { border-radius:6px; background:var(--field, rgba(0,0,0,.2)) center/cover }
+.td-rows { display:grid; gap:8px }
+.td-row { font:inherit; color:var(--fg); text-align:left; display:grid; gap:2px; padding:12px 14px; min-height:44px; border-radius:14px; border:1px solid var(--line); background:var(--glass-soft, rgba(127,127,127,.06)); cursor:pointer }
+.td-row b { font-weight:600 } .td-row span { font-size:.88rem; color:var(--muted) }
+.td-call { border-color:var(--lit-rim, var(--accent)) } .td-quiet b { font-weight:500 }
+@media (max-width:520px) { nav { overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; padding-bottom:2px } nav::-webkit-scrollbar { display:none } nav button { flex:0 0 auto !important; padding:8px 13px !important; white-space:nowrap } }
+.rm-sparks { display:flex; gap:8px; align-items:flex-start; margin-top:14px; cursor:pointer } .rm-sparks input { width:18px; height:18px; flex:0 0 auto; accent-color:var(--accent) }

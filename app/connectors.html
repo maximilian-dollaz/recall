@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Connectors · Recall</title>
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/static/icon-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Recall">
+<link rel="icon" href="/static/icon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* The same dusk tokens as remind.html, so the page reads right even before theme.css arrives. */
+  :root { --bg:#0E1519; --fg:#F2ECE1; --fg-2:#E3D5BE; --muted:#C7AE88; --accent:#E2C487; --on-accent:#14202A; --glass:rgba(242,236,225,.06); --rim:rgba(242,236,225,.13); --link:#8FB3C7; --danger:#E5A08E;
+    --chip-bg:rgba(143,179,199,.13); --chip-fg:#C3D6E0; --lit-fill:rgba(244,227,181,.14); --lit-rim:rgba(244,227,181,.55);
+    --font-ui:"Inter", -apple-system, system-ui, sans-serif; --font-display:"Cormorant Garamond", Georgia, serif; color-scheme:dark }
+</style>
+<link rel="stylesheet" href="/static/ui/theme.css">
+<style>
+  * { box-sizing:border-box } html,body { margin:0; min-height:100% }
+  body { background:var(--bg); color:var(--fg); font:16px/1.5 var(--font-ui); }
+  .wrap { max-width:620px; margin:0 auto; padding:calc(18px + env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom)) }
+  .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; font-size:.95rem }
+  .top a { text-decoration:none; color:var(--muted); padding:8px 8px 8px 0 }
+  h1 { font:500 1.6rem/1.2 var(--font-display); margin:0 0 6px; letter-spacing:.01em }
+  .lead { margin:0 0 8px; color:var(--fg-2) }
+  h2 { font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:30px 0 10px }
+  .list { display:grid; gap:10px }
+  .card { background:var(--glass); border:1px solid var(--rim); border-radius:16px; padding:16px }
+  .head { display:flex; justify-content:space-between; align-items:flex-start; gap:10px }
+  .name { font-weight:600; font-size:1.05rem; min-width:0; overflow-wrap:anywhere }
+  .chip { flex:none; font-size:.76rem; font-weight:600; padding:4px 10px; border-radius:999px; border:1px solid var(--rim); color:var(--chip-fg); background:var(--chip-bg); white-space:nowrap }
+  .chip.on { color:var(--on-accent); background:var(--accent); border-color:var(--accent) }
+  .chip.needs-you { color:var(--danger); background:none; border-color:var(--danger) }
+  .chip.shortcut { color:var(--muted); background:none }
+  .what { margin:8px 0 0; color:var(--fg-2); font-size:.95rem }
+  .needs { margin:8px 0 0; color:var(--muted); font-size:.9rem; overflow-wrap:anywhere }
+  .last { margin:8px 0 0; color:var(--muted); font-size:.85rem }
+  .act { display:block; width:100%; margin-top:14px; padding:13px 18px; min-height:48px; border-radius:14px; font:inherit; font-weight:600; text-align:center; text-decoration:none; cursor:pointer; border:1px solid var(--rim); background:var(--glass); color:var(--fg) }
+  .act.primary { border:0; background:var(--accent); color:var(--on-accent) }
+  .act[disabled] { opacity:.6; cursor:default }
+  .note { background:var(--lit-fill); border:1px solid var(--lit-rim); border-radius:14px; padding:12px 14px; margin:0 0 6px; color:var(--fg) }
+  .empty { color:var(--muted) }
+  [hidden] { display:none !important }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><a href="/">‹ Recall</a></div>
+  <h1>Connectors</h1>
+  <p class="lead">Where your saves come from, and where Recall can send them.</p>
+  <p class="note" id="note" hidden></p>
+  <h2>Comes in</h2>
+  <div class="list" id="in"><p class="empty">Loading.</p></div>
+  <h2>Goes out</h2>
+  <div class="list" id="out"></div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const CHIP = { on: 'On', ready: 'Ready to connect', 'needs-you': 'Needs you', shortcut: 'Uses the shortcut' };
+const NAMES = { drive: 'Google Drive', canva: 'Canva', granola: 'Granola', otter: 'Otter' };
+const when = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+
+function card(c) {
+  const a = c.action;
+  // One button at most. A sign-in is the primary action; anything else is a plain button.
+  const act = !a ? '' : a.post
+    ? '<button class="act" data-post="' + esc(a.href) + '">' + esc(a.label) + '</button>'
+    : '<a class="act' + (c.state === 'ready' ? ' primary' : '') + '" href="' + esc(a.href) + '">' + esc(a.label) + '</a>';
+  return '<div class="card"><div class="head"><div class="name">' + esc(c.name) + '</div><span class="chip ' + esc(c.state) + '">' + CHIP[c.state] + '</span></div>'
+    + '<p class="what">' + esc(c.what) + '</p>'
+    + (c.needs ? '<p class="needs">Needs: ' + esc(c.needs) + '</p>' : '')
+    + (c.last && when(c.last) ? '<p class="last">' + (c.id === 'metricool' ? 'Key saved ' : 'Last ') + esc(when(c.last)) + '</p>' : '')
+    + act + '</div>';
+}
+
+async function load() {
+  const r = await fetch('/api/connectors/all').catch(() => null);
+  if (!r || !r.ok) { $('#in').innerHTML = '<p class="empty">The list did not load. Pull down to try again.</p>'; return; }
+  const all = await r.json();
+  $('#in').innerHTML = all.filter((c) => c.direction === 'in').map(card).join('');
+  $('#out').innerHTML = all.filter((c) => c.direction === 'out').map(card).join('');
+}
+
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('button[data-post]'); if (!b) return;
+  b.disabled = true; const was = b.textContent;
+  const r = await fetch(b.dataset.post, { method: 'POST' }).catch(() => null);
+  const d = r ? await r.json().catch(() => ({})) : {};
+  b.textContent = r && r.ok ? 'Started' : (d.error || 'That did not work');
+  setTimeout(() => { b.textContent = was; b.disabled = false; load(); }, 4000);
+});
+
+// Back from a sign-in: say what happened, once, then clean the address.
+const q = new URLSearchParams(location.search);
+const said = q.get('connected') ? (NAMES[q.get('connected')] || 'It') + ' is connected.'
+  : q.get('cancelled') ? (NAMES[q.get('cancelled')] || 'It') + ' was not connected. Nothing changed.'
+  : q.get('problem') ? q.get('problem') : '';
+if (said) { $('#note').textContent = said; $('#note').hidden = false; history.replaceState(null, '', location.pathname); }
+load();
+</script>
+</body>
+</html>

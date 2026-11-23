@@ -43,6 +43,7 @@
       <p class="rm-home small muted" hidden>Open Recall from your home screen, then come back here to turn on Remind.</p>
       <div class="rm-deck rm-tiles"></div>
       <button class="rm-send" type="button" hidden>Send one now</button>
+      <label class="rm-sparks small muted" hidden><input type="checkbox"> <span></span></label>
       </div>
       <div class="rm-view rm-landing rm-tiles" data-v="landing" hidden></div>
       <div class="rm-view rm-jar" data-v="jar" hidden></div>`;
@@ -141,6 +142,10 @@
       setTimeout(render, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 260);
     });
     render();
+    // Sparks: the slow reading of older notes for lines worth bringing back (sparks.ts).
+    fetch('/api/sparks').then((r) => r.json()).then((sp) => { if (!sp.total) return; const l = q('.rm-sparks'); l.hidden = false;
+      l.querySelector('span').textContent = `Sparks: read your older notes for lines worth bringing back. ${sp.read} of ${sp.total} read.`;
+      const c = l.querySelector('input'); c.checked = sp.on; c.onchange = () => post('/api/sparks', { on: c.checked }); }).catch(() => {});
     q('.rm-send').hidden = !st.on;
     q('.rm-send').onclick = async () => { const r = await (await post('/api/remind/now')).json(); q('.rm-send').textContent = r.sent ? 'Sent' : 'Nothing to send'; };
 
