@@ -10,7 +10,7 @@
 import { join } from "node:path";
 import { mkdirSync, readdirSync, readFileSync, unlinkSync, existsSync } from "node:fs";
 import * as gb from "./gbrain.ts";
-import { chat, loadCatalog, withEngine, type Engine } from "./librarian.ts";
+import { chat, loadCatalog, withEngine, TITLE_RULE, titleFor, onComputer, type Engine } from "./librarian.ts";
 import * as projects from "./projects.ts";
 import type { Person } from "./identity.ts";
 
@@ -81,7 +81,7 @@ Pull out the pieces worth keeping on their own: ideas, actions (something someon
 
 For each piece:
 - "kind": one of idea, action, decision, realization, reflection
-- "title": a short specific title, max 8 words, naming what the piece is about
+- "title": the piece's own title. It must stand alone, read without the rest of the item, so name who or what it is about even when the text says "he", "they" or "it" (the item's title above tells you who). ${TITLE_RULE.replace(/^The title is/, "It is")}
 - "quote": the exact sentence or sentences from the text, copied word for word, max 60 words
 - "tags": 2 to 5 short lowercase tags: people, places, named things, topics
 
@@ -101,6 +101,11 @@ Reply with JSON only: {"pieces": [{"kind": "...", "title": "...", "quote": "..."
     const tags = Array.isArray(p.tags) ? p.tags.map((t: unknown) => String(t).toLowerCase().trim().replace(/\s+/g, "-")).filter(Boolean).slice(0, 5) : [];
     if (out.some((o) => norm(o.quote) === norm(quote))) continue;
     out.push({ kind, title: title.slice(0, 80), quote: quote.slice(0, 600), tags, at: w.start + at, section: w.section });
+  }
+  // On a computer's model, each piece gets its own title pass: findability comes first (Max, 22 Nov).
+  if (onComputer()) for (const p of out) {
+    const i = p.at - w.start, around = text.slice(Math.max(0, i - 500), Math.min(text.length, i + p.quote.length + 500));
+    const better = await titleFor(p.quote, around, job.title).catch(() => undefined); if (better) p.title = better;
   }
   return out;
 }

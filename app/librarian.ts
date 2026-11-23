@@ -10,7 +10,10 @@ import { DATA as ROOT } from "./paths.ts";
 import * as store from "./store.ts";
 import "./config.ts"; // loads .env, where ANTHROPIC_API_KEY lives
 const OLLAMA = (process.env.OLLAMA_BASE_URL ?? "http://localhost:11434/v1").replace(/\/v1\/?$/, "");
-const MODEL = process.env.LIBRARIAN_MODEL ?? "gemma3:4b";
+const MODEL = process.env.LIBRARIAN_MODEL ?? "gemma3:4b"; // sees pictures
+// Text (titles, summaries, sorting, pieces) on a computer goes to a larger model: in a side-by-side on 15 real meeting
+// pieces (22 Nov), qwen3:8b named the subject and the point; gemma3:4b mostly repeated the meeting's name.
+const TEXT_MODEL = process.env.LIBRARIAN_TEXT_MODEL ?? "qwen3:8b";
 const CLAUDE_KEY = process.env.ANTHROPIC_API_KEY ?? "";
 const CLAUDE_MODEL = process.env.LIBRARIAN_CLAUDE_MODEL ?? "claude-haiku-5-5";
 export const ENGINE: "claude" | "local" = process.env.LIBRARIAN_ENGINE === "local" || !CLAUDE_KEY ? "local" : "claude";
@@ -95,13 +98,32 @@ export async function chat(messages: any[], opts: { json?: boolean; images?: str
   const res = await fetch(`${e.url}/api/chat`, {
     method: "POST", signal: AbortSignal.timeout(180_000), // a hung model must not stop all filing
     body: JSON.stringify({
-      model: MODEL, stream: false, messages,
+      model: messages.some((m) => m.images?.length) ? MODEL : TEXT_MODEL, stream: false, think: false, messages,
       format: opts.json ? "json" : undefined,
       options: { temperature: 0, num_ctx: 8192 },
     }),
   });
   if (!res.ok) throw new Error(`librarian model error ${res.status}: ${await res.text()}`);
   return (await res.json()).message?.content ?? "";
+}
+
+/** True while the current job runs on a person's own computer (a smaller model than Claude). */
+export const onComputer = () => (engineNow.getStore()?.kind ?? (ENGINE === "claude" ? "claude" : "local")) === "local";
+
+/** A title for one passage, asked on its own. A computer's model writes much clearer titles this way than in the middle
+ *  of pulling pieces out of a whole meeting (tested 22 Nov on a real meeting). `around` is the text near the passage. */
+export async function titleFor(passage: string, around: string, from: string): Promise<string | undefined> {
+  const raw = await chat([{ role: "user", content: `Write a title for THIS PASSAGE ONLY: what the passage itself says. It is not the title of the item it came from.
+
+Passage:
+"""${passage}"""
+
+(Context only, do not copy it: the passage comes from "${from}". The text around it: """${around}""". Use these just to name who or what "he", "they" or "it" refers to.)
+
+${TITLE_RULE}
+
+Reply with JSON only: {"title": "..."}` }], { json: true });
+  try { const t = String(JSON.parse(raw).title ?? "").trim(); return t.length >= 8 ? t.slice(0, 100) : undefined; } catch { return undefined; }
 }
 
 /** Describe a picture so it becomes searchable text. */
@@ -119,6 +141,16 @@ Three to six sentences. No preamble.`,
   }]);
   return text.trim();
 }
+
+/** How every note, piece and document is titled. Recall is built for finding things again (Max, 22 Nov): the title is
+ *  what a person scans and what search matches first, so it must say exactly what the text says. */
+export const TITLE_RULE = `The title is a one-line summary of what the text actually says, so the owner can find it again by scanning or searching a month later:
+- Name the specific subject: the person, company, place, product or project it is about, by name when the text names it.
+- Then the point: the decision, idea, fact, task or finding, stated plainly.
+- 5 to 12 words. Plain words a person would search for. Accurate before short: never claim more or less than the text says.
+- State the point directly: never "Speaker says", "Discussing", "Discussion about", "Notes on".
+- No vague phrases ("maximizing potential", "key insights", "moving forward"), no labels ("Meeting notes", "Ideas", "Quotes"), no dates unless the date is the point.
+Examples of the pattern (not facts about this text): "Partnership potential remains despite plan failure" → "Rolling Home still open to partnering after booking pilot failed". "Woodworker Quotes" → "Two woodworker quotes for Zero Proof bar top: $4k and $6.5k".`;
 
 /** Decide where an item goes. Returns the filing; never touches the item. */
 export async function file(input: { notes: string; text?: string; filename?: string; url?: string; kind?: string }, catalog: Catalog): Promise<Filing> {
@@ -140,6 +172,8 @@ ${input.filename ? `Filename: ${input.filename}\n` : ""}${input.url ? `URL: ${in
 Rules:
 - "writing" is ONLY for things the owner wrote themselves as a piece of writing (an essay, a draft, a journal entry). An essay, article, artwork, sign, video or post by someone else goes to "inspiration" (if saved because it sparked something) or "reference" (if saved to look facts up). A voice note or typed note ABOUT something is not writing; file by what the something is.
 - When the item is a photo of a document, sign, poster or artwork, or a link, take the TITLE from the item itself (its headline or name), not from the owner's words; the owner's words may contain typos or be casual.
+- For a note, voice note, meeting or document, the TITLE follows this rule:
+${TITLE_RULE}
 - The owner's notes say why it was saved; let that decide between inspiration and reference.
 - "people" is for notes about someone the owner knows or deals with (what they said, what was promised). A photo of a poster, article or artwork that happens to name its author is NOT a people item; file it as inspiration or reference. An organization as the subject goes to "companies".
 - If the owner's note says nothing useful (e.g. "test", "saving this"), file by what the item itself is.
@@ -148,7 +182,7 @@ Rules:
 - For a photo: the title names the main object and its look ("Middle Eastern patterned throw pillow"), tags are the objects, materials, colours, styles and the room or space; the summary says what it is and what the owner wants it for. Never use words like "image", "photo", "analysis", "description" in the title.
 
 Reply with JSON only:
-{"shelf": "<shelf id>", "confidence": <0..1>, "tags": ["3-8 short lowercase tags: people, places, named things, vivid phrases, topics"], "title": "<a short specific title, max 8 words>", "summary": "<one line: what this is and why it was saved, max 30 words>", "proposed_shelf": "<only if confidence < 0.5: a one-or-two-word name for a shelf that would fit better, else omit>", "resurface_days": <only if the notes say when to bring it back as a time ("in two weeks", "next month", "before December"): the number of days from now, else omit>, "resurface_when": "<only if the notes say to bring it back when working on something ("when we do the lobby", "for the launch"): that thing in 2-5 words, else omit>", "project": "<the business, space or initiative this is for, if named; else omit>", "sensitive": <true only if it is about the owner's health, mental or emotional state, money trouble, intimate relationships, or someone else's private matters; else false>, "action": <true if the owner says something needs to be done (a task, a follow-up, someone to contact); else false>}`;
+{"shelf": "<shelf id>", "confidence": <0..1>, "tags": ["3-8 short lowercase tags: people, places, named things, vivid phrases, topics"], "title": "<the title, by the rules above>", "summary": "<one line: what this is and why it was saved, max 30 words>", "proposed_shelf": "<only if confidence < 0.5: a one-or-two-word name for a shelf that would fit better, else omit>", "resurface_days": <only if the notes say when to bring it back as a time ("in two weeks", "next month", "before December"): the number of days from now, else omit>, "resurface_when": "<only if the notes say to bring it back when working on something ("when we do the lobby", "for the launch"): that thing in 2-5 words, else omit>", "project": "<the business, space or initiative this is for, if named; else omit>", "sensitive": <true only if it is about the owner's health, mental or emotional state, money trouble, intimate relationships, or someone else's private matters; else false>, "action": <true if the owner says something needs to be done (a task, a follow-up, someone to contact); else false>}`;
   const raw = await chat([{ role: "user", content: prompt }], { json: true });
   let parsed: any = {};
   try { parsed = JSON.parse(raw); } catch { parsed = {}; }

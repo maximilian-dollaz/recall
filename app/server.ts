@@ -1058,14 +1058,14 @@ const routed = Bun.serve({
       const abs = join(ROOT, rel);
       if (!(abs.startsWith(join(p.dir, "files") + "/") || abs.startsWith(join(p.dir, "vault") + "/")) || !existsSync(abs)) return new Response("not found", { status: 404 });
       const cacheDir = join(p.dir, ".thumbs"); mkdirSync(cacheDir, { recursive: true });
-      const out = join(cacheDir, rel.replace(/[\/]/g, "_").replace(/\.[^.]+$/, "") + ".360.jpg"); // 360px: tiles are at most ~180px wide
+      const out = join(cacheDir, rel.replace(/[\/]/g, "_").replace(/\.[^.]+$/, "") + ".720.jpg"); // 720px: sharp on a high-density screen at the largest tile size (Max, 22 Nov)
       if (!existsSync(out)) {
         if (/\.(mp4|mov|m4v|webm)$/i.test(abs)) {
           // A frame one second in (or the first frame of a very short clip).
-          for (const at of ["1", "0"]) { if (existsSync(out)) break; await Bun.spawn(["ffmpeg", "-v", "error", "-y", "-ss", at, "-i", abs, "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "5", out]).exited; }
+          for (const at of ["1", "0"]) { if (existsSync(out)) break; await Bun.spawn(["ffmpeg", "-v", "error", "-y", "-ss", at, "-i", abs, "-frames:v", "1", "-vf", "scale=720:-2", "-q:v", "4", out]).exited; }
           if (!existsSync(out)) return new Response("no frame", { status: 404 });
         } else {
-          const r = Bun.spawn(jpegArgs(abs, out, 360, 70), { stdout: "pipe", stderr: "pipe" });
+          const r = Bun.spawn(jpegArgs(abs, out, 720, 80), { stdout: "pipe", stderr: "pipe" });
           if ((await r.exited) !== 0 || !existsSync(out)) return new Response(Bun.file(abs));
         }
       }
