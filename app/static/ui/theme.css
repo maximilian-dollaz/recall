@@ -507,3 +507,13 @@ section.card:not([hidden]) { animation:viewin var(--t-state) var(--ease) }
 @media (prefers-color-scheme: light) { .toast { background:rgba(255,252,246,.92) } }
 /* Creator mode's Clear: a quiet action (no fill, no rim until hovered), never the gold. */
 .viz .viz-opts .viz-over { --bb:transparent; --br:transparent; --bs:none; --bf:var(--fg-2); -webkit-backdrop-filter:none; backdrop-filter:none; margin-left:calc(-1 * var(--s3)) }
+
+/* ───────────────────────── Ink black (Max, 23 Nov) ─────────────────────────
+   The backdrop is plain ink black: no picture, no veil. The glass, the rim light and the gold stay as they are.
+   Daylight (a light-mode device) keeps its own backdrop. To bring the delta back, remove this block. */
+@media not (prefers-color-scheme: light) {
+  :root { --ink-black:#07090C; --bg:var(--ink-black) }
+  body::before, body.wide::before, .pboard::before { background:var(--ink-black) !important; background-image:none !important }
+  body::after, .pboard::after { background:var(--glow) }
+  .pboard { background:var(--ink-black) }
+}

@@ -32,7 +32,7 @@ Open the twin: http://localhost:4344 (if it doesn't open, run `bin/cl twin start
 ## Decisions only you can make (my recommendation first)
 
 1. **Seven tabs on a phone.** They scroll sideways now. Recommend: a bar at the bottom with Today, Save, Find, Remind, Agents; Clarify becomes a row on Today, Improve a link.
-2. **Agent model.** It runs on Claude Opus 5.5 with web search: roughly 10 to 30 cents a round. A cheaper model is one setting (`AGENT_CLAUDE_MODEL`). Recommend: keep it for a week, then look at the bill.
+2. **Agent model.** It runs on Claude Haiku 5.5 with web search (your call, 23 Nov). A stronger model is one setting (`AGENT_CLAUDE_MODEL`).
 3. **Agents on local models.** The server has 4 GB of memory and no chat model; it cannot run one. Options: a bigger server (about $48 a month for 16 GB), or your Mac's model when it is awake. Recommend: stay on Claude until the agents prove useful.
 4. **Agents for the team.** Self-starting is on for you only. Teammates can hand things over by hand. Recommend: leave it.
 5. **What an agent may do after your answer.** Tonight it only writes. Next: a calendar block, or sending a message after your yes. Tell me which first.

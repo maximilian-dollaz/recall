@@ -39,7 +39,8 @@ export const MAX_ROUNDS = 4;   // rounds of work per run; after the last one it 
 export const AUTO_CAP = 3;     // runs a day that may start without being asked
 const KEEP = 200;              // runs kept per person
 const KEY = Bun.env.ANTHROPIC_API_KEY ?? "";
-const MODEL = Bun.env.AGENT_CLAUDE_MODEL ?? "claude-opus-5-5";
+// Haiku with web search (Max, 23 Nov): fast and cheap. AGENT_CLAUDE_MODEL picks another.
+const MODEL = Bun.env.AGENT_CLAUDE_MODEL ?? "claude-haiku-5-5";
 const LOCAL = Bun.env.AGENT_ENGINE === "local" || !KEY;
 const KINDS: StepKind[] = ["research", "feasibility", "draft", "people", "plan"];
 
