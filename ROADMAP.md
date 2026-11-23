@@ -13,13 +13,20 @@ What's built, and what's next, in order. The why behind each step is in [STORY.m
 - Creator mode: pictures and words from a board into a new image or video.
 - Long documents, meetings and voice notes read in full and split into pieces, each sorted on its own and linked back to its spot.
 
+## Built, first version (23 Nov, on the twin, being refined)
+
+- **An always-on server** and **a welcome page with a click-by-click manual.**
+- **Three tabs inside every project, one at a time:** **Share** (to a person or their agent), **Create** (pick assets, say how and why; a board video, a reel or post pictures are made in a queue), **Remind** (put an asset into Remind with a note on how, when and what for).
+- **Sparks:** older notes are read slowly for the lines worth bringing back, in the writer's own words, on Remind's widening rhythm.
+- **Agents** that act on the pieces: a reminder, a save, a meeting's idea or a typed directive goes to an agent. It researches, checks feasibility, finds people and drafts messages, then stops at the first judgment point and asks. It never sends anything.
+- **Today:** your way of being for the day, your current work, and what is waiting on you.
+- **Connectors page:** every source and destination in one place, with what each one needs.
+
 ## Next
 
-1. **An always-on server**, so Recall doesn't depend on one laptop being awake ([docs/server.md](docs/server.md)).
-2. **A welcome page and a click-by-click manual** for people opening Recall for the first time.
-3. **Connectors that sync on their own:** pictures from a "Recall" album, Apple Notes, meeting recorders (Otter, Granola), Google Docs and Drive, Claude, voice notes.
-4. **Three tabs inside every project, one at a time:** **Share** (any context to a person or their agent: message, WhatsApp, Signal, email, or an agent link), **Create** (pick assets, say how and why, and the agent makes videos, reels and posts, queued), **Remind** (put an asset into Remind with a note on how, when and what for). Also: make a short video of any board.
-5. **Sparks:** the highest-inspiration passages from years of notes, pulled out in the writer's own words and brought back on a widening rhythm.
-6. **Agents** that act on the pieces: ideas, actions and decisions sent where they need to go.
+1. **Connectors that sync on their own:** Apple Notes, Google Drive, a "Recall" photo album. Meeting recorders (Otter, Granola) already do.
+2. **Create, further:** silence and filler cuts, subtitles and overlays on a reel; scheduling drafts to Instagram and LinkedIn; Canva.
+3. **Agents, further:** act after your answer (a calendar block, a sent message with your yes), agents on a local model, and voice.
+4. **Today, further:** the calendar and life orientation.
 
 Ideas and requests: open an issue.

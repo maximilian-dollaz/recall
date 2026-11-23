@@ -1472,6 +1472,7 @@ async function openItem(id, quiet, passage) {
     <div class="actions">
       <button class="primary" id="share">Send</button>
       <button id="copy">Copy text</button>
+      <button id="toagent">Hand to an agent</button>
       ${d.url ? `<a href="${esc(d.url)}" target="_blank">Open link</a>` : ''}
       ${others.map(f => `<a href="/files/${encodeURIComponent(f)}" target="_blank">${esc(f.split('/').pop())}</a>`).join('')}
     </div>
@@ -1497,6 +1498,10 @@ async function openItem(id, quiet, passage) {
       else { await navigator.clipboard.writeText(text); $('#share').textContent = 'Copied'; }
     } catch (e) { if (e.name !== 'AbortError') { $('#share').textContent = 'Couldn\'t share'; } }
   };
+  // Hand this save to an agent: it works from the title, your note and the summary (agents.ts).
+  $('#toagent').onclick = async () => { const b = $('#toagent'); if (b.dataset.run) return openAgents(b.dataset.run); b.disabled = true; b.textContent = 'Handing over…';
+    const run = await handToAgent({ kind: 'item', id }); b.disabled = false;
+    if (run) { b.dataset.run = run.id; b.textContent = 'With an agent. Open'; } else b.textContent = 'Hand to an agent'; };
   $('#copy').onclick = async () => { try { await navigator.clipboard.writeText((d.title + '\n\n' + (d.markdown||'')).trim()); $('#copy').textContent = 'Copied'; } catch { $('#copy').textContent = 'Select and copy'; } };
   $('#del').onclick = () => deleteItems([d.id], () => { if (backTo) return backTo(); b.innerHTML = ''; loadShelves(); if (qbox.value.trim()) { instant(); doSearch(); } });
   b.querySelectorAll('.proj-link').forEach(x => x.onclick = () => openProject(x.dataset.proj));

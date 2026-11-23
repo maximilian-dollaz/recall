@@ -37,8 +37,8 @@
   .needs { margin:8px 0 0; color:var(--muted); font-size:.9rem; overflow-wrap:anywhere }
   .last { margin:8px 0 0; color:var(--muted); font-size:.85rem }
   .act { display:block; width:100%; margin-top:14px; padding:13px 18px; min-height:48px; border-radius:14px; font:inherit; font-weight:600; text-align:center; text-decoration:none; cursor:pointer; border:1px solid var(--rim); background:var(--glass); color:var(--fg) }
-  .act.primary { border:0; background:var(--accent); color:var(--on-accent) }
-  .card .act { margin:14px 0 0 } /* theme.css styles .primary too; the gap above the button is this page's */
+  /* Not theme.css's .primary: that one is for the single main action of a screen, and here there can be several. */
+  .act.go { border:0; background:var(--accent); color:var(--on-accent) }
   .act[disabled] { opacity:.6; cursor:default }
   .note { background:var(--lit-fill); border:1px solid var(--lit-rim); border-radius:14px; padding:12px 14px; margin:0 0 6px; color:var(--fg) }
   .empty { color:var(--muted) }
@@ -68,7 +68,7 @@ function card(c) {
   // One button at most. A sign-in is the primary action; anything else is a plain button.
   const act = !a ? '' : a.post
     ? '<button class="act" data-post="' + esc(a.href) + '">' + esc(a.label) + '</button>'
-    : '<a class="act' + (c.state === 'ready' ? ' primary' : '') + '" href="' + esc(a.href) + '">' + esc(a.label) + '</a>';
+    : '<a class="act' + (c.state === 'ready' ? ' go' : '') + '" href="' + esc(a.href) + '">' + esc(a.label) + '</a>';
   return '<div class="card"><div class="head"><div class="name">' + esc(c.name) + '</div><span class="chip ' + esc(c.state) + '">' + CHIP[c.state] + '</span></div>'
     + '<p class="what">' + esc(c.what) + '</p>'
     + (c.needs ? '<p class="needs">Needs: ' + esc(c.needs) + '</p>' : '')
