@@ -25,7 +25,8 @@ import { DATA, TWIN } from "./paths.ts";
 import { reconcile, type TopicView } from "./topics.ts";
 
 // "asset": something saved (a picture, a note, a link) put into Remind from its project, with the person's own words on how, when and what for.
-export type Kind = "being" | "realization" | "principle" | "idea" | "quote" | "asset";
+// "do" and "learn": something the person means to make real, or wants to know more about, caught in a new note (findActions).
+export type Kind = "being" | "realization" | "principle" | "idea" | "quote" | "asset" | "do" | "learn";
 export type Spark = {
   id: string; words: string; title: string; question?: string; when_then?: string; kind: Kind;
   from: { slug?: string; title: string; date: string };
@@ -34,6 +35,7 @@ export type Spark = {
   hold?: string;     // "Still landing": out of sight until this moment (tomorrow)
   evidence?: string; // when it was lived and went into the evidence jar
   thumb?: string;    // an asset's picture (a path under the person's library), shown on its tile
+  how?: string;      // how they said they want it acted on, in their own words ("do"/"learn"/"idea" only)
 };
 type Sub = { endpoint: string; keys: { p256dh: string; auth: string }; added: string; ua?: string };
 type Ledger = { sparks: Spark[]; sent: Record<string, string[]>; tz?: string };
@@ -43,9 +45,9 @@ const DAY = 864e5;
 export const TZ = "America/Los_Angeles";
 // Windows a spark can arrive in (local time, minutes after midnight), and the kinds each one favors.
 const WINDOWS = [
-  { name: "morning", from: 8 * 60, to: 9 * 60 + 30, kinds: ["being", "principle"] },
-  { name: "midday", from: 12 * 60 + 30, to: 15 * 60, kinds: ["realization", "idea", "principle"] },
-  { name: "evening", from: 18 * 60 + 30, to: 19 * 60 + 45, kinds: ["quote", "realization", "being"] },
+  { name: "morning", from: 8 * 60, to: 9 * 60 + 30, kinds: ["being", "principle", "do"] },
+  { name: "midday", from: 12 * 60 + 30, to: 15 * 60, kinds: ["realization", "idea", "principle", "do", "learn"] },
+  { name: "evening", from: 18 * 60 + 30, to: 19 * 60 + 45, kinds: ["quote", "realization", "being", "learn"] },
 ] as const;
 
 const file = (dir: string) => join(dir, "remind.json");
@@ -108,7 +110,7 @@ function slotMinute(day: string, w: typeof WINDOWS[number]) {
 
 // ── Adding ──
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
-export async function add(dir: string, s: Pick<Spark, "words" | "title" | "kind" | "from"> & Partial<Pick<Spark, "question" | "when_then" | "thumb">>, firstAt?: Date) {
+export async function add(dir: string, s: Pick<Spark, "words" | "title" | "kind" | "from"> & Partial<Pick<Spark, "question" | "when_then" | "thumb" | "how">>, firstAt?: Date) {
   let made: Spark | undefined;
   await change(dir, (l) => {
     // Already there: the same words (or, for an asset, the same asset with the same words).
@@ -117,7 +119,7 @@ export async function add(dir: string, s: Pick<Spark, "words" | "title" | "kind"
     const waiting = l.sparks.filter((x) => x.state === "on" && x.sent === 0).length;
     const start = firstAt ?? new Date(Date.now() + (1 + Math.floor(waiting / 3)) * DAY);
     made = { id: Math.random().toString(36).slice(2, 10), words: s.words.trim(), title: s.title.trim(), question: s.question?.trim() || undefined, when_then: s.when_then?.trim() || undefined,
-      kind: s.kind, from: s.from, ...(s.thumb ? { thumb: s.thumb } : {}), step: 0, next: start.toISOString(), sent: 0, asked: 0, lived: [], landing: 0, state: "on", created: new Date().toISOString() };
+      kind: s.kind, from: s.from, ...(s.thumb ? { thumb: s.thumb } : {}), ...(s.how?.trim() ? { how: s.how.trim() } : {}), step: 0, next: start.toISOString(), sent: 0, asked: 0, lived: [], landing: 0, state: "on", created: new Date().toISOString() };
     l.sparks.push(made);
   });
   return made;
@@ -244,6 +246,41 @@ ${text.slice(0, 24_000)}` }], { json: true });
     typeof s?.words === "string" && typeof s?.title === "string" && kinds.has(s.kind) &&
     s.words.split(/\.{3}|…/).map((p: string) => p.trim()).filter((p: string) => p.length >= 12).every((p: string) => locate(text, p) >= 0));
 }
+
+/** Things to make real, from a new note: what the owner said they will do or want to do, action items that are
+ *  theirs, ideas they want built, and things they want to know more about. Their own words, checked against the
+ *  text like find(). When they said how they want it acted on ("look into who makes these", "draft an email to
+ *  Sam"), that goes along in their words too, so the agent does it their way. At most six a note, often none. */
+export async function findActions(text: string, title: string, chat: (m: any[], o?: any) => Promise<string>, locate: (t: string, q: string) => number) {
+  const raw = await chat([{ role: "user", content: `Below is something the owner of this library recorded or wrote ("${title}"). Find what the OWNER means to turn into reality. Only the owner's own words or items clearly assigned to the owner; never what another speaker will do.
+
+Catch:
+- do: an action item, a to-do, anything they say they will do, want to do, need to do or should do.
+- idea: an idea they want made, built, implemented or tried (not a passing thought).
+- learn: something they want to know more about, look into, research or understand.
+- Anything they explicitly ask to be reminded of or acted on ("remind me", "I want this acted on").
+Skip: what already happened, what someone else will do, small talk, vague wishes with nothing to act on. An empty list is right when there is nothing.
+
+For each one return:
+- words: copied exactly from the text, the sentence or two that says it, under 280 characters. You may cut stumbles with "..." but never change or add a word.
+- title: 2 to 6 plain words naming the thing to do (example: "Email Sam about the lounge lease").
+- kind: do, idea or learn.
+- how: ONLY if they said how they want it done or acted on, copy those words exactly from the text; otherwise null.
+- when_then: one line "When <a real moment in their day>, I <a small first act>." for doing it.
+
+Answer JSON only: {"actions":[...]}. At most 6.
+
+TEXT:
+${text.slice(0, 24_000)}` }], { json: true });
+  let parsed: any; try { parsed = JSON.parse(raw.replace(/^[^{]*/, "").replace(/[^}]*$/, "")); } catch { return []; }
+  const real = (q: unknown) => typeof q === "string" && q.split(/\.{3}|…/).map((p) => p.trim()).filter((p) => p.length >= 8).every((p) => locate(text, p) >= 0);
+  return (Array.isArray(parsed?.actions) ? parsed.actions : []).slice(0, 6)
+    .filter((a: any) => typeof a?.words === "string" && typeof a?.title === "string" && ["do", "idea", "learn"].includes(a.kind) && real(a.words))
+    .map((a: any) => ({ words: a.words as string, title: a.title as string, kind: (a.kind === "learn" ? "learn" : "do") as Kind, when_then: typeof a.when_then === "string" ? a.when_then : undefined, how: a.how && real(a.how) ? a.how as string : undefined }));
+}
+/** What an agent is handed for an action card: their words, and how they want it done when they said. */
+export const directiveFor = (s: Pick<Spark, "words" | "how" | "kind">) =>
+  `${s.kind === "learn" ? "They want to know more about this. " : ""}${s.words}${s.how ? `\n\nHow they want it acted on, in their words: ${s.how}` : ""}`;
 
 // ── From a project: put an asset into Remind with a note on how, when and what for ──
 /** One reminder per chosen item, carrying the person's note as its words. A date said in the note ("next Friday",

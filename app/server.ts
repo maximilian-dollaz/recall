@@ -302,8 +302,11 @@ async function process(job: Job, person: Person) {
     if (project) await gb.addTag(scope, slug, `project:${project.id}`).catch(() => {});
     await gb.addTag(scope, slug, `shelf:${shelf.id}`).catch(() => {});
     // A long doc, meeting or voice note: its pieces are pulled out after this, a part at a time.
-    if (!care && kind !== "image" && kind !== "video" && remind.on(person.dir) && (job.source?.startsWith("meeting:") || kind === "audio" || /\bremind\b/i.test(whole)) && whole.length >= 120)
-      sparksFrom(person, slug, finalTitle, whole).catch((e) => console.error(`[remind] ${person.id}: ${String(e).slice(0, 200)}`));
+    // Remind reads every new note, meeting and voice note with real text: lines worth living, and things to make real.
+    // A typed note, or a voice note from the shortcut, keeps its words in the note itself, not the body: read both.
+    const said = [job.notes, whole].filter(Boolean).join("\n\n");
+    if (!care && kind !== "image" && kind !== "video" && said.length >= 120 && (remind.on(person.dir) || await isOwner(person).catch(() => false)))
+      sparksFrom(person, slug, finalTitle, said).catch((e) => console.error(`[remind] ${person.id}: ${String(e).slice(0, 200)}`));
     if (!care && kind !== "image" && kind !== "video") await pieces.queue(person, { id: job.id, slug, title: finalTitle, notes, project: project?.id, who: job.who || undefined, body: whole.slice(0, 1_000_000), engine: engineFor(person.id, job) });
   }
   const itemId = job.keepLocal ? `vault:${job.id}` : slug;
@@ -420,10 +423,21 @@ setInterval(() => organizeAll().catch(() => {}), 5 * 60_000);
 // Remind: the moments worth living come back to the person's phone (remind.ts). Checked every 5 minutes.
 async function sparksFrom(person: Person, slug: string, title: string, text: string) {
   const date = text.match(/^Date: (\d{4}-\d{2}-\d{2})/m)?.[1] ?? today();
-  const found = await withEngine({ kind: "claude" }, () => remind.find(text, title, chat, pieces.locate));
-  for (const s of found) { const made = await remind.add(person.dir, { ...s, from: { slug, title, date } }); if (made) { console.log(`[remind] ${person.id}: new spark "${made.title}" from ${slug}`);
-    // An idea is something to move forward: an agent starts on it without being asked (agents.ts).
-    if (made.kind === "idea" && await isOwner(person)) agents.create(person.dir, { directive: made.words, title: made.title, from: { kind: "spark", id: made.id, title: made.title }, auto: true }).then((r) => r && kickAgents()).catch(() => {}); } }
+  // Two reads of the same note: lines worth living (find), and things to make real (findActions). The inspiring
+  // lines only for people who turned Remind on; the things to make real always for the owner.
+  const owner = await isOwner(person).catch(() => false);
+  const [lines, acts] = await Promise.all([
+    remind.on(person.dir) ? withEngine({ kind: "claude" }, () => remind.find(text, title, chat, pieces.locate)).catch(() => []) : [],
+    owner ? withEngine({ kind: "claude" }, () => remind.findActions(text, title, chat, pieces.locate)).catch((e) => { console.error(`[remind] actions ${person.id}: ${String(e).slice(0, 200)}`); return []; }) : [],
+  ]);
+  console.log(`[remind] ${person.id}: read ${slug}: ${lines.length} to live, ${acts.length} to make real`);
+  for (const s of [...acts, ...lines]) {
+    const made = await remind.add(person.dir, { ...s, from: { slug, title, date } }); if (!made) continue;
+    console.log(`[remind] ${person.id}: new ${made.kind} "${made.title}" from ${slug}`);
+    // Anything meant to be made real goes to an agent the moment it lands (agents.ts), with how they said to do it.
+    if (owner && ["do", "learn", "idea"].includes(made.kind))
+      agents.create(person.dir, { directive: remind.directiveFor(made), title: made.title, from: { kind: "spark", id: made.id, title: made.title }, auto: true }).then((r) => r && kickAgents()).catch(() => {});
+  }
 }
 setInterval(async () => {
   for (const email of Object.keys((await listPeople()).people)) {
@@ -442,10 +456,8 @@ setInterval(async () => { for (const p of await allPeople()) if (await isOwner(p
 const kickCreate = () => { setTimeout(() => create.drain(allPeople).catch((e) => console.error(`[create] ${String(e).slice(0, 200)}`)), 200); };
 create.recover(allPeople).then(kickCreate).catch(() => {});
 setInterval(kickCreate, 60_000);
-// A new idea or action pulled out of a meeting goes to an agent on its own (capped per day in agents.ts).
-// For now only the owner's: a teammate hands things over by hand until the owner turns this on for the team.
-pieces.made.piece = async (person, p) => { if ((p.kind !== "idea" && p.kind !== "action") || !(await isOwner(person).catch(() => false))) return;
-  agents.create(person.dir, { directive: `${p.title}\n\n"${p.quote}"`, title: p.title, from: { kind: "piece", id: p.slug, title: p.from }, auto: true }).then((r) => r && kickAgents()).catch(() => {}); };
+// (Remind now reads whole meetings for things to make real and starts the agent from the card, so a meeting's
+// action and idea pieces no longer start a second agent here.)
 setInterval(() => syncMeetings().catch((e) => console.error(`[meetings] sync: ${String(e).slice(0, 200)}`)), 30 * 60_000);
 setTimeout(() => syncMeetings().catch(() => {}), 60_000); // after a restart, carry on with any sync it cut short
 let kickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -916,6 +928,10 @@ const door = Bun.serve({
     if (team && req.method === "GET") return teamEntry(team[1]);
     const friend = u.pathname.match(/^\/invite\/([A-Za-z0-9_-]{16,64})$/);
     if (friend && req.method === "GET") return teamEntry(friend[1], "friend");
+    const hello = u.pathname.match(/^\/hello\/([A-Za-z0-9_-]{20,64})$/);
+    if (hello && req.method === "GET") return helloDoor(hello[1], req); // the Home Screen app's first open
+    const hm = u.pathname.match(/^\/hello-manifest\/([A-Za-z0-9_-]{20,64})$/);
+    if (hm && req.method === "GET") return helloManifest(hm[1]);
     if (u.pathname === "/auth/google" && req.method === "POST") return googleSignIn(req);
     if (u.pathname === "/signin") return signInPage(req);
     { const bd = await boardDoor(req); if (bd) return bd; } // board invite links (/b/<token>)
@@ -925,10 +941,6 @@ const door = Bun.serve({
     if (u.pathname === "/sw.js") return fetch(new Request(`http://127.0.0.1:${PORTS.inner}/sw.js`)); // the service worker: no personal data
     if (u.pathname === "/guide") return guidePage(req); // public: a teammate reads it before signing in
     if (/^\/static\/(icon-(32|180|192|512)\.png|manifest\.webmanifest|find-landscape\.svg|(?:delta|river)-[0-9]+\.(?:jpg|webp)|ui\/[a-z0-9-]+\.(?:js|css)|onboard\/[a-z0-9-]+\.jpg)$/.test(u.pathname)) return fetch(new Request(`http://127.0.0.1:${PORTS.inner}${u.pathname}`));
-    const hello = u.pathname.match(/^\/hello\/([A-Za-z0-9_-]{20,64})$/);
-    if (hello && req.method === "GET") return helloDoor(hello[1], req); // the Home Screen app's first open
-    const hm = u.pathname.match(/^\/hello-manifest\/([A-Za-z0-9_-]{20,64})$/);
-    if (hm && req.method === "GET") return helloManifest(hm[1]);
     // A person's own shortcut: its key can save, nothing else.
     const k = u.pathname.match(/^\/k\/([A-Za-z0-9_-]{20,64})\/api\/save$/);
     if (k) {
@@ -946,6 +958,7 @@ const door = Bun.serve({
     { const m = u.pathname.match(/^\/connect\/(granola|otter)\/callback$/); if (m && req.method === "GET") return meetingsReturn(req, u, m[1] as meetings.Vendor); }
     const email = await sessionEmail(req);
     if (!email) return signInPage(req, "", 401);
+    if (u.pathname === "/api/handoff" && req.method === "POST") return Response.json({ code: await mintHandoff(email) }, { headers: { "cache-control": "no-store" } });
     if (u.pathname === deepgram.LISTEN_PATH) return deepgram.upgrade(req, srv, (await listPeople()).owner === email);
     if (isSoulPath(u.pathname)) {
       // The sign-in decides who this is; nothing the browser sends can name someone else.
@@ -955,7 +968,6 @@ const door = Bun.serve({
       // Links the Soul Map builds point at the public https address, not the tunnel's plain http.
       const pub = new URL(u.pathname + u.search, CONFIG_URL);
       const r = await soulProxy(new Request(req.url, { method: req.method, headers: sh, body: req.body, duplex: "half" } as any), pub, "127.0.0.1", true);
-    if (u.pathname === "/api/handoff" && req.method === "POST") return Response.json({ code: await mintHandoff(email) }, { headers: { "cache-control": "no-store" } });
       // fetch has already unpacked a gzipped page but keeps the header, which the browser then fails to decode.
       if (!r.headers.get("content-encoding")) return r;
       const rh = new Headers(r.headers); rh.delete("content-encoding"); rh.delete("content-length");
@@ -1092,7 +1104,7 @@ const routed = Bun.serve({
     "/connectors": withPerson(async (req) => page(req, "connectors.html")),
     ...connectorRoutes(withPerson, { save: queueSave, keyBoxes: ["metricool", "canva", "google"] }),
     ...agents.agentRoutes(withPerson, { kick: kickAgents,
-      sparkWords: (p, id) => { const s = remind.ledger(p.dir).sparks.find((x) => x.id === id); return s ? { directive: [s.words, s.when_then].filter(Boolean).join("\n"), title: s.title } : null; },
+      sparkWords: (p, id) => { const s = remind.ledger(p.dir).sparks.find((x) => x.id === id); return s ? { directive: ["do", "learn", "idea"].includes(s.kind) ? remind.directiveFor(s) : [s.words, s.when_then].filter(Boolean).join("\n"), title: s.title } : null; },
       itemWords: async (p, id) => { const it = await item(p, id).catch(() => null); return it ? { directive: [it.title, it.summary, it.markdown].filter(Boolean).join("\n").slice(0, 3000), title: it.title } : null; } }),
     "/api/me": withPerson(async (_req, p) => json({ id: p.id, name: p.name, source: p.source }, 200)),
     "/api/health": async () => json({ ok: true, library: await gb.callTool("whoami").catch((e) => ({ error: String(e) })) }, 200),

@@ -379,6 +379,11 @@
   .rm-tile { display:grid; gap:10px; padding:14px; border:1px solid var(--line); border-radius:16px; background:var(--glass-soft, rgba(127,127,127,.06)); transition:opacity .25s ease, transform .25s ease }
   .rm-tile.rm-out { opacity:0; transform:translateX(24px) }
   .rm-note { font-size:.85rem; color:var(--muted) }
+  .rm-kind { justify-self:start; font-size:.72rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); }
+  .rm-how { font-size:.9rem; color:var(--fg-2, var(--fg)) }
+  .rm-agent { display:flex; gap:10px; align-items:baseline; justify-content:space-between; font-size:.88rem; padding:10px 12px; border-radius:12px; background:var(--accent-soft, rgba(232,169,92,.12)); color:var(--fg) }
+  .rm-agent[hidden] { display:none } .rm-agent .rm-quiet { flex:none; padding:0 }
+  .rm-agent[data-s="needs-you"] { border:1px solid var(--accent) }
   .rm-tile.rm-in { animation:rm-in .32s cubic-bezier(.2,.75,.2,1) }
   @keyframes rm-in { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:none } }
   @media (prefers-reduced-motion: reduce) { .rm-tile.rm-in { animation:none } }

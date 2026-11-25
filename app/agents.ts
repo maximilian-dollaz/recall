@@ -6,8 +6,8 @@
 //
 //   Where work comes from   a reminder ("Hand to an agent"), a saved item, a piece of a meeting (idea, action,
 //                           decision), or words typed into the Agents tab.
-//   Proactive               With "Agents start on their own" on, a new idea in Remind and a new action or idea
-//                           from a meeting start a run without being asked. At most AUTO_CAP a day.
+//   Proactive               With "Agents start on their own" on, anything to make real that lands in Remind (a to-do,
+//                           an idea, something to learn, from any note or meeting) starts a run. At most AUTO_CAP a day.
 //   What it can never do    send, post, pay, book or write to the library. Everything it makes is a draft
 //                           inside the run. It never writes a social post caption: the person writes those.
 //   Model                   Claude with web search when this install has a key (AGENT_CLAUDE_MODEL); otherwise
@@ -36,7 +36,7 @@ export type Run = {
 type Ledger = { runs: Run[]; auto: boolean; autoDays: Record<string, number> };
 
 export const MAX_ROUNDS = 4;   // rounds of work per run; after the last one it finishes with what it has
-export const AUTO_CAP = 3;     // runs a day that may start without being asked
+export const AUTO_CAP = 12;    // runs a day that may start without being asked: every action from a day of notes, with a ceiling (Max, 25 Nov)
 const KEEP = 200;              // runs kept per person
 const KEY = Bun.env.ANTHROPIC_API_KEY ?? "";
 // Haiku with web search (Max, 23 Nov): fast and cheap. AGENT_CLAUDE_MODEL picks another.

@@ -20,16 +20,24 @@
     landing: '<button class="rm-second" type="button" data-a="landing">Still landing</button>',
     letgo: '<button class="rm-quiet" type="button" data-a="let-go">Let go</button>',
     agent: '<button class="rm-quiet" type="button" data-agent="1">Hand to an agent</button>',
+    done: '<button class="primary" type="button" data-a="lived">Done</button>',
   };
+  // Things to make real (caught in a note, or said "remind me" about): labelled, and "Done" instead of "Yes, lived it".
+  const ACT = { do: 'To do', learn: 'To learn' };
+  // What the agent working on a card is doing, in a line on the card.
+  const AGENT = { queued: 'An agent is starting on this.', working: 'An agent is working on this.', 'needs-you': 'The agent needs your call:', done: 'The agent finished:', failed: 'The agent got stuck.', stopped: 'You stopped the agent.' };
   function tile(s, btns, note = '') {
     return `<article class="rm-tile" data-id="${esc(s.id)}">
       ${s.thumb ? `<img class="rm-pic" src="/thumb/${encodeURIComponent(s.thumb)}?s=720" alt="" loading="lazy">` : ''}
+      ${ACT[s.kind] ? `<div class="rm-kind">${ACT[s.kind]}</div>` : ''}
       <h3 class="rm-title">${esc(s.title)}</h3>
       <blockquote class="rm-words">“${esc(s.words)}”</blockquote>
+      ${s.how ? `<div class="rm-how">How: “${esc(s.how)}”</div>` : ''}
       <div class="rm-from">${s.kind === 'asset' ? 'Saved' : 'You,'} ${day(s.from.date)}${s.from.slug ? ` · <a href="/?item=${encodeURIComponent(s.from.slug)}">${esc(s.from.title)}</a>` : ''}</div>
       ${s.when_then ? `<div class="rm-then">${esc(s.when_then)}</div>` : ''}
       ${note ? `<div class="rm-note">${note}</div>` : ''}
-      <div class="rm-btns">${btns}</div>
+      <div class="rm-agent" hidden></div>
+      <div class="rm-btns">${ACT[s.kind] ? btns.replace(BTN.lived, BTN.done) : btns}</div>
     </article>`;
   }
 
@@ -109,7 +117,7 @@
       const o = e.target.closest('[data-open]'); if (o) { opened.push(o.dataset.open); jar(); q('#reminders')?.scrollIntoView?.({ block: 'start' }); return; }
       if (e.target.closest('[data-back]')) { opened.pop(); jar(); }
     };
-    const render = () => {
+    let render = () => {
       const on = st.sparks.filter((s) => s.state === 'on' && !held(s)).sort((a, b) => a.next.localeCompare(b.next));
       const landing = st.sparks.filter((s) => s.state === 'on' && held(s)).sort((a, b) => a.hold.localeCompare(b.hold));
       const ev = st.sparks.filter((s) => s.state === 'evidence').sort((a, b) => (b.evidence || '').localeCompare(a.evidence || ''));
@@ -129,6 +137,7 @@
       const run = await window.handToAgent?.({ kind: 'spark', id: b.closest('.rm-tile').dataset.id });
       if (!run) { b.disabled = false; b.textContent = 'Hand to an agent'; return; }
       b.outerHTML = `<button class="rm-quiet" type="button" data-open-agent="${esc(run.id)}">With an agent. Open</button>`;
+      watchAgents();
     });
     root.addEventListener('click', (e) => { const o = e.target.closest('[data-open-agent]'); if (o) window.openAgents?.(o.dataset.openAgent); });
     root.addEventListener('click', async (e) => {
@@ -142,9 +151,23 @@
       setTimeout(render, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 260);
     });
     render();
-    // A reminder already with an agent says so (and opens it) instead of offering a second hand-off.
-    fetch('/api/agents').then((r) => r.json()).then((a) => { for (const run of a.runs || []) { if (run.from?.kind !== 'spark' || !['queued', 'working', 'needs-you'].includes(run.status)) continue;
-      const b = root.querySelector(`.rm-tile[data-id="${run.from.id}"] button[data-agent]`); if (b) b.outerHTML = `<button class="rm-quiet" type="button" data-open-agent="${esc(run.id)}">With an agent. Open</button>`; } }).catch(() => {});
+    // A card with an agent shows where the agent is, live: working, your call (its question), or finished (its summary).
+    const agentLines = async () => {
+      const a = await (await fetch('/api/agents')).json(); let busy = false;
+      const latest = new Map(); for (const run of a.runs || []) if (run.from?.kind === 'spark' && !latest.has(run.from.id)) latest.set(run.from.id, run);
+      for (const [id, run] of latest) {
+        const card = root.querySelector(`.rm-tile[data-id="${CSS.escape(id)}"]`); if (!card) continue;
+        const line = card.querySelector('.rm-agent'); line.hidden = false; line.dataset.s = run.status;
+        const what = run.status === 'needs-you' ? run.ask?.question : run.status === 'done' ? run.summary : '';
+        line.innerHTML = `<span>${AGENT[run.status] || ''}${what ? ` ${esc(what)}` : ''}</span><button class="rm-quiet" type="button" data-open-agent="${esc(run.id)}">${run.status === 'needs-you' ? 'Answer' : 'Open'}</button>`;
+        card.querySelector('button[data-agent]')?.remove();
+        if (run.status === 'queued' || run.status === 'working') busy = true;
+      }
+      return busy;
+    };
+    const watchAgents = () => agentLines().then((busy) => { if (busy && root.isConnected) setTimeout(watchAgents, 8000); }).catch(() => {});
+    watchAgents();
+    const _render = render; render = () => { _render(); agentLines().catch(() => {}); };
     // Sparks: the slow reading of older notes for lines worth bringing back (sparks.ts).
     fetch('/api/sparks').then((r) => r.json()).then((sp) => { if (!sp.total) return; const l = q('.rm-sparks'); l.hidden = false;
       l.querySelector('span').textContent = `Sparks: read your older notes for lines worth bringing back. ${sp.read} of ${sp.total} read.`;
