@@ -8,7 +8,7 @@ const RECALL = "https://recall.nextmissionsi.com";
 const $ = (s) => document.querySelector(s);
 const status = (t, cls = "") => { $("#status").textContent = t; $("#status").className = cls; };
 let item = {}, words = "", typing = false, done = false, stream = null;
-let speech = null, finalText = "", ended = null;      // Chrome speech
+let speech = null, finalText = "", chromeInterim = "", ended = null; // Chrome speech
 let rec = null, chunks = [], timer = null, busy = false; // fallback: the Recall server transcribes
 let entries = [], gathered = Promise.resolve([]), sent = new Set(), batch = "", googleOk = false;
 chrome.runtime.connect({ name: "popup" }); // the background knows this pop-up is open while this lasts
@@ -39,27 +39,36 @@ function keep() {
   return chrome.storage.session.set({ pending: { ...rest, at: Date.now() } }).catch(() => {});
 }
 
+// The Recall server's transcription of everything recorded so far. While speaking it only fills the box when
+// Chrome's own speech has given no words (a safety net); at the end it's the answer when Chrome gave none.
 async function transcribe(final) {
-  if (busy || !chunks.length) return; busy = true;
+  if (busy || !chunks.length) return ""; busy = true;
   try {
-    const fd = new FormData(); fd.append("audio", new Blob(chunks, { type: rec.mimeType || "audio/webm" }), "note.webm");
+    const fd = new FormData(); fd.append("audio", new Blob(chunks, { type: rec?.mimeType || "audio/webm" }), "note.webm");
     const r = await fetch(`${RECALL}/api/transcribe`, { method: "POST", body: fd, credentials: "include" });
     if (r.status === 401) throw new Error("signin");
     const d = await r.json(); if (!r.ok) throw new Error(d.error || "transcription failed");
-    words = (d.text || "").trim(); $("#said").textContent = words;
-  } catch (e) { if (final) throw e; }
+    const t = (d.text || "").trim();
+    if (final || !heard()) $("#said").textContent = t;
+    return t;
+  } catch (e) { if (final) throw e; return ""; }
   finally { busy = false; }
 }
+const heard = () => !!(finalText || chromeInterim);
 
 async function stopListening() {
-  if (speech) { const wait = ended; try { speech.stop(); } catch {} await wait; words = (finalText || $("#said").textContent).trim(); }
-  else if (rec) {
-    clearInterval(timer);
+  clearInterval(timer);
+  if (speech) { const wait = ended; try { speech.stop(); } catch {} await Promise.race([wait, new Promise((r) => setTimeout(r, 2500))]); }
+  words = (finalText || chromeInterim).trim();
+  // Chrome gave no words (or its speech isn't working here): the recording goes to the Recall server.
+  if (!words && rec) {
     await new Promise((res) => { if (rec.state !== "recording") return res(); rec.onstop = res; rec.stop(); });
     while (busy) await new Promise((r) => setTimeout(r, 100));
-    await transcribe(true);
+    words = (await transcribe(true)).trim();
   }
+  try { rec?.state === "recording" && rec.stop(); } catch {}
   stream?.getTracks().forEach((t) => t.stop());
+  if (!words) throw new Error("nothing-heard");
 }
 
 async function finish() {
@@ -73,6 +82,7 @@ async function finish() {
     done = false; $("#stop").disabled = false; $("#savebtn").disabled = false;
     await keep();
     const part = sent.size ? `Saved ${sent.size} of ${entries.length}. ` : "";
+    if (String(e.message) === "nothing-heard") { switchToTyping(); status("Didn't hear anything. Type it, then Save to Recall.", "err"); return; }
     if (String(e.message) === "signin") { status(`${part}Sign in to Recall in this Chrome first, then try again.`, "err"); chrome.tabs.create({ url: RECALL }); }
     else status(`${part}Not saved: ${e.message}`, "err");
   }
@@ -94,25 +104,32 @@ function chromeSpeech() {
   speech.onresult = (e) => {
     let interim = ""; finalText = "";
     for (const r of e.results) { if (r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript; }
+    chromeInterim = interim.trim();
     $("#said").textContent = (finalText + interim).trim(); $("#said").scrollTop = $("#said").scrollHeight;
   };
-  speech.onerror = (e) => { if (["not-allowed", "service-not-allowed", "network", "audio-capture"].includes(e.error) && !done && !typing) { speech = null; macTranscription(); } };
+  // Chrome's speech can fail quietly in a pop-up (network, service-not-allowed, aborted). The recording keeps going
+  // and the Recall server transcribes it, so words still appear.
+  speech.onerror = (e) => { if (e.error !== "no-speech" && !done && !typing) { try { speech.abort(); } catch {} speech = null; } };
   speech.onend = () => { resolveEnd(); if (speech && !done && !typing) { try { speech.start(); ended = new Promise((r) => (resolveEnd = r)); } catch {} } }; // keep listening through pauses
   speech.start();
   return true;
 }
 
-function macTranscription() {
+// Always record. Chrome's speech gives the instant words; if it gives none, every 3 seconds the Recall server
+// transcribes what was recorded so far and the words appear that way.
+function startRecording() {
   rec = new MediaRecorder(stream); chunks = [];
   rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-  rec.start(1000); timer = setInterval(() => transcribe(false), 3000);
+  rec.start(1000);
+  timer = setInterval(() => { if (!heard() && !done && !typing) transcribe(false); }, 3000);
 }
 
 async function listen() {
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     glow(stream);
-    if (!chromeSpeech()) macTranscription();
+    startRecording();
+    chromeSpeech();
   } catch (e) {
     // First time: the pop-up can't ask, so a tab asks once, then brings the pop-up back for the same item.
     if (e?.name === "NotAllowedError" || e?.name === "SecurityError") { await keep(); chrome.tabs.create({ url: "permission.html" }); window.close(); return; }
