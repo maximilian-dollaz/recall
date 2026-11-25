@@ -20,6 +20,7 @@
   main.going .get, main.going .logo, main.finished .logo { display:none }
   main.granola > :not(.logo):not(#granola) { display:none !important }
   main.projects > :not(.logo):not(#projects) { display:none !important }
+  main.home > :not(.logo):not(#home) { display:none !important }
   /* Starting projects: three names, then Continue. */
   .projects h1 { text-align:center; margin:0 0 8px }
   .projects p { text-align:center; margin:0 0 21px; color:var(--fg-2); text-shadow:var(--shade) }
@@ -114,6 +115,10 @@
   .menu { background:#2c2c2e; border:1px solid #48484a; border-radius:8px; padding:4px; width:150px; box-shadow:0 8px 21px rgba(0,0,0,.35) }
   .menu span { display:block; padding:4px 9px; border-radius:5px } .menu .hl { background:var(--ios); color:#fff }
   .menu hr { border:0; border-top:1px solid #48484a; margin:4px 6px }
+  /* iPhone, last: the Home Screen steps, all on one page. */
+  .homescreen { display:grid; gap:21px; margin-bottom:34px } .homescreen h1 { font:600 var(--fs2)/1.236 var(--font-display); margin:0 }
+  .homescreen .hs p { margin:0 0 8px; font-weight:600 } .homescreen .hs p b { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%; background:var(--red); color:#fff; margin-right:6px; font-size:.85rem }
+  .homescreen .app { width:52px; height:52px; border-radius:12px; background:#3a3a3c; overflow:hidden; display:block } .homescreen .app img { width:100%; height:100% }
 </style>
 </head>
 <body>
@@ -259,7 +264,32 @@
     <a class="get" href="/connect/granola">Connect Granola</a>
     <a class="get" href="/connect/otter" style="margin-top:13px">Connect Otter</a>
     <p>Your meetings save to Recall on their own.</p>
-    <a class="skip" href="/">Skip</a>
+    <a class="skip" href="/" id="gskip">Skip</a>
+  </section>
+  <!-- iPhone, last: Recall on the Home Screen. It opens signed in (a one-time code in its first address), so no second sign-in. -->
+  <section class="homescreen" id="home" hidden>
+    <h1>Put Recall on your Home Screen</h1>
+    <div class="hs">
+      <p><b>1</b> Tap ···</p>
+      <div class="shot"><img src="/static/onboard/iphone-address-bar.jpg" alt=""><span class="ring" style="left:81%;top:18%;width:12%;height:64%"></span></div>
+    </div>
+    <div class="hs">
+      <p><b>2</b> Tap Share</p>
+      <div class="screen phone"><div class="sheet"><div class="it tap">Share</div><div class="it">Add to Bookmarks</div><div class="it">New Tab</div></div></div>
+    </div>
+    <div class="hs">
+      <p><b>3</b> Tap Add to Home Screen. If you don't see it, tap View More.</p>
+      <div class="screen phone"><div class="sheet"><div class="it">Copy</div><div class="it">Add to Reading List</div><div class="it tap">Add to Home Screen</div></div></div>
+    </div>
+    <div class="hs">
+      <p><b>4</b> Tap Add</p>
+      <div class="screen phone"><div class="row" style="justify-content:space-between"><span class="muted">Cancel</span><b>Add to Home Screen</b><span class="tap" style="color:var(--ios);font-weight:600;padding:0 6px">Add</span></div>
+        <div class="row" style="gap:10px;margin-top:13px"><img src="/static/icon-180.png" alt="" style="width:44px;height:44px;border-radius:10px"><span>Recall</span></div></div>
+    </div>
+    <div class="hs">
+      <p><b>5</b> Open Recall from your Home Screen</p>
+      <div class="screen phone"><div class="row" style="gap:21px;justify-content:center"><span class="app"></span><span class="app"></span><span class="app tap"><img src="/static/icon-180.png" alt=""></span><span class="app"></span></div></div>
+    </div>
   </section>
 </main>
 <script>
@@ -286,7 +316,16 @@
   fetch('/api/connectors').then((r) => (r.ok ? r.json() : null)).then((c) => { granolaOn = !!c && Object.values(c).some((s) => s.connected); }).catch(() => {});
   fetch('/api/starter-projects').then((r) => (r.ok ? r.json() : null)).then((d) => { hasProjects = !!d && d.projects.length > 0; }).catch(() => {});
   const show = (id) => { document.querySelector('main').className = id; $('#' + id).hidden = false; window.scrollTo(0, 0); };
-  const meetingsNext = () => { if (granolaOn) location.href = '/'; else show('granola'); };
+  // iPhone in Safari: last, put Recall on the Home Screen. The page's manifest is swapped for one whose first
+  // address carries a one-time code, so the Home Screen app opens signed in.
+  const homeApp = !mac && !navigator.standalone && !matchMedia('(display-mode: standalone)').matches;
+  const toHome = () => { if (!homeApp) { location.href = '/'; return; }
+    ['projects', 'granola'].forEach((id) => { $('#' + id).hidden = true; });
+    show('home');
+    fetch('/api/handoff', { method: 'POST' }).then((r) => (r.ok ? r.json() : null)).then((d) => { if (!d || !d.code) return;
+      document.querySelector('link[rel=manifest]').href = '/hello-manifest/' + d.code;
+      history.replaceState(null, '', '/hello/' + d.code); }).catch(() => {}); };
+  const meetingsNext = () => { if (granolaOn) toHome(); else show('granola'); };
   $('#done').addEventListener('click', (e) => { e.preventDefault(); finished().finally(() => {
     if (hasProjects) meetingsNext(); else { show('projects'); $('#pform input').focus(); }
   }); });
@@ -295,6 +334,7 @@
   $('#pform').addEventListener('submit', (e) => { e.preventDefault(); if (pgo.disabled) return; pgo.disabled = true;
     fetch('/api/starter-projects', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ names: pins.map((x) => x.value) }) })
       .catch(() => {}).finally(meetingsNext); });
+  $('#gskip').addEventListener('click', (e) => { e.preventDefault(); toHome(); });
   $('#pskip').addEventListener('click', (e) => { e.preventDefault(); meetingsNext(); });
   // Mac: keep Recall in the Dock. Chrome offers its own install; Safari has File → Add to Dock. Not shown once installed.
   if (mac && !matchMedia('(display-mode: standalone)').matches) {

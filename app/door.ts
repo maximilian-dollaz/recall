@@ -21,7 +21,8 @@ const YEAR = 365 * 24 * 3600;
 
 type Invite = { name: string; email: string; created: string; uses: number; maxUses: number };
 type Session = { email: string; created: string; seen: string };
-type Store = { invites: Record<string, Invite>; sessions: Record<string, Session> };
+type Handoff = { email: string; created: string; used?: string };
+type Store = { invites: Record<string, Invite>; sessions: Record<string, Session>; handoffs?: Record<string, Handoff> };
 
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 const EMPTY: Store = { invites: {}, sessions: {} };
@@ -70,6 +71,42 @@ export async function newSession(email: string): Promise<string> {
   await change((s) => { s.sessions[hash(sid)] = { email, created: new Date().toISOString(), seen: new Date().toISOString() }; });
   return `${COOKIE}=${sid}; Path=/; Max-Age=${YEAR}; HttpOnly; Secure; SameSite=Lax`;
 }
+
+/** A one-time code that signs in the Home Screen app as the person who added it. An iPhone keeps the Home Screen
+ * app's sign-in apart from Safari's, so without this a friend would sign in with Google a second time. */
+const HANDOFF_TTL = 24 * 3600_000;
+export async function mintHandoff(email: string): Promise<string> {
+  const code = randomBytes(24).toString("base64url"), now = Date.now();
+  await change((s) => {
+    s.handoffs ??= {};
+    for (const [k, h] of Object.entries(s.handoffs)) if (now - Date.parse(h.created) > HANDOFF_TTL) delete s.handoffs[k]; // old ones go
+    s.handoffs[hash(code)] = { email, created: new Date(now).toISOString() };
+  });
+  return code;
+}
+
+/** GET /hello/<code>: the Home Screen app's first open. Spends the code once and signs this browser in;
+ * a browser already signed in as that person just goes home (Safari reloading the page spends nothing). */
+export async function helloDoor(code: string, req: Request): Promise<Response> {
+  const home = (cookie?: string) => new Response(null, { status: 302, headers: { location: "/", ...(cookie ? { "set-cookie": cookie } : {}) } });
+  const already = await sessionEmail(req);
+  const h = (await load()).handoffs?.[hash(code)];
+  if (!h || h.used || Date.now() - Date.parse(h.created) > HANDOFF_TTL) return already ? home() : new Response(null, { status: 302, headers: { location: "/signin" } });
+  if (already === h.email) return home();
+  const sid = randomBytes(32).toString("base64url"); let ok = false;
+  await change((s) => {
+    const row = s.handoffs?.[hash(code)]; if (!row || row.used) return;
+    row.used = new Date().toISOString(); ok = true;
+    s.sessions[hash(sid)] = { email: row.email, created: new Date().toISOString(), seen: new Date().toISOString() };
+  });
+  if (!ok) return new Response(null, { status: 302, headers: { location: "/signin" } });
+  console.log(`[door] a Home Screen app signed in with a handoff code`);
+  return home(`${COOKIE}=${sid}; Path=/; Max-Age=${YEAR}; HttpOnly; Secure; SameSite=Lax`);
+}
+
+/** The app manifest for a Home Screen app added from the welcome page: it opens /hello/<code> the first time. */
+export const helloManifest = (code: string) => Response.json({ id: "/", scope: "/", name: "Recall", short_name: "Recall", start_url: `/hello/${code}`, display: "standalone", background_color: "#f3f1ec", theme_color: "#2d5a46",
+  icons: [{ src: "/static/icon-192.png", sizes: "192x192", type: "image/png" }, { src: "/static/icon-512.png", sizes: "512x512", type: "image/png" }] }, { headers: { "content-type": "application/manifest+json", "cache-control": "no-store" } });
 
 /** GET /join/<token>: a page with one "Open Recall" button. Nothing is spent here, so link previews in
  * Messages or Mail (which fetch the link before anyone taps it) can't use up an invite. */

@@ -55,6 +55,10 @@ export async function signInPage(req: Request, note = "", status = 200): Promise
   const id = await clientId();
   const joining = same(cookie(req, TEAM_COOKIE), await teamCode()) || same(cookie(req, FRIEND_COOKIE), await friendCode()) || !!inviteInfo(cookie(req, BOARD_COOKIE));
   const lead = note || (joining ? "Sign in with your Google account. Your own library is created the first time." : "Sign in with your Google account.");
+  // Opened inside another app (Instagram, Gmail, Messenger…): Google won't sign in there, and that browser forgets
+  // the sign-in anyway. Hand the same link to Safari (or Chrome) instead: the invite it came from, else this page.
+  const fc = cookie(req, FRIEND_COOKIE), tc = cookie(req, TEAM_COOKIE), bc = cookie(req, BOARD_COOKIE);
+  const openPath = fc && same(fc, await friendCode()) ? `/invite/${fc}` : tc && same(tc, await teamCode()) ? `/team/${tc}` : bc && inviteInfo(bc) ? `/b/${bc}` : "";
   const google = id ? `<div id="g" style="margin-top:18px;min-height:44px"></div>
 <p id="err" style="color:#9b2d2d;min-height:1.2em"></p>
 <script src="https://accounts.google.com/gsi/client" async></script>
@@ -69,8 +73,33 @@ window.onload = () => {
   google.accounts.id.renderButton(document.getElementById("g"), { theme: "outline", size: "large", text: "signin_with", width: 320 });
 };
 </script>` : `<p style="color:#6b766f">Google sign-in isn't set up yet.</p>`;
-  return page("Recall", `${esc(lead)}${google}`, status);
+  return page("Recall", `<span id="lead">${esc(lead)}</span>${google}${inAppStep(openPath)}`, status);
 }
+
+/** Shown instead of the Google button when the page is open inside another app's browser. */
+const inAppStep = (openPath: string) => `<div id="inapp" hidden style="margin-top:8px">
+<p style="font-weight:600;font-size:1.15rem;margin:0 0 4px" id="ia-h">Open in Safari</p>
+<p style="margin:0 0 16px;opacity:.8">Google sign-in doesn't work inside this app.</p>
+<a id="ia-go" href="#" style="display:block;text-align:center;font-weight:600;padding:14px 22px;border-radius:12px;background:#2d5a46;color:#fff;text-decoration:none">Open in Safari</a>
+<p style="margin:21px 0 8px" id="ia-or">Or tap ··· or the compass, then Open in Safari</p>
+<div style="display:flex;gap:10px;align-items:center;padding:10px 13px;border-radius:12px;background:#1c1c1e;color:#f2f2f7;max-width:320px">
+<span id="ia-host" style="flex:1;opacity:.7;font-size:.9rem"></span><span id="ia-dots" style="border:3px solid #e5484d;border-radius:999px;padding:0 9px;font-weight:700">···</span></div>
+<button id="ia-copy" type="button" style="margin-top:16px;font:inherit;font-weight:600;padding:12px 22px;border-radius:12px;border:1px solid #9aa69f;background:none;color:inherit;width:100%;cursor:pointer">Copy link</button>
+</div>
+<script>(() => {
+  const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1), android = /Android/.test(ua);
+  const known = /FBAN|FBAV|FB_IAB|Instagram|LinkedInApp|GSA\\/|Line\\/|Snapchat|musical_ly|BytedanceWebview|TikTok|Twitter|Pinterest|WhatsApp|Messenger|; wv\\)/.test(ua);
+  if (navigator.standalone || matchMedia('(display-mode: standalone)').matches) return; // the Home Screen app is fine
+  if (!known && !(ios && !/Safari\\//.test(ua)) && !/[?&]inapp=1/.test(location.search)) return;
+  const url = location.origin + (${JSON.stringify(openPath)} || location.pathname);
+  const g = document.getElementById('g'); if (g) g.hidden = true; document.getElementById('lead').hidden = true; document.getElementById('ia-host').textContent = location.host;
+  document.getElementById('inapp').hidden = false;
+  const go = document.getElementById('ia-go');
+  if (android) { go.textContent = 'Open in Chrome'; document.getElementById('ia-h').textContent = 'Open in Chrome'; document.getElementById('ia-or').textContent = 'Or tap ⋮, then Open in Chrome'; document.getElementById('ia-dots').textContent = '⋮';
+    go.href = 'intent://' + url.replace(/^https?:\\/\\//, '') + '#Intent;scheme=https;package=com.android.chrome;end'; }
+  else go.href = 'x-safari-' + url;
+  document.getElementById('ia-copy').onclick = (e) => navigator.clipboard.writeText(url).then(() => { e.target.textContent = 'Copied. Paste it in ' + (android ? 'Chrome.' : 'Safari.'); });
+})();</script>`;
 
 // Google's signing keys, cached for an hour.
 let keys: { at: number; jwks: any[] } | null = null;

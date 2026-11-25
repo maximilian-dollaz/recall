@@ -24,7 +24,7 @@ import { isSoulPath, soulProxy } from "./soul.ts";
 import * as topics from "./topics.ts";
 import * as cues from "./cues.ts";
 import * as organize from "./organize.ts";
-import { join_ as joinDoor, joinPage, sessionEmail, page as doorPage } from "./door.ts";
+import { join_ as joinDoor, joinPage, sessionEmail, page as doorPage, mintHandoff, helloDoor, helloManifest } from "./door.ts";
 import { teamEntry, googleSignIn, signInPage, privacyPage } from "./google.ts";
 import * as boards from "./board.ts";
 import { boardRoutes, boardDoor } from "./boards-routes.ts";
@@ -925,6 +925,10 @@ const door = Bun.serve({
     if (u.pathname === "/sw.js") return fetch(new Request(`http://127.0.0.1:${PORTS.inner}/sw.js`)); // the service worker: no personal data
     if (u.pathname === "/guide") return guidePage(req); // public: a teammate reads it before signing in
     if (/^\/static\/(icon-(32|180|192|512)\.png|manifest\.webmanifest|find-landscape\.svg|(?:delta|river)-[0-9]+\.(?:jpg|webp)|ui\/[a-z0-9-]+\.(?:js|css)|onboard\/[a-z0-9-]+\.jpg)$/.test(u.pathname)) return fetch(new Request(`http://127.0.0.1:${PORTS.inner}${u.pathname}`));
+    const hello = u.pathname.match(/^\/hello\/([A-Za-z0-9_-]{20,64})$/);
+    if (hello && req.method === "GET") return helloDoor(hello[1], req); // the Home Screen app's first open
+    const hm = u.pathname.match(/^\/hello-manifest\/([A-Za-z0-9_-]{20,64})$/);
+    if (hm && req.method === "GET") return helloManifest(hm[1]);
     // A person's own shortcut: its key can save, nothing else.
     const k = u.pathname.match(/^\/k\/([A-Za-z0-9_-]{20,64})\/api\/save$/);
     if (k) {
@@ -951,6 +955,7 @@ const door = Bun.serve({
       // Links the Soul Map builds point at the public https address, not the tunnel's plain http.
       const pub = new URL(u.pathname + u.search, CONFIG_URL);
       const r = await soulProxy(new Request(req.url, { method: req.method, headers: sh, body: req.body, duplex: "half" } as any), pub, "127.0.0.1", true);
+    if (u.pathname === "/api/handoff" && req.method === "POST") return Response.json({ code: await mintHandoff(email) }, { headers: { "cache-control": "no-store" } });
       // fetch has already unpacked a gzipped page but keeps the header, which the browser then fails to decode.
       if (!r.headers.get("content-encoding")) return r;
       const rh = new Headers(r.headers); rh.delete("content-encoding"); rh.delete("content-length");
