@@ -216,7 +216,7 @@ ADMIN_TOKEN="$SERVE_DIR/admin-token"    # owner credential, created by `mcp expo
 CC_BOUND_TOOLS="add_timeline_entry,find_anomalies,get_backlinks,get_ingest_log,get_page,get_recent_salience,list_link_sources,list_pages,put_page,query,resolve_slugs,search,traverse_graph"
 
 # Stop stdio gbrain servers (SIGTERM, never -9) so the shared server can own the brain.
-pids=($(pgrep -f 'gbrain serve' | while read -r p; do ps -o command= -p "$p" | grep -q -- '--http' || echo "$p"; done))
+pids=($( { pgrep -f 'gbrain serve' || true; } | while read -r p; do ps -o command= -p "$p" | grep -q -- '--http' || echo "$p"; done))
 if (( ${#pids} )); then
   note "stopping: ${pids[*]}"
   kill -TERM "${pids[@]}" 2>/dev/null || true
