@@ -1,4 +1,4 @@
-// Service keys (OpenAI, Higgsfield, Deepgram, Resend): pasted into a box once on the Keys page, saved on this Mac with owner-only
+// Service keys (OpenAI, Higgsfield, Deepgram, Resend, xAI): pasted into a box once on the Keys page, saved on this Mac with owner-only
 // file permissions, never shown again, never logged. The app's /settings page and `cl keys` both use this.
 // One step for Max: the page opens with the right box ready (?key=deepgram), and pasting saves it at once,
 // checks it with the service where that's free, and empties the clipboard. A chat that opened the page can
@@ -20,6 +20,9 @@ const KEYS: Record<string, { label: string; file: string; fields: string[]; join
   metricool: { label: "Metricool", file: "metricool.key", fields: ["API token", "User ID", "Brand ID (blogId)"], join: (v) => v.join(":"), ok: (k) => k.split(":").length === 3 && k.length >= 12 },
   canva: { label: "Canva", file: "canva.key", fields: ["Client ID", "Client secret"], join: (v) => v.join(":"), ok: (k) => k.includes(":") && k.length >= 20 },
   google: { label: "Google client secret (Drive)", file: "google.key", fields: ["Client secret"], join: (v) => v[0], ok: (k) => k.length >= 16 },
+  // xAI (Grok) runs the agent teams on the server. Checked for free by listing the models.
+  xai: { label: "xAI (Grok)", file: "xai.key", fields: ["API key"], join: (v) => v[0].trim(), ok: (k) => k.startsWith("xai-") && k.length >= 20,
+    check: async (k) => (await fetch("https://api.x.ai/v1/models", { headers: { Authorization: `Bearer ${k}` }, signal: AbortSignal.timeout(8000) }).catch(() => null))?.status === 200 },
   resend: { label: "Resend", file: "resend.key", fields: ["API key"], join: (v) => v[0], ok: (k) => k.startsWith("re_") && k.length >= 20 },
 };
 const json = (d: unknown, status = 200) => Response.json(d, { status });
