@@ -795,8 +795,16 @@ const qbox = $('#q');
 const grow = () => { qbox.style.height = 'auto'; qbox.style.height = Math.min(qbox.scrollHeight, 220) + 'px'; };
 addEventListener('resize', () => grow());
 qbox.oninput = () => { grow(); instant(); clearTimeout(t); t = setTimeout(doSearch, 350); };
-qbox.addEventListener('focus', showRecent); qbox.addEventListener('click', showRecent);
-qbox.addEventListener('input', () => { if (qbox.value.trim()) hideRecent(); else showRecent(); });
+// Recently saved opens only on a click in the search box, or after resting the pointer on it for a second.
+// (Not on focus: Find focuses the box by itself on desktop.) Opened by hover, it closes when the pointer leaves box and strip.
+let recentHover = null, recentByHover = false;
+qbox.addEventListener('click', () => { recentByHover = false; showRecent(); });
+qbox.addEventListener('input', () => { if (qbox.value.trim()) hideRecent(); });
+qbox.addEventListener('mouseenter', () => { clearTimeout(recentHover); recentHover = setTimeout(() => { if ($('#recentbar').hidden) { recentByHover = true; showRecent(); } }, 1000); });
+for (const el of [qbox, $('#recentbar')]) {
+  el.addEventListener('mouseleave', () => { clearTimeout(recentHover); if (recentByHover) recentHover = setTimeout(() => { if (recentByHover && !qbox.matches(':hover') && !$('#recentbar').matches(':hover') && !document.body.classList.contains('carrying')) hideRecent(); }, 400); });
+  el.addEventListener('mouseenter', () => { if (el !== qbox) clearTimeout(recentHover); });
+}
 document.addEventListener('mousedown', (e) => { if (!e.target.closest('#recentbar, #q') && !document.body.classList.contains('carrying')) hideRecent(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#recentbar').hidden) hideRecent(); });
 qbox.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); clearTimeout(t); doSearch(); } };
@@ -919,7 +927,7 @@ function drawRecent() {
 }
 function refreshRecent() { fetch('/api/recent?limit=24').then(r => r.json()).then(r => { recentRows = (r.items || []).map(it => ({ ...it, pending: it.status === 'filing' || it.status === 'failed' })); drawRecent(); }).catch(() => {}); }
 function showRecent() { if (!qbox.value.trim() && recentRows.length) $('#recentbar').hidden = false; }
-function hideRecent() { $('#recentbar').hidden = true; }
+function hideRecent() { $('#recentbar').hidden = true; recentByHover = false; }
 async function openShelf(id) {
   const my = ++openSeq; clearTimeout(pendingPoll); view = 'shelf';
   const b = $('#browse'); b.innerHTML = '<div class="status">Loading…</div>';
