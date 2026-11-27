@@ -3,7 +3,7 @@ name: install-mac
 # then saves one note and finds it again. Runs when the installer changes, and on demand (Actions → Run workflow).
 on:
   pull_request:
-    paths: [get.sh, install.sh, "server/**", "bin/**", "tools/ocr.py", ".github/workflows/install-mac.yml"]
+    paths: [get.sh, install.sh, uninstall.sh, "server/**", "bin/**", "tools/ocr.py", ".github/workflows/install-mac.yml"]
   workflow_dispatch:
 
 jobs:
