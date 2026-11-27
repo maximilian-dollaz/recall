@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 200" width="640" font-family="Menlo,Monaco,Consolas,monospace">
+  <rect width="640" height="200" rx="10" fill="#1e1e1e"/>
+  <rect width="640" height="28" rx="10" fill="#3a3a3a"/>
+  <circle cx="18" cy="14" r="6" fill="#ff5f57"/><circle cx="38" cy="14" r="6" fill="#febc2e"/><circle cx="58" cy="14" r="6" fill="#28c840"/>
+  <text x="16" y="58" font-size="13" fill="#f85149" font-weight="700">✗ The install stopped at step 5: Downloading the AI models.</text>
+  <text x="16" y="78" font-size="13" fill="#ccc">  Nothing is broken. Paste the same line into Terminal again and press Return;</text>
+  <text x="16" y="96" font-size="13" fill="#ccc">  it picks up where it stopped.</text>
+  <text x="16" y="146" font-size="16" fill="#ff8a8a" font-weight="700" font-family="-apple-system,Helvetica,Arial,sans-serif">Seeing red? Do what it says: paste the same line again.</text>
+  <text x="16" y="172" font-size="14" fill="#aaa" font-family="-apple-system,Helvetica,Arial,sans-serif">Usually it's just the Wi-Fi. The second run continues from where it stopped.</text>
+</svg>
