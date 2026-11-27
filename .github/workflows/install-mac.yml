@@ -1,0 +1,42 @@
+name: install-mac
+# Runs the one-line installer on a clean Apple Silicon Mac in GitHub's cloud, the way a new person would,
+# then saves one note and finds it again. Runs when the installer changes, and on demand (Actions → Run workflow).
+on:
+  pull_request:
+    paths: [get.sh, install.sh, "server/**", "bin/**", "tools/ocr.py", ".github/workflows/install-mac.yml"]
+  workflow_dispatch:
+
+jobs:
+  install:
+    runs-on: macos-14          # Apple Silicon (M1)
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: get.sh, sparse-checkout-cone-mode: false }
+
+      - name: Install, the way a new person does (no Homebrew on the PATH)
+        env:
+          RECALL_REF: ${{ github.head_ref || github.ref_name }}
+          RECALL_NO_OPEN: "1"
+          RECALL_ALLOW_SMALL: "1"   # the cloud Mac has 7 GB of memory
+        run: env PATH=/usr/bin:/bin:/usr/sbin:/sbin bash get.sh
+
+      - name: Run it again (must be safe to repeat)
+        env: { RECALL_NO_OPEN: "1", RECALL_ALLOW_SMALL: "1" }
+        run: env PATH=/usr/bin:/bin:/usr/sbin:/sbin bash get.sh
+
+      - name: Save a note and find it again
+        run: |
+          curl -sf -F "notes=Ceramic lamp with a warm amber glow, for the reading nook" http://127.0.0.1:3344/api/save
+          for i in $(seq 1 120); do
+            n=$(curl -s "http://127.0.0.1:3344/api/search?q=amber%20lamp" | /usr/bin/python3 -c 'import json,sys; d=json.load(sys.stdin); r=d if isinstance(d,list) else (d.get("results") or d.get("hits") or d.get("items") or []); print(len(r))' 2>/dev/null || echo 0)
+            [ "${n:-0}" -gt 0 ] && { echo "found it after $((i*10)) seconds"; exit 0; }
+            sleep 10
+          done
+          echo "The note was not filed within 20 minutes"; tail -50 ~/.gbrain/serve/app.err; exit 1
+
+      - name: Logs
+        if: always()
+        run: |
+          tail -80 ~/.recall/logs/install.log || true
+          for f in ~/.gbrain/serve/app.err ~/.gbrain/serve/serve.err ~/.recall/logs/ollama.err; do echo "== $f"; tail -40 "$f" 2>/dev/null || true; done

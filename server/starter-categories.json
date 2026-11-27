@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "shelves": [
+    { "id": "inspiration", "name": "Inspiration", "type": "note", "description": "things saved because they sparked something: pictures, places, designs, art, posts, quotes by others" },
+    { "id": "ideas", "name": "Ideas", "type": "note", "description": "the owner's own ideas, plans and things to try or build" },
+    { "id": "notes", "name": "Notes", "type": "note", "description": "quick notes, voice notes and thoughts that are not a finished piece of writing" },
+    { "id": "meetings", "name": "Meetings", "type": "note", "description": "meeting notes, call recordings and transcripts" },
+    { "id": "people", "name": "People", "type": "note", "description": "notes about someone the owner knows or deals with: what they said, what was promised" },
+    { "id": "companies", "name": "Companies", "type": "note", "description": "organizations, shops, suppliers and brands as the subject" },
+    { "id": "reference", "name": "Reference", "type": "note", "description": "facts, how-tos, documents, articles and links saved to look things up later" },
+    { "id": "writing", "name": "Writing", "type": "note", "description": "things the owner wrote themselves as a piece of writing: essays, drafts, journal entries" }
+  ],
+  "proposed": [],
+  "corrections": [],
+  "projects": []
+}
