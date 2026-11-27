@@ -20,8 +20,9 @@ jobs:
           curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.head_ref || github.ref_name }}/check.sh" -o check.sh
           bash check.sh
           RECALL_TEST_FREE_GB=30 bash check.sh | tee out.txt; grep -q "fairly full" out.txt
-          if RECALL_TEST_FREE_GB=12 bash check.sh | tee out.txt; then echo "should have refused"; exit 1; fi
-          grep -q "can't be installed" out.txt
+          set +e; RECALL_TEST_FREE_GB=12 bash check.sh > out.txt; code=$?; set -e
+          cat out.txt; echo "exit code: $code"
+          [ "$code" = 1 ] && grep -q "can't be installed" out.txt
 
       - name: Install, the way a new person does (no Homebrew on the PATH)
         env:
