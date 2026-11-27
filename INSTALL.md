@@ -2,11 +2,31 @@
 
 Recall keeps everything you save (pictures, links, notes, voice notes) and finds it again when you describe it. It runs entirely on your own Mac, with its own AI, so nothing you save leaves your computer.
 
-This guide takes about **5 minutes of your time**, then **15 to 45 minutes of waiting** while your Mac downloads the AI.
-
-> **Have Claude?** You can let it do this for you. See [Let your AI install it](#let-your-ai-install-it) at the bottom.
+It takes about **5 minutes of your time**, then **15 to 45 minutes of waiting** while your Mac downloads the AI. **You don't need a GitHub account**, and with Claude you don't need Terminal either.
 
 ---
+
+## The easy way: Claude installs it (no Terminal)
+
+You need the **Claude app for Mac** and a Claude plan that includes Claude Code (Pro or Max).
+
+1. Download Claude for Mac from **claude.ai/download**, open it, and sign in.
+2. Click the **Code** tab at the top.
+3. Under the message box, set the place it runs to **Local** (not Cloud), and pick a folder, for example your **home folder** (the one with your name).
+   *If you see "Connect GitHub", you're on **Cloud**. Switch to **Local**: Recall doesn't need GitHub.*
+4. Paste this and press Return:
+
+```
+Install Recall on my Mac. Read this page and follow it exactly: https://raw.githubusercontent.com/maximilian-dollaz/recall/main/AI-INSTALL.md
+```
+
+5. Claude checks your Mac, helps free space if needed (it asks you about each thing first), installs Recall, and connects your iPad if you have one. When it asks to run a command, click **Allow** (or **Always allow** for this session). When a macOS window asks for **your Mac's password**, type it there, never into the chat.
+
+That's it. The rest of this page is the same install done by hand, for anyone without Claude.
+
+---
+
+# By hand, with Terminal
 
 ## Before you start
 
@@ -138,19 +158,6 @@ Keep the Mac plugged in and set it not to sleep: System Settings → **Battery**
 | A window asks to install **command line developer tools** | Click **Not Now**. Recall doesn't need them. |
 | Anything asks for your **password** | Don't type it. Click **Cancel** and tell the person who sent you Recall. |
 | Nothing seems to happen for a long time | Look for a progress bar or a percentage. If the last line hasn't changed for 30 minutes, press **Control C**, then paste the line again. |
-
----
-
-## Let your AI install it
-
-**Claude with access to your Mac** (the Claude desktop app with Claude Code or computer use turned on) can run the install for you. Paste this to it:
-
-```
-Install Recall on my Mac. Read this page and follow it exactly:
-https://raw.githubusercontent.com/maximilian-dollaz/recall/main/AI-INSTALL.md
-```
-
-**ChatGPT, or Claude in a browser**, can't type into your Mac's Terminal, but they can walk you through it one step at a time and read your screenshots. Paste the same message.
 
 ---
 

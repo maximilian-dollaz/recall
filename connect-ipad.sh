@@ -104,7 +104,13 @@ launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.contextlibrar
 wait_for 60 'curl -sf -o /dev/null http://127.0.0.1:3344/api/health' || fail "Recall didn't restart. See ~/.gbrain/serve/app.err"
 note "✓ Linked"
 
+# The QR code as a picture too, opened on screen (handy when an AI ran this and the terminal isn't visible).
+QR="$HERE/iPad-QR.svg"
+"$HERE/tools/.venv/bin/python" -c "import qrcode, qrcode.image.svg, sys; qrcode.make(sys.argv[1], image_factory=qrcode.image.svg.SvgPathFillImage, box_size=20).save(sys.argv[2])" "$URL" "$QR" 2>/dev/null \
+  && open -a Safari "$QR" 2>/dev/null
+
 print -P "\n%F{green}%B✓ This Mac is ready for the iPad.%b%f"
+print "  Address for the iPad: $URL"
 cat <<EOF
 
   On the iPad (or iPhone):

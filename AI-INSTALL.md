@@ -1,88 +1,105 @@
 # Installing Recall on a Mac, for an AI assistant
 
-This page is for an AI assistant (Claude, ChatGPT or another) helping a person install **Recall** on their Mac. Recall runs fully on their Mac with a local AI model. Read the whole page before your first reply.
+This page is for an AI assistant installing **Recall** on a person's Mac. Recall runs fully on their Mac, with a local AI model. The person may never have used Terminal: **you run every command yourself**; they only answer questions and click Allow. Read the whole page before your first reply.
 
-The person may be a complete beginner. Use plain words, one step at a time, and say what they should see when it worked.
-
-## The whole install is one command
-
-```
-curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/get.sh | bash
-```
-
-It downloads Recall into `~/Recall` and runs `~/Recall/install.sh`. It needs **no admin password, no Homebrew, no Xcode, no keys and no answers**: it never reads from the keyboard. It is safe to run again; each run continues where the last stopped and never replaces the person's library or settings. The code is public: https://github.com/maximilian-dollaz/recall (`get.sh`, `install.sh`).
+**Nothing here needs a GitHub account.** Every link below is a public download. If you are running in a cloud environment that asks the person to connect GitHub, you are in the wrong place: see "Which Claude" at the end.
 
 ## Rules
 
-1. **Run only the commands on this page.** Never add `sudo`, `brew`, `caffeinate`, or edits to files. The installer already keeps the Mac awake.
-2. **Never ask for a password, API key or code**, and never type one. If anything asks for a password, cancel it and tell the person.
-3. **Don't interrupt it.** It takes 15 to 45 minutes. Step 5 of 11 (the model download, 4 to 9 GB) is the long one and shows progress bars. Silence for a few minutes during steps 2, 6 and 9 is normal.
-4. If a window asks to install **command line developer tools**, click **Not Now**.
-5. If the same step fails twice, stop and give the person the log file `~/.recall/logs/install.log` to send to whoever shared Recall with them.
+1. **Run only the commands on this page.** No `sudo`, no `brew`, no editing the person's files, no `caffeinate` (the installer keeps the Mac awake itself).
+2. **Never ask for a password, key or code in the chat**, and never type one. When macOS asks for the Mac's password, the person types it into macOS's own window.
+3. **Never delete or move the person's files yourself.** To free space, use `free-space.sh` below, and only for the items the person said yes to, one by one.
+4. **Plain words, short messages.** Say what's happening and roughly how long. Tell the person before anything appears on their screen (an installer window, a sign-in page, "allow" prompts).
+5. Long commands run **in the background with a log**, and you check the log every minute or two (your command timeout is shorter than the install).
+6. If the same step fails twice, stop and give the person the log file to send to whoever shared Recall: `~/.recall/logs/install.log`.
 
-## Path A: you can run commands on this Mac
-
-(For example Claude Code, or the Claude desktop app with a terminal or computer use.)
-
-1. Check the Mac first (installs nothing):
-   ```
-   curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/check.sh | bash
-   ```
-   `✓` means go. `!` means it fits but the Mac will be fairly full: tell the person, suggest freeing space, and go on if they're fine with it. `✗` means stop: tell the person, in one plain sentence each, what the check listed (it says what to do).
-
-   If space is short, the person runs the clean-up helper themselves in Terminal (it asks them a yes or no for each thing, so you can't answer for them, and it never removes their documents or photos): `curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/free-space.sh | bash`. Then run the check again. Never delete files yourself to make room.
-2. Run the install command above. Give it a timeout of at least **60 minutes**, or run it in the background and check on it, because the download is long. If your shell tool can't run that long, use Terminal through computer use instead: open Terminal, paste the command, press Return, then check the window every few minutes.
-3. **It worked** when the output ends with `✓ Done. Recall is installed and running.` Confirm with:
-   ```
-   curl -s http://localhost:3344/api/health
-   ```
-   which prints `{"ok":true,…}`.
-4. If it ended with `✗ The install stopped at step N`, run the same command again (at most twice). Read the lines above the red message to understand why, and tell the person in one plain sentence.
-5. Tell the person: Recall is at http://localhost:3344 (and as **Recall** on their Desktop), it starts when the Mac starts, and everything they save stays on their Mac.
-
-## Path B: you can't run commands (you're in a browser or a phone app)
-
-Guide the person. Give **one step**, then wait for their reply or screenshot.
-
-1. **Check the Mac.** Have them open Terminal (step 2) and paste the check line from Path A step 1; it answers ✓, ! or ✗ with what to do. Or by hand: Apple menu → **About This Mac** (Chip **Apple M…**, Memory **8 GB** or more, macOS **14** or newer) and System Settings → General → **Storage** (free space: 50 GB comfortable; at least 25 GB, or 20 GB on an 8 GB Mac).
-2. **Open Terminal.** Hold **⌘** and tap the **space bar**, type `Terminal`, press **Return**.
-3. **Paste the line.** Give them the install command in a code block. They click inside the Terminal window, press **⌘ V**, then **Return**.
-4. **Wait.** Green lines count from `[1 of 11]` to `[11 of 11]`. Tell them to keep the window open and the Mac plugged in, and to send a screenshot if red text appears or nothing changes for 30 minutes.
-5. **Done** when it says `✓ Done. Recall is installed and running.` and Recall opens in the browser.
-
-A picture guide for the person is at https://github.com/maximilian-dollaz/recall/blob/main/INSTALL.md; you may share it.
-
-## Messages the installer can stop with
-
-| Message | What to do |
-| --- | --- |
-| `The install stopped at step N: …` | Run the same command again. Usually a dropped download. |
-| `✗ Recall can't be installed on this Mac yet.` | The lines below it say why. Intel chip or under 8 GB memory: stop, it can't run here. Old macOS: update, then run again. Free space: free what it says, then run again. |
-| `! Recall fits, but the Mac will be fairly full.` | Not an error; the install continues. |
-| `Ollama didn't start` / `The AI model didn't answer` | Restart the Mac, then run again. If it repeats, send the log. |
-| `The library server didn't start` / `Recall didn't start` | Run again. If it repeats, send the log. |
-| `Other library sessions are still open` | Quit Claude Code sessions using Recall's library, then run again. |
-
-## The iPad or iPhone (after the Mac install)
-
-Recall runs on the Mac; an iPad or iPhone uses it privately through Tailscale. On the Mac run:
+## Step 1. Check the Mac (installs nothing)
 
 ```
-zsh ~/Recall/connect-ipad.sh
+curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/check.sh | bash
 ```
 
-It is interactive, so in Path B the person runs it. It installs Tailscale (macOS asks for the Mac's login password: the person types it into macOS's own window, never into chat), asks them to sign in to Tailscale, may open one page where they click **Enable** for HTTPS, then prints a QR code and an `https://….ts.net` address. On the iPad: install **Tailscale** from the App Store, sign in with the **same account**, open the address (scan the QR code), then Share → **Add to Home Screen**. The Mac must be on and awake for the iPad to reach it.
+Exit code and what to do:
+- **0, ✓ ready:** go to step 3.
+- **3, ! fits but tight:** tell the person the Mac will be fairly full, offer step 2, then continue either way.
+- **2, ✗ not enough free space** (the only problem): do step 2, then run this check again.
+- **1, ✗ can't run Recall** (Intel chip, under 8 GB memory, or macOS older than 14): tell the person in one plain sentence each, using the lines it printed. Old macOS: they update (System Settings → General → Software Update), then you check again. Intel or under 8 GB: stop; Recall can't run on this Mac.
+
+Thresholds: needs at least 25 GB free (20 GB on an 8 GB Mac); 50 GB is comfortable. Recall uses about 12 GB (8 GB on an 8 GB Mac).
+
+## Step 2. Free up space (only if needed, only with a yes for each)
+
+```
+curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/free-space.sh -o /tmp/free-space.sh
+bash /tmp/free-space.sh --list
+```
+
+It prints one line per thing that could be freed: `downloads <KB> <path>` (files over 200 MB in Downloads untouched for a month), `caches <KB>`, `trash <items>`, `free <GB>`. macOS may ask the person to let Claude see Downloads or control Finder: tell them to click OK.
+
+Show the person the list in plain words with sizes in GB, then ask, item by item:
+- Each Downloads file they want gone: `bash /tmp/free-space.sh --trash "<path>"` (moves it to the Trash; nothing is deleted yet).
+- App caches (safe: apps rebuild them; suggest quitting web browsers first): `bash /tmp/free-space.sh --clear-caches`
+- Emptying the Trash (this is what frees the space; it's permanent, so say so): `bash /tmp/free-space.sh --empty-trash`
+- More room the Apple way (old iPhone backups, unused apps): `bash /tmp/free-space.sh --open-storage` opens Apple's Storage settings for them to look at.
+
+Never touch Documents, Desktop, Pictures, Photos or anything else. Then run step 1 again.
+
+## Step 3. Install (15 to 45 minutes)
+
+Tell the person: "Installing now. It downloads the AI (4 to 9 GB), so it takes 15 to 45 minutes. Keep the Mac plugged in; you can keep using it."
+
+Start it in the background:
+
+```
+curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/get.sh -o /tmp/recall-get.sh && RECALL_NO_OPEN=1 nohup bash /tmp/recall-get.sh > /tmp/recall-install.out 2>&1 &
+```
+
+Then every minute or two:
+
+```
+tail -5 /tmp/recall-install.out
+```
+
+Progress lines look like `[5 of 11] Downloading the AI models`. Tell the person each new step in a few words. It's finished when the output contains `✓ Done. Recall is installed and running.` (success) or `✗` (stopped). On `✗ The install stopped at step N`: run the same start command again (it continues where it stopped), at most twice.
+
+Confirm: `curl -s http://localhost:3344/api/health` prints `{"ok":true,…}`. Then `open http://localhost:3344` to show Recall to the person. Tell them it's also **Recall** on their Desktop and starts by itself with the Mac.
+
+## Step 4. The iPad or iPhone (if they have one)
+
+Recall stays on the Mac; the iPad uses it privately through Tailscale (free). Tell the person what will appear, then start it in the background:
+
+```
+nohup zsh ~/Recall/connect-ipad.sh > /tmp/recall-ipad.out 2>&1 &
+```
+
+Watch `tail -15 /tmp/recall-ipad.out` and guide them through what it asks for, in this order:
+1. **Tailscale's installer window** opens: they click Continue, Install, and type **the Mac's password** into that window.
+2. **Tailscale sign-in**: they sign in with the Google or Apple account they'll also use on the iPad. If macOS asks to allow a VPN configuration: Allow.
+3. Maybe a **Tailscale page with an Enable button** (for private https): they click Enable.
+4. When the output says `✓ This Mac is ready for the iPad`, a **QR code** opens on the Mac's screen, and the output has the address (`https://….ts.net`).
+
+On the iPad: App Store → **Tailscale** → Get → sign in with the **same account** → Allow the VPN. Then scan the QR code with the iPad's camera (or type the address in Safari), and tap **Share → Add to Home Screen**. The Mac must be on and awake for the iPad to reach Recall; suggest System Settings → Battery → Options → "Prevent automatic sleeping on power adapter when the display is off".
 
 ## Done when
 
-- `curl -s http://localhost:3344/api/health` prints `{"ok":true,…}`, and
-- http://localhost:3344 opens Recall in the browser.
+- `curl -s http://localhost:3344/api/health` prints `{"ok":true,…}`,
+- Recall is open in the person's browser, and
+- (if they have one) Recall is on the iPad's Home Screen.
+
+## If you can't run commands
+
+(ChatGPT, or Claude in a browser or on a phone.) Tell the person the easiest way is the Claude desktop app's Code tab (below), which runs all of this for them. Otherwise guide them one step at a time through the picture guide: https://github.com/maximilian-dollaz/recall/blob/main/INSTALL.md
+
+## Which Claude
+
+Recall installs from the **Claude desktop app for Mac → Code tab → Local** (a session that runs on the person's own Mac, in a folder they pick, such as their home folder). That needs no GitHub account.
+
+The **Cloud** option (and claude.ai/code in a browser) runs on Anthropic's computers, not the person's Mac, and asks to connect GitHub. It can't install Recall. Switch to **Local**.
 
 ---
 
-**For the person, what to paste into your AI:**
+**For the person, what to paste into Claude:**
 
 ```
-Install Recall on my Mac. Read this page and follow it exactly:
-https://raw.githubusercontent.com/maximilian-dollaz/recall/main/AI-INSTALL.md
+Install Recall on my Mac. Read this page and follow it exactly: https://raw.githubusercontent.com/maximilian-dollaz/recall/main/AI-INSTALL.md
 ```

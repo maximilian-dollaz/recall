@@ -29,6 +29,9 @@ jobs:
           curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.head_ref || github.ref_name }}/free-space.sh" -o free-space.sh
           set +e; bash free-space.sh < /dev/null > out.txt 2>&1; code=$?; set -e
           cat out.txt; [ "$code" = 1 ] && grep -q "needs a person" out.txt
+          # The AI mode: list what could be freed, and refuse anything outside Downloads.
+          bash free-space.sh --list | tee out.txt; grep -q "^free" out.txt
+          if bash free-space.sh --trash "$HOME/.zshrc"; then echo "should have refused"; exit 1; fi
 
       - name: Install, the way a new person does (no Homebrew on the PATH)
         env:
