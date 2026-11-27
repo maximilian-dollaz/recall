@@ -22,8 +22,14 @@ jobs:
         run: env PATH=/usr/bin:/bin:/usr/sbin:/sbin bash get.sh
 
       - name: Run it again (must be safe to repeat)
-        env: { RECALL_NO_OPEN: "1", RECALL_ALLOW_SMALL: "1" }
+        env: { RECALL_REF: "${{ github.head_ref || github.ref_name }}", RECALL_NO_OPEN: "1", RECALL_ALLOW_SMALL: "1" }
         run: env PATH=/usr/bin:/bin:/usr/sbin:/sbin bash get.sh
+
+      - name: Text in pictures without Xcode's tools (the Python reader)
+        run: |
+          out=$(~/Recall/tools/.venv/bin/python ~/Recall/tools/ocr.py ~/Recall/app/static/onboard/mac-details.jpg)
+          echo "$out" | head -5
+          [ -n "$out" ]
 
       - name: Save a note and find it again
         run: |
