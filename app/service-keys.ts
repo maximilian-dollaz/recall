@@ -23,6 +23,10 @@ const KEYS: Record<string, { label: string; file: string; fields: string[]; join
   // xAI (Grok) runs the agent teams on the server. Checked for free by listing the models.
   xai: { label: "xAI (Grok)", file: "xai.key", fields: ["API key"], join: (v) => v[0].trim(), ok: (k) => k.startsWith("xai-") && k.length >= 20,
     check: async (k) => (await fetch("https://api.x.ai/v1/models", { headers: { Authorization: `Bearer ${k}` }, signal: AbortSignal.timeout(8000) }).catch(() => null))?.status === 200 },
+  // ElevenLabs reads Claude's reply summaries out loud (the Play summary button). Checked for free by listing the models;
+  // a key limited to text-to-speech may be refused that list, so only a 401 (bad key) counts as a failure.
+  elevenlabs: { label: "ElevenLabs", file: "elevenlabs.key", fields: ["API key"], join: (v) => v[0].trim(), ok: (k) => k.length >= 20,
+    check: async (k) => { const s = (await fetch("https://api.elevenlabs.io/v1/models", { headers: { "xi-api-key": k }, signal: AbortSignal.timeout(8000) }).catch(() => null))?.status; return s !== undefined && s !== 401; } },
   resend: { label: "Resend", file: "resend.key", fields: ["API key"], join: (v) => v[0], ok: (k) => k.startsWith("re_") && k.length >= 20 },
 };
 const json = (d: unknown, status = 200) => Response.json(d, { status });
