@@ -16,6 +16,8 @@
 
 import { join } from "node:path";
 import * as store from "./store.ts";
+import { readFileSync } from "node:fs";
+import { DATA } from "./paths.ts";
 import * as gb from "./gbrain.ts";
 import * as remind from "./remind.ts";
 import { chat } from "./librarian.ts";
@@ -41,7 +43,20 @@ const KEEP = 200;              // runs kept per person
 const KEY = Bun.env.ANTHROPIC_API_KEY ?? "";
 // Haiku with web search (Max, 23 Nov): fast and cheap. AGENT_CLAUDE_MODEL picks another.
 const MODEL = Bun.env.AGENT_CLAUDE_MODEL ?? "claude-haiku-5-5";
-const LOCAL = Bun.env.AGENT_ENGINE === "local" || !KEY;
+// Grok (Max, 27 Nov): with an xAI key on this server, agents think with Grok and search the web and X on xAI's side.
+// Images and video never come from Grok: those go through Higgsfield (Max, 27 Nov).
+// Every Grok round is billed to one company key, so all runs share one hard monthly cap (AGENT_MONTHLY_CAP_USD,
+// $10 to start): once it's reached, rounds wait until next month.
+const XAI_FILE = join(Bun.env.HOME ?? "", ".gbrain/serve/xai.key");
+const xaiKey = () => { try { return readFileSync(XAI_FILE, "utf8").trim(); } catch { return ""; } };
+const GROK_MODEL = Bun.env.AGENT_GROK_MODEL ?? "grok-4.3";
+export const MONTHLY_CAP = Number(Bun.env.AGENT_MONTHLY_CAP_USD ?? 10);
+const SPEND = join(DATA, "library", "agent-spend.json");
+type Spend = Record<string, { usd: number; rounds: number }>;
+const month = () => new Date().toISOString().slice(0, 7);
+export function spent(): { month: string; usd: number; cap: number } { const s = store.read<Spend>(SPEND, {}); return { month: month(), usd: s[month()]?.usd ?? 0, cap: MONTHLY_CAP }; }
+async function addSpend(usd: number) { await store.update<Spend>(SPEND, {}, (s) => { const m = s[month()] ?? { usd: 0, rounds: 0 }; m.usd = Math.round((m.usd + usd) * 1e6) / 1e6; m.rounds++; s[month()] = m; return s; }); }
+export const engine = () => Bun.env.AGENT_ENGINE === "local" ? "local" : Bun.env.AGENT_ENGINE !== "claude" && xaiKey() ? "grok" : KEY ? "claude" : "local";
 const KINDS: StepKind[] = ["research", "feasibility", "draft", "people", "plan"];
 
 const file = (dir: string) => join(dir, "agents.json");
@@ -57,7 +72,7 @@ export function list(dir: string) {
   const l = ledger(dir);
   // Newest first, and a card never moves while you use it (Today and the tab's badge point at the ones waiting on you).
   const runs = [...l.runs].sort((a, b) => b.created.localeCompare(a.created));
-  return { runs, auto: l.auto, waiting: runs.filter((r) => r.status === "needs-you").length, web: !LOCAL };
+  return { runs, auto: l.auto, waiting: runs.filter((r) => r.status === "needs-you").length, web: engine() !== "local" };
 }
 
 /** Hand something to an agent. The same directive already in flight is returned instead of started twice. */
@@ -75,7 +90,7 @@ export async function create(dir: string, input: { directive: string; from?: Fro
       l.autoDays = { [day]: (l.autoDays[day] ?? 0) + 1 };
     }
     made = { id: Math.random().toString(36).slice(2, 10), directive, title: clip(input.title || directive.split(/[.\n]/)[0], 80), from: input.from ?? { kind: "said" },
-      status: "queued", auto: input.auto || undefined, steps: [], sources: [], answers: [], round: 0, web: !LOCAL, created: now(), updated: now() };
+      status: "queued", auto: input.auto || undefined, steps: [], sources: [], answers: [], round: 0, web: engine() !== "local", created: now(), updated: now() };
     l.runs.push(made);
     // Past KEEP, the oldest finished ones go (never one in flight or waiting on the person).
     while (l.runs.length > KEEP) { const i = l.runs.findIndex((r) => ["done", "stopped", "failed"].includes(r.status)); if (i < 0) break; l.runs.splice(i, 1); }
@@ -180,6 +195,35 @@ async function claudeRound(system: string, user: string): Promise<Thought> {
   return { text, sources };
 }
 
+/** One round with Grok, searching the web and X on xAI's side. Counts what it cost against the monthly cap. */
+async function grokRound(system: string, user: string): Promise<Thought> {
+  const k = xaiKey(); if (!k) throw new Error("no xAI key on this server");
+  const sp = spent(); if (sp.usd >= sp.cap) throw new Error(`this month's agent budget ($${sp.cap}) is used up; runs start again next month`);
+  let res: Response | null = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    res = await fetch("https://api.x.ai/v1/responses", { method: "POST", signal: AbortSignal.timeout(10 * 60_000),
+      headers: { Authorization: `Bearer ${k}`, "content-type": "application/json" },
+      body: JSON.stringify({ model: GROK_MODEL, input: [{ role: "system", content: system }, { role: "user", content: user }], tools: [{ type: "web_search" }, { type: "x_search" }], store: false }) });
+    if (res.status === 429 || res.status >= 500) { await Bun.sleep(4000 * (attempt + 1)); continue; }
+    break;
+  }
+  if (!res) throw new Error("no answer from Grok");
+  if (!res.ok) throw new Error(`Grok error ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const d: any = await res.json();
+  const usd = Number(d?.usage?.cost_in_usd_ticks ?? 0) / 1e10; // xAI counts cost in ten-billionths of a dollar
+  await addSpend(usd);
+  console.log(`[agents] grok ${GROK_MODEL}: $${usd.toFixed(4)} (${d?.usage?.num_server_side_tools_used ?? 0} searches); month $${spent().usd.toFixed(2)} of $${MONTHLY_CAP}`);
+  let text = ""; const sources: Source[] = [];
+  for (const o of d.output ?? []) {
+    if (o.type === "message") for (const c of o.content ?? []) {
+      if (c.type === "output_text") text += c.text;
+      for (const a of c.annotations ?? []) if (a?.url && !sources.some((x) => x.url === a.url)) sources.push({ title: clip(a.title || a.url, 120), url: String(a.url) });
+    }
+    if (o.type === "web_search_call") for (const r of o.action?.sources ?? []) if (r?.url && !sources.some((x) => x.url === r.url) && sources.length < 20) sources.push({ title: clip(r.title || r.url, 120), url: String(r.url) });
+  }
+  return { text: text.replace(/\[\[\d+\]\]\([^)]*\)/g, ""), sources };
+}
+
 const jsonOnly = (s: string) => { const a = s.indexOf("{"), b = s.lastIndexOf("}"); return a >= 0 && b > a ? s.slice(a, b + 1) : s; };
 /** What a round returned, checked: unknown kinds dropped, lengths capped, a question only with real options. */
 export function parse(raw: string, round: number): { title?: string; steps: Step[]; summary?: string; ask?: Run["ask"]; done: boolean } | null {
@@ -203,7 +247,8 @@ export async function work(person: Person, id: string, deps: { think?: (system: 
     const context = await libraryContext(person, run.directive);
     const system = RULES.replace("{NAME}", person.name || "the owner");
     const user = prompt(run, person, context, last);
-    const think = deps.think ?? (LOCAL ? async (s: string, u: string) => ({ text: await chat([{ role: "system", content: s }, { role: "user", content: u }], { json: true }), sources: [] }) : claudeRound);
+    const eng = engine();
+    const think = deps.think ?? (eng === "grok" ? grokRound : eng === "claude" ? claudeRound : async (s: string, u: string) => ({ text: await chat([{ role: "system", content: s }, { role: "user", content: u }], { json: true }), sources: [] }));
     const t = await think(system, user);
     const p = parse(t.text, run.round + 1);
     if (!p || (!p.steps.length && !p.ask)) throw new Error("the agent's answer couldn't be read");
