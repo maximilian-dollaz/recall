@@ -168,7 +168,7 @@ note "Ollama $(curl -s localhost:11434/api/version | sed 's/.*"version":"\([^"]*
 step "Downloading the AI models ($dl; often 5 to 30 minutes)"
 note "The progress bars below are the download. Leave the window open."
 # Read the whole list first: `grep -q` stopping early would break the pipe, and pipefail would call that a failure.
-have_model() { local names; names="$(ollama list 2>/dev/null | awk 'NR>1 {print $1}')" || true; [[ $'\n'"$names"$'\n' == *$'\n'"$1"$'\n'* || $'\n'"$names"$'\n' == *$'\n'"$1:latest"$'\n'* ]]; }
+have_model() { local names; names="$(ollama list 2>/dev/null | awk 'NR>1 {print $1}')" || true; [[ $'\n'"$names"$'\n' == *$'\n'"$1"$'\n'* || $'\n'"$names"$'\n' == *$'\n'"${1}:latest"$'\n'* ]]; }
 for m in "$EMBED_MODEL" "$VISION_MODEL" "$TEXT_MODEL"; do
   if have_model "$m"; then note "$m: already here"; continue; fi
   note "$m:"
