@@ -17,6 +17,8 @@
   * { box-sizing:border-box }
   body { margin:0; background:var(--bg); color:var(--fg); font:400 17px/1.5 var(--font-ui) }
   main { max-width:460px; margin:0 auto; padding:34px 16px 55px; min-height:100vh; display:flex; flex-direction:column; justify-content:center }
+  .wskip { display:block; text-align:center; margin-top:21px; color:var(--fg-2); text-decoration:none; text-shadow:var(--shade) }
+  main.finished .wskip { display:none }
   main.going .get, main.going .logo, main.finished .logo { display:none }
   main.granola > :not(.logo):not(#granola) { display:none !important }
   main.projects > :not(.logo):not(#projects) { display:none !important }
@@ -125,6 +127,7 @@
 <main>
   <img class="logo" src="/static/icon-512.png" alt="">
   <a class="get" id="get" href="/my-shortcut">Add Recall Shortcut</a>
+  <a class="wskip" id="wskip" href="/">Skip, go to Recall</a>
 
   <!-- iPhone (Safari with the address bar at the bottom) -->
   <section id="phone">
@@ -335,6 +338,8 @@
     fetch('/api/starter-projects', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ names: pins.map((x) => x.value) }) })
       .catch(() => {}).finally(meetingsNext); });
   $('#gskip').addEventListener('click', (e) => { e.preventDefault(); toHome(); });
+  // Skip: the steps are optional; this device counts as welcomed, so sign-in goes straight to Recall next time.
+  $('#wskip').addEventListener('click', (e) => { e.preventDefault(); finished().finally(() => { location.href = '/'; }); });
   $('#pskip').addEventListener('click', (e) => { e.preventDefault(); meetingsNext(); });
   // Mac: keep Recall in the Dock. Chrome offers its own install; Safari has File → Add to Dock. Not shown once installed.
   if (mac && !matchMedia('(display-mode: standalone)').matches) {

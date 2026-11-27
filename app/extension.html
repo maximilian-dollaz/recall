@@ -30,10 +30,14 @@
   .copy { font:inherit; font-size:.9rem; padding:8px 13px; border-radius:999px; border:1px solid rgba(242,236,225,.2); background:rgba(242,236,225,.06); color:inherit; cursor:pointer }
   .muted { color:#98989d }
   .menu { display:grid; gap:2px; max-width:200px; padding:6px; border-radius:10px; background:#2c2c2e; border:1px solid #48484a } .menu div { padding:6px 9px; border-radius:6px }
+  /* Optional page: a way back to Recall at the top and the bottom. */
+  .back { display:block; text-align:center; margin:21px 0 0; color:var(--fg-2); text-decoration:none; font-weight:500 }
+  .back.top { text-align:right; margin:0 0 13px }
 </style>
 </head>
 <body>
 <main>
+  <a class="back top" href="/">Skip, go to Recall</a>
   <img class="logo" src="/static/icon-512.png" alt="">
   <ol>
     <li><div><p>Click Download</p>
@@ -53,6 +57,7 @@
     <li><div><p>Right-click anything on a page, click Add to Recall</p>
       <div class="screen"><div class="menu"><div>Copy image</div><div>Save image as…</div><div class="tap"><b>Add to Recall</b></div></div></div></div></li>
   </ol>
+  <a class="back" href="/">Go to Recall</a>
 </main>
 <script>
   // chrome:// pages can't be opened from a link, so the address is copied for pasting.
