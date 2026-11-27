@@ -70,8 +70,12 @@ render() {
 }
 # load <label> <plist>: (re)start a background service for this user. It starts at login and restarts if it stops.
 load() {
-  launchctl bootout "gui/$(id -u)/$1" 2>/dev/null || true
-  launchctl bootstrap "gui/$(id -u)" "$2"
+  local svc="gui/$(id -u)/$1" i
+  launchctl bootout "$svc" 2>/dev/null || true
+  # bootout returns before the old copy is fully gone; bootstrapping too soon fails with "Input/output error".
+  for i in {1..20}; do launchctl print "$svc" >/dev/null 2>&1 || break; sleep 0.5; done
+  for i in {1..5}; do launchctl bootstrap "gui/$(id -u)" "$2" 2>/dev/null && return 0; sleep 2; done
+  launchctl bootstrap "gui/$(id -u)" "$2"   # last try, with the error shown
 }
 
 print -P "%B"
