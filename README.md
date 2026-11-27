@@ -37,23 +37,19 @@ What you save stays on the Mac that runs Recall. Each person has their own libra
 
 ## Install
 
-You need an Apple Silicon Mac with macOS 14 or later, 16 GB of memory and 15 GB of free disk. Setting it up takes about half an hour, most of it downloading the models.
+You need a Mac with Apple Silicon (M1 or newer), macOS 14 or later, 8 GB of memory (16 GB recommended) and about 15 GB of free disk. Open Terminal, paste this line, press Return:
 
 ```bash
-git clone https://github.com/maximilian-dollaz/recall.git ~/recall
+curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/get.sh | bash
 ```
 
-```bash
-cd ~/recall && zsh install.sh
-```
+It needs no admin password, Homebrew or Xcode. It installs into your home folder: Recall in `~/Recall`, its tools (Bun, ffmpeg, pdftotext, Python, git) in `~/.recall` and `~/.bun`, Ollama and the local models (Gemma 3 4B for pictures, plus Qwen 3 8B for writing and sorting on Macs with 16 GB), GBrain and the library server, then starts Recall at http://localhost:3344 and checks that the model answers. About 15 to 45 minutes, most of it the model download. Run it again any time to update or to finish an install that stopped.
 
-The installer sets up Homebrew, Bun, Ollama and the two local models, ffmpeg, Whisper for voice notes, GBrain, the shared library server and the app, and starts Recall at http://localhost:3344.
+- **Step by step with pictures, for anyone:** [INSTALL.md](INSTALL.md)
+- **Let an AI assistant do it:** paste `Install Recall on my Mac. Read this page and follow it exactly: https://raw.githubusercontent.com/maximilian-dollaz/recall/main/AI-INSTALL.md` into Claude or ChatGPT. [AI-INSTALL.md](AI-INSTALL.md)
+- **From a git checkout:** `zsh install.sh`. **To remove:** `zsh ~/Recall/uninstall.sh`.
 
-Then open `.env`, set your Google account as the owner, and restart:
-
-```bash
-cl app restart
-```
+On your own Mac, Recall needs no sign-in: it's yours. To let other people or your phone reach it, set your Google account as the owner in `.env`, then `cl app restart`:
 
 ### Settings (`.env`)
 
