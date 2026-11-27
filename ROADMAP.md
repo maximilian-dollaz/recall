@@ -29,4 +29,24 @@ What's built, and what's next, in order. The why behind each step is in [STORY.m
 3. **Agents, further:** act after your answer (a calendar block, a sent message with your yes), agents on a local model, and voice.
 4. **Today, further:** the calendar and life orientation.
 
+## Vision: one line, a whole agent ecosystem (27 Nov 2026)
+
+Where all of this is heading. Saved word for word in Recall under the Max OS project.
+
+- **One line to install.** Anyone pastes a single line into Claude (Claude Code desktop, ideally even their phone). Their Claude reads the whole system, works out which parts to set up, and sets them up on their behalf.
+- **Land and expand.** It starts small and unfolds into a full agentic ecosystem built around that person's own Claude, like a car that turns into a giant autonomous robot.
+- **Spreads by a line of text.** People share it by sending a friend the line: "Hey, install this."
+- **Free to install.** For every connector, Claude uses the computer to walk the person to the page where all they do is click "Create API key", then sends the keys in.
+- **They choose what to pay for.** Possible ways Max earns: referrals for installs, a setup fee, a monthly subscription, and a share of the value the system creates, measured over time by a secure mechanism inside the system that tracks the revenue and value it generates.
+
+The voice note, verbatim:
+
+> Ultimately, what I want to happen (and I want you to add this to the roadmap) is that I want for anyone to be able to download this by copy-pasting a single line of text into their Claude Code desktop, or ideally, maybe even just their phone. An entire agentic ecosystem spawns and is created based on their Claude.
+>
+> What I imagine is that they copy and paste this line of code, or the single line, to their Claude. Their Claude understands the entire thing, and then it's like, "Okay, these are the parts that need to be set up," and Claude sets it up on their behalf. It's kind of like a land-and-expand, kind of like a transformer that goes from a car into this giant autonomous robot. That's how I imagine.
+>
+> People are able to spread it by simply sending a line of text to their friends, like, "Hey, install this." The way that I make it is completely free to install, and for all of the connectors, it has people who are able to use computers and go into all the applications and get them to the page where all they have to do is click "Create API key" and then send in a bunch of API keys. Now they have this entire gigantic system.
+>
+> Then they have the choices of which ones to pay for. Perhaps I'm making money off of referrals for people installing the software, and I'm making money somehow based on the actual output and based on the value generated for the person driver. A single setup fee, monthly subscription fee, whatever the person is using the software for, whatever value is generated through the use of the Authentik ecosystem: I am getting a percentage of the value created because there's some kind of secure mechanism within the system that is able to determine, over the long run, how much revenue and how much value is generated from the use of the system. Also, please save this to Recall in a project called Maps OS, and ensure that this exact voice note is saved word for word and is put into the roadmap.
+
 Ideas and requests: open an issue.
