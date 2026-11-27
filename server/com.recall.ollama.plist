@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The local AI models (Ollama) on 127.0.0.1:11434, for a Mac that had no Ollama running.
+  install.sh fills in the paths and loads it; it starts at login and restarts if it stops.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.recall.ollama</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__OLLAMA__</string>
+    <string>serve</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key><string>__HOME__</string>
+    <key>OLLAMA_HOST</key><string>127.0.0.1:11434</string>
+  </dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>5</integer>
+  <key>StandardOutPath</key><string>__HOME__/.recall/logs/ollama.out</string>
+  <key>StandardErrorPath</key><string>__HOME__/.recall/logs/ollama.err</string>
+</dict>
+</plist>

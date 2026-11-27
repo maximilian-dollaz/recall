@@ -7,7 +7,7 @@
 #
 #   gbrain-mcp-headers [client]      default client: claude-code
 set -euo pipefail
-export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+export PATH="$HOME/.recall/env/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"  # jq: the installer's tools first
 umask 077
 
 client="${1:-claude-code}"

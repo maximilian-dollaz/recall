@@ -18,6 +18,8 @@
 #
 set -euo pipefail
 export OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-http://localhost:11434/v1}"
+# The installer's own tools (jq, git, ffmpeg, pdftotext) and bun, ahead of anything else on this Mac.
+export PATH="$HOME/.recall/env/bin:$HOME/.bun/bin:$PATH"
 HERE="$(cd "$(dirname "${0:A}")/.." && pwd)"
 TOOLS="$HERE/tools"
 
@@ -41,7 +43,8 @@ fi
 
 ensure_ollama() {
   curl -s localhost:11434/api/version >/dev/null 2>&1 && return
-  (ollama serve >/dev/null 2>&1 &)
+  if launchctl print "gui/$(id -u)/com.recall.ollama" >/dev/null 2>&1; then launchctl kickstart "gui/$(id -u)/com.recall.ollama"
+  else (ollama serve >/dev/null 2>&1 &); fi
   for i in {1..20}; do curl -s localhost:11434/api/version >/dev/null 2>&1 && return; sleep 0.5; done
   echo "cl: could not start Ollama" >&2; exit 1
 }
@@ -149,7 +152,7 @@ case "$cmd" in
                (cd "$soul" && npm run build)
                echo "built; apply it with: cl soul restart" ;;
       stop)    launchctl bootout "$svc" 2>/dev/null || true; echo "soul stopped" ;;
-      start)   [[ -f "$plist" ]] || sed -e "s#__RECALL__#$HERE#g" -e "s#__SOUL__#$soul#g" -e "s#__HOME__#$HOME#g" "$HERE/server/com.soulmap.app.plist" > "$plist"
+      start)   [[ -f "$plist" ]] || sed -e "s#__RECALL__#$HERE#g" -e "s#__SOUL__#$soul#g" -e "s#__HOME__#$HOME#g" -e "s#__PATH__#$HOME/.recall/env/bin:$HOME/.bun/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin#g" -e "s#/usr/local/bin/npm#$(command -v npm)#g" "$HERE/server/com.soulmap.app.plist" > "$plist"
                [[ -d "$soul/.next" ]] || echo "cl: no production build in $soul/.next yet — run: cl soul build" >&2
                launchctl bootstrap "gui/$(id -u)" "$plist" 2>/dev/null || launchctl kickstart -k "$svc"
                for i in {1..30}; do curl -sf -o /dev/null http://127.0.0.1:3355/soul && break; sleep 1; done

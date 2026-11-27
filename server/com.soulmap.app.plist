@@ -25,7 +25,7 @@
   <key>WorkingDirectory</key><string>__SOUL__/app</string>
   <key>EnvironmentVariables</key>
   <dict>
-    <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    <key>PATH</key><string>__PATH__</string>
     <key>HOME</key><string>__HOME__</string>
     <key>NODE_ENV</key><string>production</string>
     <key>PORT</key><string>3355</string>

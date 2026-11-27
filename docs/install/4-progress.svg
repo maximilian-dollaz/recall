@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280" width="640" font-family="Menlo,Monaco,Consolas,monospace">
+  <rect width="640" height="280" rx="10" fill="#1e1e1e"/>
+  <rect width="640" height="28" rx="10" fill="#3a3a3a"/>
+  <circle cx="18" cy="14" r="6" fill="#ff5f57"/><circle cx="38" cy="14" r="6" fill="#febc2e"/><circle cx="58" cy="14" r="6" fill="#28c840"/>
+  <text x="16" y="58" font-size="13" fill="#3fb950" font-weight="700">[4 of 11] Setting up Ollama (runs the AI models on this Mac)</text>
+  <text x="16" y="78" font-size="13" fill="#ccc">    Ollama 0.13.0</text>
+  <text x="16" y="106" font-size="13" fill="#3fb950" font-weight="700">[5 of 11] Downloading the AI models (about 9 GB; often 5 to 30 minutes)</text>
+  <text x="16" y="126" font-size="13" fill="#ccc">    The progress bars below are the download. Leave the window open.</text>
+  <text x="16" y="146" font-size="13" fill="#ccc">pulling aeda25e63ebd:  41% ▕██████▋         ▏ 1.4 GB/3.3 GB  24 MB/s  1m20s</text>
+  <rect x="8" y="90" width="624" height="66" rx="4" fill="none" stroke="#ff6b6b" stroke-width="2"/>
+  <text x="16" y="196" font-size="16" fill="#ff8a8a" font-weight="700" font-family="-apple-system,Helvetica,Arial,sans-serif">This is normal. Wait. Don't close the window.</text>
+  <text x="16" y="222" font-size="14" fill="#aaa" font-family="-apple-system,Helvetica,Arial,sans-serif">The steps count up to 11. The model download is the long one.</text>
+  <text x="16" y="244" font-size="14" fill="#aaa" font-family="-apple-system,Helvetica,Arial,sans-serif">Keep the Mac plugged in. It won't fall asleep while this runs.</text>
+</svg>
