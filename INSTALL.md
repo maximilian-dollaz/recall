@@ -10,19 +10,29 @@ This guide takes about **5 minutes of your time**, then **15 to 45 minutes of wa
 
 ## Before you start
 
-- A **Mac with Apple Silicon** (M1, M2, M3, M4 or newer), **macOS 14 or newer**, **8 GB memory or more**.
-- About **15 GB of free space**.
-- The Mac **plugged in** and on **Wi-Fi**.
+You need a **Mac with Apple Silicon** (M1 or newer), **macOS 14 or newer**, **8 GB memory or more**, and enough **free space** (below). Keep it **plugged in** and on **Wi-Fi**.
 
-Not sure? Check like this:
+| Free space | What happens |
+| --- | --- |
+| **50 GB or more** | ✓ Ready. Plenty of room left for macOS updates and everything you save. |
+| **25 to 50 GB** (or 20 to 50 GB on an 8 GB Mac) | ! It installs, but the Mac will be fairly full. Free some space if you can. |
+| **Less than 25 GB** (less than 20 GB on an 8 GB Mac) | ✗ It won't install. Free space first. |
+
+Why those numbers: Recall and its AI take about **12 GB** (about 8 GB on an 8 GB Mac). After that, a Mac needs at least **10 GB** free to keep running well, and a macOS update needs 25 to 35 GB.
+
+**You don't have to work this out yourself.** The installer checks first and stops before downloading anything if the Mac isn't ready. To check without installing, do steps 1 to 3 below with this line instead:
+
+```
+curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/check.sh | bash
+```
+
+It prints ✓, ! or ✗ for the chip, macOS, memory and free space, and says what to do about anything that's missing.
+
+To see it yourself: click the **Apple** in the top-left corner → **About This Mac**.
 
 ![Click the Apple in the top left, then About This Mac. Check the Chip, Memory and macOS lines.](docs/install/1-about-this-mac.svg)
 
-1. Click the **Apple** in the very top-left corner of the screen.
-2. Click **About This Mac**.
-3. **Chip** should say **Apple M** something. **Memory** should be **8 GB** or more. **macOS** should be **14** (Sonoma) or newer.
-
-If the Chip says **Intel**, Recall won't run well on this Mac. Stop here and tell the person who sent you this.
+For free space: Apple menu → **System Settings** → **General** → **Storage**.
 
 ---
 
@@ -77,6 +87,30 @@ From now on:
 
 ---
 
+## Use Recall on your iPad or iPhone
+
+The iPad uses Recall on your Mac, privately, through **Tailscale** (a free app that links your own devices). It works anywhere the iPad has internet, as long as the Mac is on.
+
+**On the Mac** (once): open Terminal, paste this, press Return:
+
+```
+zsh ~/Recall/connect-ipad.sh
+```
+
+It installs Tailscale (it asks for the **Mac's password** once, to install the app), asks you to sign in to Tailscale, turns on Recall's private address, and links it to your library. Sign in with **the account you'll also use on the iPad** (Google or Apple). If a page asks you to **Enable** HTTPS, click Enable.
+
+At the end it shows a **QR code** and an address like `https://your-mac.tail1234.ts.net`.
+
+**On the iPad:**
+1. App Store → search **Tailscale** → **Get** → open it.
+2. Sign in with **the same account** as on the Mac. Tap **Allow** when it asks to add a VPN.
+3. Point the camera at the QR code on the Mac and tap the link (or type the address into Safari).
+4. Tap **Share** (the square with an arrow) → **Add to Home Screen**. Recall is now an app on the iPad.
+
+Keep the Mac plugged in and set it not to sleep: System Settings → **Battery** → **Options** → turn on **Prevent automatic sleeping on power adapter when the display is off**.
+
+---
+
 ## If something goes wrong
 
 ![A red message says the install stopped, and to paste the same line again.](docs/install/6-stopped.svg)
@@ -85,9 +119,10 @@ From now on:
 | --- | --- |
 | Red text: **The install stopped at step …** | Paste the same line again and press Return. It continues where it stopped. Most often it was the Wi-Fi. |
 | It stops at the **same step twice** | Send the file it names (`~/.recall/logs/install.log`) to the person who sent you Recall. To find it: in Finder, click **Go** in the top menu, then **Go to Folder…**, paste `~/.recall/logs`, press Return. |
-| **needs a Mac with Apple Silicon** | This Mac has an Intel chip. Recall can't run on it. |
-| **needs macOS 14** | Update the Mac: Apple menu → **System Settings** → **General** → **Software Update**. Then try again. |
-| **needs about … GB of free disk** | Empty the Trash and delete big old downloads, then try again. |
+| **Chip ✗ (Intel)** | Recall can't run on this Mac. |
+| **macOS ✗** | Update the Mac: Apple menu → **System Settings** → **General** → **Software Update**. Then try again. |
+| **Free space ✗** | It says how much to free. Empty the Trash, delete big files in Downloads, and see System Settings → General → Storage. Then try again. |
+| The iPad says **can't connect** or the page won't load | Check the Mac is on and awake, and Tailscale on both shows Connected with the same account. |
 | A window asks to install **command line developer tools** | Click **Not Now**. Recall doesn't need them. |
 | Anything asks for your **password** | Don't type it. Click **Cancel** and tell the person who sent you Recall. |
 | Nothing seems to happen for a long time | Look for a progress bar or a percentage. If the last line hasn't changed for 30 minutes, press **Control C**, then paste the line again. |

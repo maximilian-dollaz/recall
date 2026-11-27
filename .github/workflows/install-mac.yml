@@ -3,7 +3,7 @@ name: install-mac
 # then saves one note and finds it again. Runs when the installer changes, and on demand (Actions → Run workflow).
 on:
   pull_request:
-    paths: [get.sh, install.sh, uninstall.sh, "server/**", "bin/**", "tools/ocr.py", ".github/workflows/install-mac.yml"]
+    paths: [get.sh, install.sh, uninstall.sh, check.sh, connect-ipad.sh, "server/**", "bin/**", "tools/ocr.py", ".github/workflows/install-mac.yml"]
   workflow_dispatch:
 
 jobs:
@@ -13,6 +13,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { sparse-checkout: get.sh, sparse-checkout-cone-mode: false }
+
+      - name: The Mac check, on its own (ready, tight, and too full)
+        env: { RECALL_ALLOW_SMALL: "1" }
+        run: |
+          curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.head_ref || github.ref_name }}/check.sh" -o check.sh
+          bash check.sh
+          RECALL_TEST_FREE_GB=30 bash check.sh | tee out.txt; grep -q "fairly full" out.txt
+          if RECALL_TEST_FREE_GB=12 bash check.sh | tee out.txt; then echo "should have refused"; exit 1; fi
+          grep -q "can't be installed" out.txt
 
       - name: Install, the way a new person does (no Homebrew on the PATH)
         env:
@@ -30,6 +39,14 @@ jobs:
           out=$(~/Recall/tools/.venv/bin/python ~/Recall/tools/ocr.py ~/Recall/app/static/onboard/mac-details.jpg)
           echo "$out" | head -5
           [ -n "$out" ]
+
+      - name: iPad link pieces (QR code, library link) without a Tailscale account
+        run: |
+          zsh -n ~/Recall/connect-ipad.sh
+          ~/Recall/tools/.venv/bin/python -c "import qrcode,sys; q=qrcode.QRCode(border=2); q.add_data(sys.argv[1]); q.print_ascii(invert=True)" https://example.ts.net | head -3
+          echo '{"owner":"me@this-mac.local","people":{"me@this-mac.local":{"id":"sam","name":"Sam","source":"default"}}}' > p.json
+          ~/.recall/env/bin/jq --arg l "sam@gmail.com" '.people[$l] = ((.people[$l] // {}) + {id: .people[.owner].id, name: .people[.owner].name, alias_of: .owner})' p.json | tee p2.json
+          [ "$(~/.recall/env/bin/jq -r '.people["sam@gmail.com"].alias_of' p2.json)" = "me@this-mac.local" ]
 
       - name: Save a note and find it again
         run: |

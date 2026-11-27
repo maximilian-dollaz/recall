@@ -51,6 +51,8 @@ stop_with() { print -P "\n%F{red}%B✗ $*%b%f"; exit 1; }
 on_exit() {
   local code=$?
   (( code == 0 )) && return
+  # The Mac itself isn't ready (check.sh already said why and what to do): running again won't help.
+  if [[ "${HARD_STOP:-0}" == 1 ]]; then return; fi
   print -P "\n%F{red}%B✗ The install stopped at step $N: $STEP.%b%f"
   print "  Nothing is broken. Paste the same line into Terminal again and press Return;"
   print "  it picks up where it stopped. If it stops at the same place twice, send this file"
@@ -88,25 +90,16 @@ print -P "%b"
 
 # ── 1. This Mac ───────────────────────────────────────────────────────────────
 step "Checking this Mac"
-[[ "$(uname -m)" == "arm64" ]] || stop_with "Recall needs a Mac with Apple Silicon (M1, M2, M3, M4 or newer). This Mac has an Intel chip, so the local AI would be too slow to use."
-macos="$(sw_vers -productVersion)"
-(( ${macos%%.*} >= 14 )) || stop_with "Recall needs macOS 14 (Sonoma) or newer. This Mac has macOS $macos. Update it in System Settings → General → Software Update, then run the line again."
+# The same check anyone can run on its own first (check.sh): chip, macOS, memory, free space.
+bash "$HERE/check.sh" --install || { HARD_STOP=1; exit 1; }
 mem_gb=$(( $(sysctl -n hw.memsize) / 1073741824 ))
-free_gb=$(df -g "$HOME" | awk 'NR==2 {print $4}')
-note "macOS $macos, Apple Silicon, ${mem_gb} GB memory, ${free_gb} GB free disk"
-if (( mem_gb < 8 )) && [[ "${RECALL_ALLOW_SMALL:-0}" != 1 ]]; then
-  stop_with "Recall needs at least 8 GB of memory. This Mac has ${mem_gb} GB."
-fi
 # The models. With 16 GB or more, a stronger model writes titles and sorts (qwen3:8b, 5.2 GB) next to the one that
 # sees pictures (gemma3:4b, 3.3 GB). With less, the picture model does both: smaller, and still good.
 VISION_MODEL="${RECALL_VISION_MODEL:-gemma3:4b}"
 if [[ -n "${RECALL_TEXT_MODEL:-}" ]]; then TEXT_MODEL="$RECALL_TEXT_MODEL"
 elif (( mem_gb >= 16 )); then TEXT_MODEL="qwen3:8b"
 else TEXT_MODEL="$VISION_MODEL"; fi
-if [[ "$TEXT_MODEL" == "$VISION_MODEL" ]]; then need_gb=10; dl="about 4 GB"; else need_gb=16; dl="about 9 GB"; fi
-# Models already downloaded don't need the room again.
-(( free_gb >= need_gb )) || [[ -d "$HOME/.ollama/models/manifests/registry.ollama.ai/library/${VISION_MODEL%%:*}" ]] \
-  || stop_with "Recall needs about ${need_gb} GB of free disk; this Mac has ${free_gb} GB. Free some space (empty the Trash, delete old downloads), then run the line again."
+if [[ "$TEXT_MODEL" == "$VISION_MODEL" ]]; then dl="about 4 GB"; else dl="about 9 GB"; fi
 note "AI models: $VISION_MODEL (pictures)${TEXT_MODEL:+, $TEXT_MODEL (writing and sorting)}, $dl to download"
 # Keep the Mac awake while this runs; it stops by itself when the installer ends.
 caffeinate -dims -w $$ &>/dev/null &
@@ -270,8 +263,8 @@ fi
 step "Setting up text-in-pictures and voice notes (on this Mac)"
 VENV="$HERE/tools/.venv"
 [[ -x "$VENV/bin/python" ]] || "$ENV_DIR/bin/python3" -m venv "$VENV"
-if ! "$VENV/bin/python" -c 'import mlx_whisper, Vision, Quartz' 2>/dev/null; then
-  retry 3 "$VENV/bin/pip" install -q --disable-pip-version-check mlx-whisper pyobjc-framework-Vision pyobjc-framework-Quartz
+if ! "$VENV/bin/python" -c 'import mlx_whisper, Vision, Quartz, qrcode' 2>/dev/null; then
+  retry 3 "$VENV/bin/pip" install -q --disable-pip-version-check mlx-whisper pyobjc-framework-Vision pyobjc-framework-Quartz qrcode
 fi
 # Text in pictures: the Swift version when Apple's developer tools are already here, else the same thing in Python.
 # (Never call swiftc without them: macOS would pop up an install window.)
