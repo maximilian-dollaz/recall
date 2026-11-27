@@ -28,6 +28,12 @@ curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/check
 
 It prints ✓, ! or ✗ for the chip, macOS, memory and free space, and says what to do about anything that's missing.
 
+**Short on space?** A helper frees it safely. It shows what's taking room and asks before removing each thing: big old files in Downloads (moved to the Trash, only the ones you pick), app caches (apps rebuild them), then emptying the Trash, then Apple's own Storage settings for old iPhone backups and unused apps. It never touches Documents, Desktop, Photos or anything else of yours. The installer offers it by itself when space is short, or run it any time:
+
+```
+curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/free-space.sh | bash
+```
+
 To see it yourself: click the **Apple** in the top-left corner → **About This Mac**.
 
 ![Click the Apple in the top left, then About This Mac. Check the Chip, Memory and macOS lines.](docs/install/1-about-this-mac.svg)
@@ -84,6 +90,12 @@ From now on:
 - **Open Recall** any time by double-clicking **Recall** on your Desktop, or going to **http://localhost:3344** in your browser.
 - It **starts by itself** when the Mac starts.
 - **To update**, do steps 1 to 3 again. Your saved things stay.
+
+---
+
+## Will it slow my Mac down?
+
+No more than it has to. The AI only runs while Recall is filing something you saved, then **leaves memory 2 minutes later**. Only **one model is loaded at a time**, and Recall runs at **lower priority** than the apps you're using, so your work goes first. On an 8 GB Mac, other apps may pause for a moment while a save is being filed.
 
 ---
 

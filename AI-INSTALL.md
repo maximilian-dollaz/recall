@@ -29,6 +29,8 @@ It downloads Recall into `~/Recall` and runs `~/Recall/install.sh`. It needs **n
    curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/check.sh | bash
    ```
    `✓` means go. `!` means it fits but the Mac will be fairly full: tell the person, suggest freeing space, and go on if they're fine with it. `✗` means stop: tell the person, in one plain sentence each, what the check listed (it says what to do).
+
+   If space is short, the person runs the clean-up helper themselves in Terminal (it asks them a yes or no for each thing, so you can't answer for them, and it never removes their documents or photos): `curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/free-space.sh | bash`. Then run the check again. Never delete files yourself to make room.
 2. Run the install command above. Give it a timeout of at least **60 minutes**, or run it in the background and check on it, because the download is long. If your shell tool can't run that long, use Terminal through computer use instead: open Terminal, paste the command, press Return, then check the window every few minutes.
 3. **It worked** when the output ends with `✓ Done. Recall is installed and running.` Confirm with:
    ```

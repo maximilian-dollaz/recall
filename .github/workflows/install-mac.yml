@@ -3,7 +3,7 @@ name: install-mac
 # then saves one note and finds it again. Runs when the installer changes, and on demand (Actions → Run workflow).
 on:
   pull_request:
-    paths: [get.sh, install.sh, uninstall.sh, check.sh, connect-ipad.sh, "server/**", "bin/**", "tools/ocr.py", ".github/workflows/install-mac.yml"]
+    paths: [get.sh, install.sh, uninstall.sh, check.sh, connect-ipad.sh, free-space.sh, "server/**", "bin/**", "tools/ocr.py", ".github/workflows/install-mac.yml"]
   workflow_dispatch:
 
 jobs:
@@ -19,10 +19,16 @@ jobs:
         run: |
           curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.head_ref || github.ref_name }}/check.sh" -o check.sh
           bash check.sh
-          RECALL_TEST_FREE_GB=30 bash check.sh | tee out.txt; grep -q "fairly full" out.txt
+          set +e; RECALL_TEST_FREE_GB=30 bash check.sh > out.txt; code=$?; set -e
+          cat out.txt; echo "exit code: $code"
+          [ "$code" = 3 ] && grep -q "fairly full" out.txt && grep -q "free-space.sh" out.txt
           set +e; RECALL_TEST_FREE_GB=12 bash check.sh > out.txt; code=$?; set -e
           cat out.txt; echo "exit code: $code"
-          [ "$code" = 1 ] && grep -q "can't be installed" out.txt
+          [ "$code" = 2 ] && grep -q "can't be installed" out.txt
+          # The clean-up helper asks a person before anything; with nobody at a keyboard it does nothing.
+          curl -fsSL "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.head_ref || github.ref_name }}/free-space.sh" -o free-space.sh
+          set +e; bash free-space.sh < /dev/null > out.txt 2>&1; code=$?; set -e
+          cat out.txt; [ "$code" = 1 ] && grep -q "needs a person" out.txt
 
       - name: Install, the way a new person does (no Homebrew on the PATH)
         env:

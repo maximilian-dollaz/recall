@@ -91,7 +91,18 @@ print -P "%b"
 # ── 1. This Mac ───────────────────────────────────────────────────────────────
 step "Checking this Mac"
 # The same check anyone can run on its own first (check.sh): chip, macOS, memory, free space.
-bash "$HERE/check.sh" --install || { HARD_STOP=1; exit 1; }
+c=0; bash "$HERE/check.sh" --install || c=$?
+# Short on space (2) or tight (3): with a person at the keyboard, offer the safe clean-up, then check again.
+# (Run by an AI with no keyboard, it skips the offer: the check already said what to do.)
+if (( c == 2 || c == 3 )) && { : </dev/tty; } 2>/dev/null; then
+  print -n "\n  Free up space now? It shows what's taking room and asks before removing anything. [y/N] "
+  read -r a </dev/tty
+  if [[ "$a" == [yY]* ]]; then
+    bash "$HERE/free-space.sh"
+    c=0; bash "$HERE/check.sh" --install || c=$?
+  fi
+fi
+(( c == 0 || c == 3 )) || { HARD_STOP=1; exit 1; }
 mem_gb=$(( $(sysctl -n hw.memsize) / 1073741824 ))
 # The models. With 16 GB or more, a stronger model writes titles and sorts (qwen3:8b, 5.2 GB) next to the one that
 # sees pictures (gemma3:4b, 3.3 GB). With less, the picture model does both: smaller, and still good.
@@ -289,9 +300,12 @@ if [[ ! -f "$HERE/.env" ]]; then
       -e "s#^RECALL_OPERATOR=.*#RECALL_OPERATOR=$full#" \
       -e "/^RECALL_CONTACT_EMAIL=/d" "$HERE/.env.example" > "$HERE/.env"
   { echo; echo "# Chosen by the installer for this Mac's ${mem_gb} GB of memory."
-    echo "LIBRARIAN_MODEL=$VISION_MODEL"; echo "LIBRARIAN_TEXT_MODEL=$TEXT_MODEL"; } >> "$HERE/.env"
+    echo "LIBRARIAN_MODEL=$VISION_MODEL"; echo "LIBRARIAN_TEXT_MODEL=$TEXT_MODEL"
+    echo "# Free the model's memory 2 minutes after it was last used, so other apps stay fast."
+    echo "RECALL_MODEL_KEEP_ALIVE=2m"; } >> "$HERE/.env"
   note "settings written to $HERE/.env"
 fi
+grep -q '^RECALL_MODEL_KEEP_ALIVE=' "$HERE/.env" || printf '\n# Free the model memory soon after use, so other apps stay fast.\nRECALL_MODEL_KEEP_ALIVE=2m\n' >> "$HERE/.env"
 mkdir -p "$HOME/Library/LaunchAgents"
 render "$HERE/server/com.contextlibrary.app.plist" "$HOME/Library/LaunchAgents/com.contextlibrary.app.plist"
 load com.contextlibrary.app "$HOME/Library/LaunchAgents/com.contextlibrary.app.plist"

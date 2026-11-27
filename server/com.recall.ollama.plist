@@ -16,7 +16,15 @@
   <dict>
     <key>HOME</key><string>__HOME__</string>
     <key>OLLAMA_HOST</key><string>127.0.0.1:11434</string>
+    <!-- Keep the rest of the Mac fast: a model leaves memory 2 minutes after its last use,
+         only one model is in memory at a time, and one request runs at a time. -->
+    <key>OLLAMA_KEEP_ALIVE</key><string>2m</string>
+    <key>OLLAMA_MAX_LOADED_MODELS</key><string>1</string>
+    <key>OLLAMA_NUM_PARALLEL</key><string>1</string>
   </dict>
+  <!-- Lower priority than the apps the person is using; their work goes first. -->
+  <key>Nice</key><integer>5</integer>
+  <key>LowPriorityIO</key><true/>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ThrottleInterval</key><integer>5</integer>

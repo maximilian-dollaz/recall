@@ -16,6 +16,9 @@
     <key>HOME</key><string>__HOME__</string>
     <key>OLLAMA_BASE_URL</key><string>http://localhost:11434/v1</string>
   </dict>
+  <!-- Background work (filing, reading long documents) yields to the apps the person is using. -->
+  <key>Nice</key><integer>10</integer>
+  <key>LowPriorityIO</key><true/>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ThrottleInterval</key><integer>5</integer>
