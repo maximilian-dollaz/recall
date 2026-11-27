@@ -62,7 +62,7 @@ async function embeddings(dir: string, items: ProjectItem[]): Promise<Map<string
   const need = items.filter((it) => cache[it.id]?.h !== hash(textOf(it)));
   for (let i = 0; i < need.length; i += 32) {
     const batch = need.slice(i, i + 32);
-    const r = await fetch(`${OLLAMA}/api/embed`, { method: "POST", signal: AbortSignal.timeout(60_000), body: JSON.stringify({ model: "nomic-embed-text", input: batch.map((it) => `clustering: ${textOf(it)}`) }) });
+    const r = await fetch(`${OLLAMA}/api/embed`, { method: "POST", signal: AbortSignal.timeout(60_000), body: JSON.stringify({ model: "nomic-embed-text", keep_alive: process.env.RECALL_MODEL_KEEP_ALIVE || undefined, input: batch.map((it) => `clustering: ${textOf(it)}`) }) });
     if (!r.ok) throw new Error(`embeddings failed: ${r.status}`);
     const { embeddings: vs } = await r.json() as { embeddings: Vec[] };
     batch.forEach((it, j) => (cache[it.id] = { h: hash(textOf(it)), v: unit(vs[j]) }));

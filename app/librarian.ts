@@ -14,6 +14,8 @@ const MODEL = process.env.LIBRARIAN_MODEL ?? "gemma3:4b"; // sees pictures
 // Text (titles, summaries, sorting, pieces) on a computer goes to a larger model: in a side-by-side on 15 real meeting
 // pieces (22 Nov), qwen3:8b named the subject and the point; gemma3:4b mostly repeated the meeting's name.
 const TEXT_MODEL = process.env.LIBRARIAN_TEXT_MODEL ?? "qwen3:8b";
+// How long a local model stays in memory after a request. Unset: Ollama's own setting (5 minutes by default).
+const KEEP_ALIVE = process.env.RECALL_MODEL_KEEP_ALIVE || undefined;
 const CLAUDE_KEY = process.env.ANTHROPIC_API_KEY ?? "";
 const CLAUDE_MODEL = process.env.LIBRARIAN_CLAUDE_MODEL ?? "claude-haiku-5-5";
 export const ENGINE: "claude" | "local" = process.env.LIBRARIAN_ENGINE === "local" || !CLAUDE_KEY ? "local" : "claude";
@@ -99,6 +101,7 @@ export async function chat(messages: any[], opts: { json?: boolean; images?: str
     method: "POST", signal: AbortSignal.timeout(180_000), // a hung model must not stop all filing
     body: JSON.stringify({
       model: messages.some((m) => m.images?.length) ? MODEL : TEXT_MODEL, stream: false, think: false, messages,
+      keep_alive: KEEP_ALIVE, // on a person's own Mac (set by install.sh): free the model's memory soon after use
       format: opts.json ? "json" : undefined,
       options: { temperature: 0, num_ctx: 8192 },
     }),

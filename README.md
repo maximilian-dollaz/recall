@@ -37,7 +37,7 @@ What you save stays on the Mac that runs Recall. Each person has their own libra
 
 ## Install
 
-You need a Mac with Apple Silicon (M1 or newer), macOS 14 or later, 8 GB of memory (16 GB recommended) and about 15 GB of free disk. Open Terminal, paste this line, press Return:
+You need a Mac with Apple Silicon (M1 or newer), macOS 14 or later, 8 GB of memory (16 GB recommended) and at least 25 GB free (20 GB on an 8 GB Mac; 50 GB is comfortable). `check.sh` checks all of it without installing anything, and the installer runs the same check first. Open Terminal, paste this line, press Return:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/get.sh | bash
@@ -46,7 +46,9 @@ curl -fsSL https://raw.githubusercontent.com/maximilian-dollaz/recall/main/get.s
 It needs no admin password, Homebrew or Xcode. It installs into your home folder: Recall in `~/Recall`, its tools (Bun, ffmpeg, pdftotext, Python, git) in `~/.recall` and `~/.bun`, Ollama and the local models (Gemma 3 4B for pictures, plus Qwen 3 8B for writing and sorting on Macs with 16 GB), GBrain and the library server, then starts Recall at http://localhost:3344 and checks that the model answers. About 15 to 45 minutes, most of it the model download. Run it again any time to update or to finish an install that stopped.
 
 - **Step by step with pictures, for anyone:** [INSTALL.md](INSTALL.md)
+- **No Terminal, no GitHub account:** in the Claude app for Mac, open the Code tab, choose Local, and paste the prompt below. Claude runs the check, the clean-up, the install and the iPad link itself.
 - **Let an AI assistant do it:** paste `Install Recall on my Mac. Read this page and follow it exactly: https://raw.githubusercontent.com/maximilian-dollaz/recall/main/AI-INSTALL.md` into Claude or ChatGPT. [AI-INSTALL.md](AI-INSTALL.md)
+- **On an iPad or iPhone:** `zsh ~/Recall/connect-ipad.sh` on the Mac links it privately through Tailscale and shows a QR code to open on the iPad.
 - **From a git checkout:** `zsh install.sh`. **To remove:** `zsh ~/Recall/uninstall.sh`.
 
 On your own Mac, Recall needs no sign-in: it's yours. To let other people or your phone reach it, set your Google account as the owner in `.env`, then `cl app restart`:

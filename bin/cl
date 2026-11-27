@@ -1,6 +1,8 @@
 #!/bin/zsh
 # cl — the context library from the command line.
 #
+#   cl check                        can this Mac run Recall? (chip, macOS, memory, free space)
+#   cl ipad                         use Recall on an iPad or iPhone (private, through Tailscale)
 #   cl twin start|stop|status       a scratch copy of the app for testing (ports 4344-4346)
 #   cl team-link [--new]           the one link for the team (open, sign in with Google); --new retires the old one
 #   cl invite <name> [email]       a personal link to Recall on the web (works on 3 browsers)
@@ -25,7 +27,7 @@ TOOLS="$HERE/tools"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "cl: missing $1 — run $HERE/install.sh" >&2; exit 1; }; }
 # Commands that don't touch the library run without gbrain (pasting keys, the twin, onboarding resets).
-case "${1:-}" in higgsfield-key|deepgram-key|keys|welcome-reset|twin) ;; *) need gbrain ;; esac
+case "${1:-}" in higgsfield-key|deepgram-key|keys|welcome-reset|twin|ipad|iphone|phone|check) ;; *) need gbrain ;; esac
 
 # The shared server (launchd com.gbrain.serve) owns the single-writer brain while
 # it runs, so route gbrain through it as the `cl` thin client: a separate
@@ -59,6 +61,10 @@ cmd="${1:-}"; shift || true
 case "$cmd" in
   twin)
     exec "$HERE/tools/twin.sh" "$@" ;;
+  ipad|iphone|phone)
+    exec /bin/zsh "$HERE/connect-ipad.sh" "$@" ;;
+  check)
+    exec /bin/bash "$HERE/check.sh" "$@" ;;
   boards-migrate)
     exec bun "$HERE/tools/boards-migrate.ts" "$@" ;;
   team-link)
